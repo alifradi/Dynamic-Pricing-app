@@ -10,6 +10,7 @@ library(httr)
 library(jsonlite)
 library(dplyr)
 library(lubridate)
+library(readr)
 
 # --- Configuration ---
 # Try multiple ways to get the API URL
@@ -157,80 +158,80 @@ ui <- dashboardPage(
       # --- TAB 2: STRATEGY SELECTION ---
       tabItem(tabName = "strategy",
         fluidRow(
-          # Strategy Configuration
-          box(
-            title = "Strategy Configuration", status = "primary", solidHeader = TRUE, width = 4,
-            
-            h4("Market Conditions"),
-            div(class = "metric-box",
-                div(class = "metric-value", textOutput("days_until_travel")),
-                div(class = "metric-label", "Days Until Travel")
+          # --- UI: Place Bandit Simulation and Strategy Configuration side by side at the top ---
+          # In tabName = 'strategy', replace the top layout with:
+          fluidRow(
+            column(6,
+              box(
+                title = "Strategy Configuration", status = "primary", solidHeader = TRUE, width = 12,
+                
+                h4("Market Conditions Analysis"),
+                actionButton("calculate_market_conditions_btn", "Calculate Market Conditions", 
+                            class = "btn-info btn-block", icon = icon("calculator")),
+                
+                hr(),
+                
+                div(class = "metric-box",
+                    div(class = "metric-value", textOutput("market_demand_index")),
+                    div(class = "metric-label", "Market Demand Index")
+                ),
+                
+                div(class = "metric-box",
+                    div(class = "metric-value", textOutput("demand_category")),
+                    div(class = "metric-label", "Demand Category")
+                ),
+                
+                # Removed Market Demand Override and Price Sensitivity Override sliders
+                # - Market demand is auto-detected from the four market signals
+                # - Price sensitivity is calculated per user based on their profile
+                
+                hr(),
+                
+                h4("Strategy Selection"),
+                selectInput("ranking_strategy", "Ranking Strategy:",
+                           choices = c("Greedy (Highest Commission)" = "Greedy (Highest Commission)",
+                                     "User-First (Lowest Price)" = "User-First (Lowest Price)",
+                                     "Stochastic LP" = "Stochastic LP",
+                                     "RL Optimized Policy" = "RL Optimized Policy")),
+                
+                conditionalPanel(
+                  condition = "input.ranking_strategy == 'Stochastic LP'",
+                  h5("Optimization Weights:"),
+                  sliderInput("weight_conversion", "Conversion Weight:", 
+                             min = 0, max = 1, value = 0.4, step = 0.1),
+                  sliderInput("weight_revenue", "Revenue Weight:", 
+                             min = 0, max = 1, value = 0.4, step = 0.1),
+                  sliderInput("weight_trust", "Trust Weight:", 
+                             min = 0, max = 1, value = 0.2, step = 0.1)
+                ),
+                
+                hr(),
+                
+                actionButton("apply_strategy_btn", "Apply Strategy", 
+                            class = "btn-primary btn-block", icon = icon("cogs"))
+              )
             ),
-            
-            selectInput("market_demand_override", "Market Demand Override:",
-                       choices = c("Auto-Detect" = "auto", "Low" = "Low", 
-                                 "Medium" = "Medium", "High" = "High"),
-                       selected = "auto"),
-            
-            sliderInput("price_sensitivity_override", "Price Sensitivity Override:",
-                       min = 0, max = 1, value = 0.5, step = 0.1),
-            
-            hr(),
-            
-            h4("Strategy Selection"),
-            selectInput("ranking_strategy", "Ranking Strategy:",
-                       choices = c("Greedy (Highest Commission)" = "Greedy (Highest Commission)",
-                                 "User-First (Lowest Price)" = "User-First (Lowest Price)",
-                                 "Stochastic LP" = "Stochastic LP",
-                                 "RL Optimized Policy" = "RL Optimized Policy")),
-            
-            conditionalPanel(
-              condition = "input.ranking_strategy == 'Stochastic LP'",
-              h5("Optimization Weights:"),
-              sliderInput("weight_conversion", "Conversion Weight:", 
-                         min = 0, max = 1, value = 0.4, step = 0.1),
-              sliderInput("weight_revenue", "Revenue Weight:", 
-                         min = 0, max = 1, value = 0.4, step = 0.1),
-              sliderInput("weight_trust", "Trust Weight:", 
-                         min = 0, max = 1, value = 0.2, step = 0.1)
-            ),
-            
-            hr(),
-            
-            actionButton("apply_strategy_btn", "Apply Strategy", 
-                        class = "btn-primary btn-block", icon = icon("cogs"))
-          ),
-          
-          # RL Recommendations
-          box(
-            title = "RL Model Recommendations", status = "info", solidHeader = TRUE, width = 8,
-            
-            h4("Market Analysis"),
-            verbatimTextOutput("market_analysis"),
-            
-            h4("Strategy Recommendations"),
-            div(id = "recommendations_display",
-                div(class = "recommendation-box",
-                    h5("Recommendation Engine"),
-                    p("Apply a strategy to see AI-powered recommendations based on current market conditions and user behavior.")
-                )
-            ),
-            
-            h4("Customer Behavior Prediction"),
-            fluidRow(
-              column(3, div(class = "metric-box",
-                           div(class = "metric-value", textOutput("predicted_conversion")),
-                           div(class = "metric-label", "Conversion Rate"))),
-              column(3, div(class = "metric-box",
-                           div(class = "metric-value", textOutput("booking_urgency")),
-                           div(class = "metric-label", "Booking Urgency"))),
-              column(3, div(class = "metric-box",
-                           div(class = "metric-value", textOutput("price_sensitivity_calc")),
-                           div(class = "metric-label", "Price Sensitivity"))),
-              column(3, div(class = "metric-box",
-                           div(class = "metric-value", textOutput("brand_preference")),
-                           div(class = "metric-label", "Top Brand")))
+            column(6,
+              box(
+                title = "Bandit Simulation: Ranking Impact Over Clicks", status = "warning", solidHeader = TRUE, width = 12,
+                fluidRow(
+                  column(6, actionButton("run_bandit_sim_btn", "Estimate ranking impact over clicks", class = "btn-warning btn-lg")),
+                  column(6, div(style = "margin-top: 25px;", textOutput("bandit_sim_status")))
+                ),
+                DT::dataTableOutput("bandit_sim_results_table"),
+                verbatimTextOutput("bandit_sim_summary"),
+                plotlyOutput("bandit_sim_barplot")
+              )
             )
+          ),
+          # The merged User, Market State & Offers Table box remains below this row
+          box(
+            title = "User, Market State & Offers Table", status = "info", solidHeader = TRUE, width = 12,
+            fluidRow(
+              column(4, selectizeInput("selected_users_for_offers", "Select User ID(s):", choices = NULL, multiple = TRUE, width = "100%")),
+              column(8, div(style = "margin-top: 25px;", textOutput("offers_loading_status")))
+            ),
+            DT::dataTableOutput("merged_offers_table")
           )
         )
       ),
@@ -324,7 +325,18 @@ server <- function(input, output, session) {
     scenario_saved = FALSE,
     user_ids = NULL,
     selected_user_profile = NULL,
-    data_loaded = FALSE  # Track if data has been loaded
+    data_loaded = FALSE,  # Track if data has been loaded
+    market_conditions = NULL,  # Store market conditions analysis
+    user_market_table = NULL, # New reactive value for user/market table
+    offers_prob_table = NULL, # New reactive value for offers/probabilities table
+    bandit_sim_table = NULL, # New reactive value for bandit simulation results
+    bandit_sim_summary = NULL, # New reactive value for bandit simulation summary
+    bandit_sim_top = NULL, # New reactive value for top arms for barplot
+    user_offers_multi = NULL, # New reactive value for offers table with multi-user selection
+    bandit_results = NULL, # New reactive value for bandit simulation results
+    merged_offers = NULL, # New reactive value for merged offers table
+    bandit_sim_results_table = NULL, # New reactive value for bandit simulation results table
+    bandit_simulation_from_csv = NULL
   )
   
   # Helper to fetch and update offers table from /trial_sampled_offers
@@ -346,11 +358,15 @@ server <- function(input, output, session) {
           print("Updated values$user_offers successfully")
           write("Updated values$user_offers successfully", "/tmp/shiny_debug.log", append = TRUE)
           showNotification(paste("Offers table updated. Records:", result$records), type = "default")
+          # Update user IDs from the offers data
+          fetch_and_update_user_ids()
         } else {
           values$user_offers <- NULL
           print("No data in response, set values$user_offers to NULL")
           write("No data in response, set values$user_offers to NULL", "/tmp/shiny_debug.log", append = TRUE)
           showNotification("No offers data found", type = "warning")
+          # Clear user IDs since no offers data
+          fetch_and_update_user_ids()
         }
       } else {
         print("HTTP request failed")
@@ -364,8 +380,30 @@ server <- function(input, output, session) {
     })
   }
 
-  # On app load, fetch the offers table
+  # On app load, fetch the offers table and load bandit results from CSV
   fetch_and_update_offers()
+
+  # Load bandit simulation results from CSV on startup
+  tryCatch({
+    bandit_results_df <- read.csv("../data/bandit_simulation_results.csv")
+    values$bandit_simulation_from_csv <- bandit_results_df
+    print("Successfully loaded bandit_simulation_results.csv")
+  }, error = function(e) {
+    print(paste("Error loading bandit_simulation_results.csv:", e$message))
+    showNotification("Could not load bandit simulation results from CSV.", type = "error")
+  })
+
+  # Render the loaded bandit simulation results in the UI
+  output$bandit_sim_results_table <- DT::renderDataTable({
+    if (!is.null(values$bandit_simulation_from_csv)) {
+      DT::datatable(values$bandit_simulation_from_csv, 
+                    options = list(pageLength = 5, scrollX = TRUE, autoWidth = TRUE),
+                    rownames = FALSE,
+                    caption = 'Bandit Simulation Results from CSV')
+    } else {
+      DT::datatable(data.frame(Status=character()), caption = 'No bandit simulation data loaded from file.')
+    }
+  })
 
   # Test button handler
   observeEvent(input$test_btn, {
@@ -374,26 +412,49 @@ server <- function(input, output, session) {
     showNotification("App is working! Test button clicked.", type = "default")
   })
   
-  # Helper to fetch and update user IDs from /trial_user_ids
+  # Helper to fetch and update user IDs from offers data
   fetch_and_update_user_ids <- function() {
     tryCatch({
-      res <- GET(paste0(API_URL, "/trial_user_ids"))
-      if (http_status(res)$category == "Success") {
-        result <- fromJSON(content(res, "text", encoding = "UTF-8"))
-        if (!is.null(result$user_ids) && length(result$user_ids) > 0) {
-          values$user_ids <- result$user_ids
-          updateSelectInput(session, "user_profile_select_offers", choices = result$user_ids)
+      # Extract user IDs from the offers data instead of calling a separate endpoint
+      if (!is.null(values$user_offers) && length(values$user_offers) > 0) {
+        # Convert to data frame and extract unique user IDs
+        df <- as.data.frame(values$user_offers, stringsAsFactors = FALSE)
+        if ("user_id" %in% colnames(df)) {
+          user_ids <- unique(df$user_id)
+          user_ids <- user_ids[!is.na(user_ids) & user_ids != ""]
+          if (length(user_ids) > 0) {
+            values$user_ids <- user_ids
+            updateSelectInput(session, "user_profile_select_offers", choices = user_ids)
+            updateSelectizeInput(session, "selected_users_for_offers", choices = user_ids)
+            print(paste("Updated user IDs from offers data:", length(user_ids), "users"))
+            write(paste("Updated user IDs from offers data:", length(user_ids), "users"), "/tmp/shiny_debug.log", append = TRUE)
+          } else {
+            values$user_ids <- NULL
+            updateSelectInput(session, "user_profile_select_offers", choices = NULL)
+            updateSelectizeInput(session, "selected_users_for_offers", choices = NULL)
+            print("No valid user IDs found in offers data")
+            write("No valid user IDs found in offers data", "/tmp/shiny_debug.log", append = TRUE)
+          }
         } else {
           values$user_ids <- NULL
           updateSelectInput(session, "user_profile_select_offers", choices = NULL)
+          updateSelectizeInput(session, "selected_users_for_offers", choices = NULL)
+          print("No user_id column found in offers data")
+          write("No user_id column found in offers data", "/tmp/shiny_debug.log", append = TRUE)
         }
       } else {
         values$user_ids <- NULL
         updateSelectInput(session, "user_profile_select_offers", choices = NULL)
+        updateSelectizeInput(session, "selected_users_for_offers", choices = NULL)
+        print("No offers data available to extract user IDs")
+        write("No offers data available to extract user IDs", "/tmp/shiny_debug.log", append = TRUE)
       }
     }, error = function(e) {
       values$user_ids <- NULL
       updateSelectInput(session, "user_profile_select_offers", choices = NULL)
+      updateSelectizeInput(session, "selected_users_for_offers", choices = NULL)
+      print(paste("Error updating user IDs:", e$message))
+      write(paste("Error updating user IDs:", e$message), "/tmp/shiny_debug.log", append = TRUE)
     })
   }
 
@@ -475,9 +536,17 @@ server <- function(input, output, session) {
                  "&days_to_go=", days_to_go,
                  "&days_var=", days_var)
     res <- POST(url)
-    # After backend samples, reload offers and user IDs
+    # After backend samples, reload offers (user IDs will be updated automatically)
     fetch_and_update_offers()
-    fetch_and_update_user_ids()
+    
+    # Explicitly update the selectizeInput for selected_users_for_offers
+    # This ensures the dropdown is populated with the correct user IDs from the sampled data
+    if (!is.null(values$user_ids) && length(values$user_ids) > 0) {
+      updateSelectizeInput(session, "selected_users_for_offers", choices = values$user_ids, server = TRUE)
+      print(paste("Updated selected_users_for_offers with", length(values$user_ids), "user IDs after sampling"))
+      write(paste("Updated selected_users_for_offers with", length(values$user_ids), "user IDs after sampling"), "/tmp/shiny_debug.log", append = TRUE)
+    }
+    
     # Set data loaded flag
     values$data_loaded <- TRUE
   })
@@ -490,7 +559,22 @@ server <- function(input, output, session) {
     if (!is.null(user_id) && user_id != "") {
       df <- df[df$user_id == user_id, , drop = FALSE]
     }
-    df
+    DT::datatable(
+      df,
+      options = list(
+        scrollX = TRUE,  # Enable horizontal scrolling
+        scrollY = "400px",  # Enable vertical scrolling with fixed height
+        pageLength = 25,  # Show 25 rows per page
+        lengthMenu = c(10, 25, 50, 100),  # Page length options
+        autoWidth = FALSE,  # Don't auto-adjust column widths
+        columnDefs = list(
+          list(targets = "_all", className = "dt-center")  # Center align all columns
+        )
+      ),
+      rownames = FALSE,  # Don't show row numbers
+      filter = "top",  # Add filter boxes at the top
+      selection = "single"  # Allow single row selection
+    )
   })
 
   # After successful scenario save, fetch the offers table and user IDs
@@ -529,9 +613,16 @@ server <- function(input, output, session) {
         # Set the scenario saved flag
         values$scenario_saved <- TRUE
         
-        # Fetch the updated offers table from backend to show the saved data
+        # Fetch the updated offers table from backend to show the saved data (user IDs will be updated automatically)
         fetch_and_update_offers()
-        fetch_and_update_user_ids()
+        
+        # Explicitly update the selectizeInput for selected_users_for_offers
+        # This ensures the dropdown is populated with the correct user IDs from the saved scenario
+        if (!is.null(values$user_ids) && length(values$user_ids) > 0) {
+          updateSelectizeInput(session, "selected_users_for_offers", choices = values$user_ids, server = TRUE)
+          print(paste("Updated selected_users_for_offers with", length(values$user_ids), "user IDs after scenario save"))
+          write(paste("Updated selected_users_for_offers with", length(values$user_ids), "user IDs after scenario save"), "/tmp/shiny_debug.log", append = TRUE)
+        }
         
       } else {
         removeNotification("save_scenario")
@@ -547,25 +638,123 @@ server <- function(input, output, session) {
 
   # --- TAB 2: STRATEGY SELECTION ---
   
-  # Calculate days until travel
-  output$days_until_travel <- renderText({
-    if (is.null(values$scenario_data)) return("--")
-    as.character(values$scenario_data$market_conditions$days_until_travel)
+  # Calculate Market Conditions button handler
+  observeEvent(input$calculate_market_conditions_btn, {
+    showNotification("Calculating market conditions...", id = "market_calc", duration = NULL, type = "message")
+    
+    tryCatch({
+      res <- POST(paste0(API_URL, "/calculate_market_conditions"))
+      
+      if (http_status(res)$category == "Success") {
+        result <- fromJSON(content(res, "text", encoding = "UTF-8"))
+        values$market_conditions <- result
+        
+        # Auto-update the market demand override if set to auto
+        if (input$market_demand_override == "auto") {
+          updateSelectInput(session, "market_demand_override", selected = result$demand_category)
+        }
+        
+        removeNotification("market_calc")
+        showNotification("Market conditions calculated successfully!", type = "default")
+      } else {
+        removeNotification("market_calc")
+        showNotification("Error calculating market conditions", type = "error")
+      }
+    }, error = function(e) {
+      removeNotification("market_calc")
+      showNotification(paste("Error:", e$message), type = "error")
+    })
   })
   
-  # Market analysis
-  output$market_analysis <- renderText({
+  # Market Demand Index output
+  output$market_demand_index <- renderText({
+    if (is.null(values$market_conditions)) return("--")
+    values$market_conditions$market_demand_index
+  })
+  
+  # Demand Category output
+  output$demand_category <- renderText({
+    if (is.null(values$market_conditions)) return("--")
+    values$market_conditions$demand_category
+  })
+  
+  # Price Level outputs
+  output$price_level_value <- renderText({
+    if (is.null(values$market_conditions)) return("--")
+    paste0("$", values$market_conditions$signals$price_level$value)
+  })
+  
+  output$price_level_norm <- renderText({
+    if (is.null(values$market_conditions)) return("--")
+    values$market_conditions$signals$price_level$normalized
+  })
+  
+  # Booking Urgency outputs
+  output$booking_urgency_value <- renderText({
+    if (is.null(values$market_conditions)) return("--")
+    paste0(values$market_conditions$signals$booking_urgency$value, " days")
+  })
+  
+  output$booking_urgency_norm <- renderText({
+    if (is.null(values$market_conditions)) return("--")
+    values$market_conditions$signals$booking_urgency$normalized
+  })
+  
+  # Price Volatility outputs
+  output$price_volatility_value <- renderText({
+    if (is.null(values$market_conditions)) return("--")
+    values$market_conditions$signals$price_volatility$value
+  })
+  
+  output$price_volatility_norm <- renderText({
+    if (is.null(values$market_conditions)) return("--")
+    values$market_conditions$signals$price_volatility$normalized
+  })
+  
+  # Price Trend outputs
+  output$price_trend_value <- renderText({
+    if (is.null(values$market_conditions)) return("--")
+    paste0(values$market_conditions$signals$price_trend$value, "%")
+  })
+  
+  output$price_trend_direction <- renderText({
+    if (is.null(values$market_conditions)) return("--")
+    values$market_conditions$signals$price_trend$direction
+  })
+  
+  # Competition Density outputs
+  output$competition_density_value <- renderText({
+    if (is.null(values$market_conditions)) return("--")
+    paste0(values$market_conditions$signals$competition_density$unique_hotels, " × ", 
+           values$market_conditions$signals$competition_density$unique_partners)
+  })
+  
+  output$competition_density_norm <- renderText({
+    if (is.null(values$market_conditions)) return("--")
+    values$market_conditions$signals$competition_density$normalized
+  })
+  
+  # Market Insights output
+  output$market_insights <- renderText({
     if (is.null(values$market_conditions)) return("No market data available")
     
-    mc <- values$market_conditions
-    paste(
-      paste("Destination:", mc$destination),
-      paste("Market Demand:", mc$market_demand),
-      paste("Demand Score:", round(mc$demand_score, 2)),
-      paste("Seasonal Factor:", round(mc$seasonal_factor, 2)),
-      paste("Price Volatility:", round(mc$price_volatility, 2)),
-      paste("Booking Velocity:", round(mc$booking_velocity, 2)),
-      sep = "\n"
+    insights <- values$market_conditions$market_insights
+    summary <- values$market_conditions$data_summary
+    
+          paste(
+        "Market Demand Index:", values$market_conditions$market_demand_index,
+        "\nDemand Category:", values$market_conditions$demand_category,
+        "\n\nMarket Insights:",
+        "\n• Price Trend:", insights$price_trend,
+        "\n• Price Volatility:", insights$price_volatility,
+        "\n• Competition Level:", insights$competition_level,
+        "\n• Booking Pressure:", insights$booking_pressure,
+      "\n\nData Summary:",
+      "\n• Total Offers:", summary$total_offers,
+      "\n• Unique Hotels:", summary$unique_hotels,
+      "\n• Unique Partners:", summary$unique_partners,
+      "\n• Price Range:", summary$price_range,
+      "\n• Days Range:", summary$days_range
     )
   })
   
@@ -820,6 +1009,11 @@ server <- function(input, output, session) {
   })
   
   # MAB simulation plot
+  output$bandit_sim_results_table <- DT::renderDataTable({
+    req(values$bandit_sim_results_table)
+    DT::datatable(values$bandit_sim_results_table, options = list(scrollX = TRUE, pageLength = 10), rownames = FALSE)
+  })
+
   output$mab_simulation_plot <- renderPlotly({
     if (is.null(values$mab_results)) {
       p <- ggplot() + 
@@ -869,26 +1063,74 @@ server <- function(input, output, session) {
     )
   })
   
-  # Price trends plot (placeholder)
+  # Price trends plot using real data from sampled offers
   output$price_trends_plot <- renderPlotly({
-    # Generate sample price trend data
-    dates <- seq(from = Sys.Date() - 30, to = Sys.Date(), by = "day")
-    prices <- 150 + cumsum(rnorm(length(dates), 0, 5))
+    if (is.null(values$user_offers) || length(values$user_offers) == 0) {
+      p <- ggplot() + 
+        geom_text(aes(x = 0.5, y = 0.5, label = "Load sampled data to see price trends"), size = 4) +
+        theme_void()
+      return(ggplotly(p))
+    }
     
-    plot_data <- data.frame(
-      Date = dates,
-      Average_Price = prices
-    )
+    # Use the sampled offers data to show price history trends
+    price_history_data <- data.frame()
     
-    p <- ggplot(plot_data, aes(x = Date, y = Average_Price)) +
-      geom_line(color = "#3498db", size = 1.2) +
-      geom_smooth(method = "loess", se = TRUE, alpha = 0.3) +
-      labs(
-        title = "30-Day Price Trend Analysis",
-        x = "Date",
-        y = "Average Price ($)"
-      ) +
-      theme_minimal()
+    for (offer in values$user_offers) {
+      tryCatch({
+        if (!is.null(offer$price_history_24h)) {
+          # Parse the 24-hour price history
+          price_history <- fromJSON(offer$price_history_24h)
+          if (length(price_history) == 24) {
+            history_df <- data.frame(
+              Hour = 0:23,
+              Price = price_history,
+              Hotel = offer$hotel_name,
+              Partner = offer$partner_name
+            )
+            price_history_data <- rbind(price_history_data, history_df)
+          }
+        }
+      }, error = function(e) {
+        # Skip if parsing fails
+      })
+    }
+    
+    if (nrow(price_history_data) == 0) {
+      # Fallback to price distribution if no price history available
+      offers_df <- do.call(rbind, lapply(values$user_offers, function(offer) {
+        data.frame(
+          Price = offer$price_per_night,
+          Hotel = offer$hotel_name,
+          Partner = offer$partner_name
+        )
+      }))
+      
+      p <- ggplot(offers_df, aes(x = Price)) +
+        geom_histogram(bins = 20, fill = "#3498db", alpha = 0.7) +
+        geom_vline(aes(xintercept = mean(Price)), color = "#e74c3c", linetype = "dashed", size = 1) +
+        labs(
+          title = "Price Distribution from Sampled Offers",
+          subtitle = paste("Average Price: $", round(mean(offers_df$Price), 2)),
+          x = "Price per Night ($)",
+          y = "Number of Offers"
+        ) +
+        theme_minimal()
+    } else {
+      # Show 24-hour price trends
+      p <- ggplot(price_history_data, aes(x = Hour, y = Price, color = Partner)) +
+        geom_line(alpha = 0.7) +
+        geom_point(alpha = 0.5, size = 1) +
+        labs(
+          title = "24-Hour Price Trends from Sampled Offers",
+          subtitle = paste("Showing", length(unique(price_history_data$Hotel)), "hotels across", 
+                          length(unique(price_history_data$Partner)), "partners"),
+          x = "Hour (Past 24 Hours)",
+          y = "Price ($)",
+          color = "Partner"
+        ) +
+        theme_minimal() +
+        theme(legend.position = "bottom")
+    }
     
     ggplotly(p)
   })
@@ -906,6 +1148,404 @@ server <- function(input, output, session) {
     
     datatable(competitors_df, options = list(pageLength = 10, dom = 't'), rownames = FALSE)
   })
+
+# Helper to fetch all unique users from trial_sampled_offers
+fetch_all_users <- function() {
+  res <- GET(paste0(API_URL, "/trial_user_ids"))
+  if (http_status(res)$category == "Success") {
+    user_ids <- fromJSON(content(res, "text", encoding = "UTF-8"))$user_ids
+    return(user_ids)
+  } else {
+    return(NULL)
+  }
+}
+
+# Helper to fetch user profile
+fetch_user_profile <- function(user_id) {
+  res <- GET(paste0(API_URL, "/user_profile/", user_id))
+  if (http_status(res)$category == "Success") {
+    return(fromJSON(content(res, "text", encoding = "UTF-8"))$profile)
+  } else {
+    return(NULL)
+  }
+}
+
+# Helper to fetch dynamic price sensitivity
+fetch_dynamic_sensitivity <- function(user_id) {
+  res <- GET(paste0(API_URL, "/dynamic_price_sensitivity/", user_id))
+  if (http_status(res)$category == "Success") {
+    return(fromJSON(content(res, "text", encoding = "UTF-8")))
+  } else {
+    return(NULL)
+  }
+}
+
+# Helper to fetch market state
+fetch_market_state <- function(location) {
+  res <- GET(paste0(API_URL, "/market_state/", URLencode(location)))
+  if (http_status(res)$category == "Success") {
+    return(fromJSON(content(res, "text", encoding = "UTF-8")))
+  } else {
+    return(NULL)
+  }
+}
+
+# Reactive value to store user/market table
+values$user_market_table <- NULL
+
+observeEvent(input$refresh_user_market_btn, {
+  showModal(modalDialog("Loading user and market data...", footer = NULL))
+  user_ids <- fetch_all_users()
+  if (is.null(user_ids) || length(user_ids) == 0) {
+    values$user_market_table <- NULL
+    removeModal()
+    return()
+  }
+  user_rows <- list()
+  for (uid in user_ids) {
+    profile <- fetch_user_profile(uid)
+    dyn_sens <- fetch_dynamic_sensitivity(uid)
+    if (is.null(profile) || is.null(dyn_sens)) next
+    market_state <- fetch_market_state(dyn_sens$location)
+    if (is.null(market_state)) next
+    user_rows[[length(user_rows)+1]] <- data.frame(
+      UserID = uid,
+      Location = dyn_sens$location,
+      UserClass = profile$user_type,
+      PreferredAmenities = profile$preferred_amenities,
+      PriceTrend = round(market_state$price_trend * 100, 2),
+      Volatility = round(market_state$price_volatility, 2),
+      Competition = market_state$competition_density,
+      Urgency = round(market_state$normalized$urgency, 2),
+      DemandIndex = round(market_state$demand_index, 2),
+      BaseSensitivity = round(dyn_sens$base_price_sensitivity, 2),
+      DynamicSensitivity = round(dyn_sens$dynamic_price_sensitivity, 2)
+    )
+  }
+  if (length(user_rows) > 0) {
+    values$user_market_table <- do.call(rbind, user_rows)
+  } else {
+    values$user_market_table <- NULL
+  }
+  removeModal()
+})
+
+output$user_market_table <- DT::renderDataTable({
+  if (is.null(values$user_market_table)) return(NULL)
+  datatable(values$user_market_table, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE)
+})
+
+# Auto-refresh on app start
+observe({
+  if (is.null(values$user_market_table)) {
+    isolate({
+      shinyjs::click("refresh_user_market_btn")
+    })
+  }
+})
+
+# Update user dropdown choices when user_market_table is loaded
+observe({
+  if (!is.null(values$user_market_table)) {
+    updateSelectInput(session, "selected_user_for_offers", choices = values$user_market_table$UserID)
+  }
+})
+
+# Reactive value to store offers/probabilities for selected user
+values$offers_prob_table <- NULL
+
+observeEvent(input$selected_user_for_offers, {
+  if (is.null(input$selected_user_for_offers) || input$selected_user_for_offers == "") {
+    values$offers_prob_table <- NULL
+    output$offers_loading_status <- renderText("")
+    return()
+  }
+  output$offers_loading_status <- renderText("Loading offers and probabilities...")
+  user_id <- input$selected_user_for_offers
+  res <- GET(paste0(API_URL, "/offer_probabilities/", user_id))
+  if (http_status(res)$category == "Success") {
+    offers <- fromJSON(content(res, "text", encoding = "UTF-8"))$offers
+    if (!is.null(offers) && length(offers) > 0) {
+      # Optionally fetch more offer details from trial_sampled_offers.csv if needed
+      offers_df <- as.data.frame(offers)
+      values$offers_prob_table <- offers_df
+      output$offers_loading_status <- renderText("")
+    } else {
+      values$offers_prob_table <- NULL
+      output$offers_loading_status <- renderText("No offers found for this user.")
+    }
+  } else {
+    values$offers_prob_table <- NULL
+    output$offers_loading_status <- renderText("Error fetching offers.")
+  }
+})
+
+output$offers_prob_table <- DT::renderDataTable({
+  if (is.null(values$offers_prob_table)) return(NULL)
+  datatable(values$offers_prob_table, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE) %>%
+    formatPercentage(c("click_probability", "booking_probability"), 2)
+})
+
+values$bandit_sim_table <- NULL
+values$bandit_sim_summary <- NULL
+values$bandit_sim_top <- NULL
+
+observeEvent(input$run_bandit_sim_btn, {
+  output$bandit_sim_status <- renderText("Running bandit simulation, please wait...")
+  showModal(modalDialog("Running simulation... this may take a moment.", footer = NULL))
+
+  tryCatch({
+    # Step 1: Run the simulation
+    res_run <- POST(paste0(API_URL, "/run_bandit_simulation"))
+    if (http_status(res_run)$category != "Success") {
+      stop("Failed to run bandit simulation on backend.")
+    }
+
+    # Step 2: Fetch the results
+    res_data <- GET(paste0(API_URL, "/bandit_simulation_results"))
+    if (http_status(res_data)$category != "Success") {
+      stop("Failed to fetch simulation results.")
+    }
+
+    results <- fromJSON(content(res_data, "text", encoding = "UTF-8"))
+    if (is.null(results$data) || nrow(as.data.frame(results$data)) == 0) {
+      stop("No results returned from simulation.")
+    }
+
+    # Data is pivoted, reshape it for ggplot
+    df_wide <- as.data.frame(results$data)
+    if (!"rank" %in% names(df_wide)) {
+      stop("Data from backend is missing 'rank' column.")
+    }
+
+    df_long <- tidyr::pivot_longer(df_wide, cols = -rank, names_to = "user_id", values_to = "probability_of_click")
+    
+    values$bandit_results <- df_long
+    values$bandit_sim_results_table <- df_wide # For table view
+
+    # Save the results to a CSV file
+    results_path <- file.path("..", "data", "bandit_simulation_results.csv")
+    readr::write_csv(df_wide, results_path)
+    showNotification("Bandit simulation results have been updated and saved.", type = "message")
+
+    output$bandit_sim_status <- renderText("Simulation complete. Results loaded.")
+    showNotification("Bandit simulation results loaded successfully.", type = "message")
+
+  }, error = function(e) {
+    output$bandit_sim_status <- renderText(paste("Error:", e$message))
+    showNotification(e$message, type = "error")
+  }, finally = {
+    removeModal()
+  })
+})
+
+# Add a reactive value to store the CSV data
+values$bandit_sim_csv <- NULL
+
+# When the simulation button is clicked, read the CSV directly
+observeEvent(input$run_bandit_sim_btn, {
+  csv_path <- "/data/bandit_simulation_results.csv"  # Adjust if your mount path is different
+  if (file.exists(csv_path)) {
+    df <- readr::read_csv(csv_path, col_types = readr::cols(.default = 'c'))
+    # Convert numeric columns
+    num_cols <- c("rank", "probability_of_click", "true_click_prob", "preference_score", "normalized_probability_of_click")
+    for (col in num_cols) {
+      if (col %in% names(df)) df[[col]] <- as.numeric(df[[col]])
+    }
+    values$bandit_sim_csv <- df
+    showNotification("Loaded bandit_simulation_results.csv from disk", type = "message")
+  } else {
+    values$bandit_sim_csv <- NULL
+    showNotification("bandit_simulation_results.csv not found on disk", type = "error")
+  }
+})
+
+# Render the DT table
+output$bandit_sim_results_table <- DT::renderDataTable({
+  data <- values$bandit_sim_csv 
+  if (is.null(data) || !is.data.frame(data) || nrow(data) == 0) {
+    return(NULL)
+  }
+  DT::datatable(data, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE)
+})
+
+output$bandit_sim_table <- DT::renderDataTable({
+  if (is.null(values$bandit_sim_table)) return(NULL)
+  datatable(values$bandit_sim_table, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE) %>%
+    formatPercentage(c("probability_of_click", "true_click_prob"), 2)
+})
+
+output$bandit_sim_summary <- renderPrint({
+  if (is.null(values$bandit_sim_summary)) return(NULL)
+  s <- values$bandit_sim_summary
+  cat(
+    "Bandit Simulation Summary:\n",
+    "Total Users:", s$total_users, "\n",
+    "Total Offers:", s$total_offers, "\n",
+    "Total Arms:", s$total_arms, "\n",
+    "Clicks per Arm:", s$clicks_per_arm, "\n",
+    "CSV Path:", s$csv_path, "\n\n"
+  )
+  
+  if (!is.null(values$bandit_sim_user_sums)) {
+    cat("User Probability Sums (should be ~1.0 for each user):\n")
+    for (user_id in names(values$bandit_sim_user_sums)) {
+      cat(user_id, ":", round(values$bandit_sim_user_sums[[user_id]], 3), "\n")
+    }
+  }
+})
+
+output$bandit_sim_barplot <- renderPlotly({
+  if (is.null(values$bandit_results)) return(NULL)
+  
+  p <- ggplot(values$bandit_results, aes(x = factor(rank), y = probability_of_click, fill = user_id)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    labs(
+      title = "Bandit Simulation: Click Probability by Rank",
+      x = "Rank",
+      y = "Probability of Click",
+      fill = "User ID"
+    ) +
+    theme_minimal() +
+    scale_fill_brewer(palette = "Set2")
+  
+  ggplotly(p)
+})
+
+# --- Update Offers & Probabilities for Selected User ---
+# 1. Allow multi-select for user IDs
+# 2. When users are selected, show offers from trial_sampled_offers.csv filtered by those users
+# 3. After simulation, update table with click probabilities, price sensitivity, and market state
+
+# UI: Change selectInput to selectizeInput with multiple=TRUE
+observeEvent(input$selected_users_for_offers, {
+  user_ids <- input$selected_users_for_offers
+  if (is.null(user_ids) || length(user_ids) == 0) {
+    values$user_offers_multi <- NULL
+    output$offers_loading_status <- renderText({"No user(s) selected"})
+    return()
+  }
+  res <- httr::GET(paste0(API_URL, "/trial_sampled_offers"))
+  offers_data <- jsonlite::fromJSON(httr::content(res, as = "text"))
+  if (is.null(offers_data$data) || length(offers_data$data) == 0) {
+    values$user_offers_multi <- NULL
+    output$offers_loading_status <- renderText({"No offers found for selected user(s)"})
+    return()
+  }
+  filtered_offers <- dplyr::filter(as.data.frame(offers_data$data), user_id %in% user_ids)
+  values$user_offers_multi <- filtered_offers
+  output$offers_loading_status <- renderText({paste(nrow(filtered_offers), "offers loaded for", length(user_ids), "user(s)")})
+})
+
+# Render the offers table
+output$offers_table_multi <- DT::renderDataTable({
+  data <- values$user_offers_multi
+  if (is.null(data) || !is.data.frame(data) || nrow(data) == 0) {
+    showNotification("No offers data to display.", type = "error")
+    return(NULL)
+  }
+  DT::datatable(data, options = list(pageLength = 10, scrollX = TRUE), server = FALSE)
+})
+
+# After simulation, update offers table with click probabilities, price sensitivity, and market state
+# (Assume simulation results are loaded into values$bandit_results)
+observeEvent(values$bandit_results, {
+  if (is.null(values$user_offers_multi) || is.null(values$bandit_results)) return()
+  offers <- values$user_offers_multi
+  bandit <- values$bandit_results
+  # Merge click_probability by user_id and offer_id
+  offers <- dplyr::left_join(offers, bandit, by = c("user_id", "offer_id"))
+  values$user_offers_multi <- offers
+})
+
+# --- Robust checks for empty vectors/data frames in merging logic ---
+observeEvent(input$selected_users_for_offers, {
+  user_ids <- input$selected_users_for_offers
+  if (is.null(user_ids) || length(user_ids) == 0) {
+    values$merged_offers <- NULL
+    output$offers_loading_status <- renderText({"No user(s) selected"})
+    return()
+  }
+  res <- tryCatch(httr::GET(paste0(API_URL, "/trial_sampled_offers")), error = function(e) NULL)
+  if (is.null(res) || httr::status_code(res) != 200) {
+    values$merged_offers <- NULL
+    output$offers_loading_status <- renderText({"Failed to fetch offers from backend."})
+    showNotification("Failed to fetch offers from backend.", type = "error")
+    return()
+  }
+  offers_data <- tryCatch(jsonlite::fromJSON(httr::content(res, as = "text")), error = function(e) NULL)
+  if (is.null(offers_data$data) || length(offers_data$data) == 0) {
+    values$merged_offers <- NULL
+    output$offers_loading_status <- renderText({"No offers found for selected user(s)"})
+    showNotification("No offers found for selected user(s)", type = "error")
+    return()
+  }
+  filtered_offers <- dplyr::filter(as.data.frame(offers_data$data), user_id %in% user_ids)
+  if (nrow(filtered_offers) == 0) {
+    values$merged_offers <- NULL
+    output$offers_loading_status <- renderText({"No offers found for selected user(s)"})
+    showNotification("No offers found for selected user(s)", type = "error")
+    return()
+  }
+  # For each user, fetch price sensitivity and market state, and append to offers
+  merged <- filtered_offers
+  merged$price_sensitivity <- NA
+  merged$market_state <- NA
+  merged$booking_probability <- NA
+  for (uid in unique(filtered_offers$user_id)) {
+    dps <- tryCatch(jsonlite::fromJSON(httr::content(httr::GET(paste0(API_URL, "/dynamic_price_sensitivity/", uid)), as = "text")), error = function(e) NULL)
+    locs <- filtered_offers$location[filtered_offers$user_id == uid]
+    if (length(locs) == 0) {
+      ms <- NULL
+    } else {
+      ms <- tryCatch(jsonlite::fromJSON(httr::content(httr::GET(paste0(API_URL, "/market_state/", locs[1])), as = "text")), error = function(e) NULL)
+    }
+    merged$price_sensitivity[merged$user_id == uid] <- if (!is.null(dps)) dps$dynamic_price_sensitivity else NA
+    merged$market_state[merged$user_id == uid] <- if (!is.null(ms)) ms$demand_index else NA
+    # Optionally, fetch booking probability from offer_probabilities endpoint
+    opp <- tryCatch(jsonlite::fromJSON(httr::content(httr::GET(paste0(API_URL, "/offer_probabilities/", uid)), as = "text")), error = function(e) NULL)
+    if (!is.null(opp) && !is.null(opp$offers)) {
+      for (i in 1:nrow(merged[merged$user_id == uid,])) {
+        oid <- merged$offer_id[merged$user_id == uid][i]
+        # Defensive: check opp$offers is a list and oid is not NA
+        if (is.na(oid) || length(opp$offers) == 0) next
+        idx <- which(sapply(opp$offers, function(x) x$offer_id == oid))
+        if (length(idx) == 0) next
+        bp <- opp$offers[[idx]]$booking_probability
+        merged$booking_probability[merged$user_id == uid & merged$offer_id == oid] <- bp
+      }
+    }
+  }
+  values$merged_offers <- merged
+  output$offers_loading_status <- renderText({paste(nrow(merged), "offers loaded for", length(user_ids), "user(s)")})
+})
+
+output$merged_offers_table <- DT::renderDataTable({
+  data <- values$merged_offers
+  if (is.null(data) || !is.data.frame(data) || nrow(data) == 0) {
+    showNotification("No offers data to display.", type = "error")
+    return(NULL)
+  }
+  DT::datatable(data, options = list(pageLength = 10, scrollX = TRUE), server = FALSE)
+})
+
+# After simulation, update merged_offers with click probabilities from bandit results
+observeEvent(values$bandit_results, {
+  if (is.null(values$merged_offers) || is.null(values$bandit_results)) return()
+  offers <- values$merged_offers
+  bandit <- values$bandit_results
+  offers <- dplyr::left_join(offers, bandit, by = c("user_id", "offer_id"))
+  values$merged_offers <- offers
+})
+
+# Ensure user ID dropdown for offers is populated on app load or after sampling
+observe({
+  # Use the user IDs from offers data instead of calling a separate endpoint
+  if (!is.null(values$user_ids) && length(values$user_ids) > 0) {
+    updateSelectizeInput(session, "selected_users_for_offers", choices = values$user_ids, server = TRUE)
+  }
+})
+
 }
 
 # Run the application

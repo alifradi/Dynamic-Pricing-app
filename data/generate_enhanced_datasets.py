@@ -162,8 +162,12 @@ class HotelDatasetGenerator:
             price_diff = np.random.normal(0, price_per_night * 0.02)
             trivago_price = round(price_per_night + price_diff, 2)
             
-            # Generate price fluctuation data for past 24 hours
-            price_history = self._generate_price_fluctuation(price_per_night, base_date)
+            # Generate random variance factor for this specific offer (hotel_id, partner)
+            # Variance ranges from 0.005 (low volatility) to 0.025 (high volatility)
+            variance_factor = np.random.uniform(0.005, 0.025)
+            
+            # Generate price fluctuation data for past 24 hours with custom variance
+            price_history = self._generate_price_fluctuation(price_per_night, base_date, variance_factor)
             
             offer = {
                 "offer_id": f"O{i+1:06d}",
@@ -184,6 +188,7 @@ class HotelDatasetGenerator:
                 "price_fluctuation_mean": round(np.mean(price_history), 2),
                 "price_fluctuation_variance": round(np.var(price_history), 2),
                 "price_history_24h": json.dumps([round(p, 2) for p in price_history]),
+                "variance_factor": round(variance_factor, 4),  # Store the variance factor used
                 "last_updated": (base_date + timedelta(hours=24)).isoformat()
             }
             offers.append(offer)
@@ -222,14 +227,14 @@ class HotelDatasetGenerator:
         }
         return multipliers.get(partner, np.random.uniform(0.9, 1.1))
     
-    def _generate_price_fluctuation(self, base_price, start_date):
-        """Generate hourly price fluctuation for past 24 hours"""
+    def _generate_price_fluctuation(self, base_price, start_date, variance_factor=0.01):
+        """Generate hourly price fluctuation for past 24 hours with custom variance"""
         prices = []
         current_price = base_price
         
         for hour in range(24):
-            # Random walk with mean reversion
-            change = np.random.normal(0, base_price * 0.01)
+            # Random walk with mean reversion and custom variance
+            change = np.random.normal(0, base_price * variance_factor)
             current_price += change
             
             # Mean reversion

@@ -4,6 +4,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import random
 import uuid
+import json
 from datetime import date, datetime, timedelta
 from typing import List, Dict, Any, Optional
 import numpy as np
@@ -21,6 +22,8 @@ from data_models.models import (
     UserType, MarketDemand, RoomType
 )
 from data_models.data_generator import DataGenerator
+
+from collections import defaultdict
 
 app = FastAPI(
     title="Enhanced Hotel Ranking Simulation API",
@@ -1030,6 +1033,554 @@ def get_latest_scenario():
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error reading latest scenario: {str(e)}")
+
+@app.post("/calculate_market_conditions")
+def calculate_market_conditions():
+    """Calculate enhanced market conditions using four signals from trial_sampled_offers.csv"""
+    try:
+        # Load the trial sampled offers data
+        file_path = os.path.join('data', 'trial_sampled_offers.csv')
+        if not os.path.exists(file_path):
+            return {"error": "No trial data available"}
+        
+        df = pd.read_csv(file_path)
+        
+        if len(df) == 0:
+            return {"error": "No offers data available"}
+        
+        # Step 1: Calculate the four signals
+        
+        # 1. Price Level (avg_price) - average price across all offers
+        avg_price = df['price_per_night'].mean()
+        
+        # 2. Booking Urgency (days_to_go) - average days to go
+        avg_days_to_go = df['days_to_go'].mean()
+        
+        # 3. Price Volatility - analyze price_history_24h for trend and volatility
+        price_trends = []
+        price_volatilities = []
+        
+        for _, row in df.iterrows():
+            try:
+                # Parse the 24-hour price history
+                price_history = json.loads(row['price_history_24h'])
+                if len(price_history) >= 2:
+                    # Calculate trend (positive = increasing, negative = decreasing)
+                    trend = (price_history[-1] - price_history[0]) / price_history[0]
+                    price_trends.append(trend)
+                    
+                    # Calculate volatility (standard deviation of price changes)
+                    price_changes = [price_history[i] - price_history[i-1] for i in range(1, len(price_history))]
+                    volatility = np.std(price_changes) if price_changes else 0
+                    price_volatilities.append(volatility)
+            except (json.JSONDecodeError, KeyError, TypeError):
+                # Fallback to variance if price_history_24h is not available
+                price_trends.append(0)
+                price_volatilities.append(row.get('price_fluctuation_variance', 0))
+        
+        avg_price_trend = np.mean(price_trends) if price_trends else 0
+        avg_price_volatility = np.mean(price_volatilities) if price_volatilities else 0
+        
+        # 4. Competition Density - calculate unique hotels and partners
+        unique_hotels = df['hotel_id'].nunique()
+        unique_partners = df['partner_name'].nunique()
+        competition_density = unique_hotels * unique_partners  # Total possible combinations
+        
+        # Step 2: Normalize all variables to 0-1 scale
+        # For price level: normalize based on typical hotel price ranges (50-500)
+        norm_avg_price = min(1.0, max(0.0, (avg_price - 50) / (500 - 50)))
+        
+        # For booking urgency: normalize days_to_go (1-365) and invert (closer = higher urgency)
+        norm_days_to_go = 1 - min(1.0, max(0.0, (avg_days_to_go - 1) / (365 - 1)))
+        
+        # For price volatility: normalize based on typical volatility ranges (0-50)
+        norm_price_volatility = min(1.0, max(0.0, avg_price_volatility / 50))
+        
+        # For price trend: normalize trend percentage (-0.5 to 0.5) to 0-1 scale
+        norm_price_trend = min(1.0, max(0.0, (avg_price_trend + 0.5) / 1.0))
+        
+        # For competition density: normalize based on typical ranges (1-100)
+        norm_competition_density = min(1.0, max(0.0, (competition_density - 1) / (100 - 1)))
+        
+        # Step 3: Calculate Market Demand Index with weights
+        w1, w2, w3, w4 = 0.25, 0.25, 0.2, 0.3  # Weights for each signal
+        market_demand_index = (
+            w1 * norm_avg_price +
+            w2 * norm_days_to_go +
+            w3 * norm_price_volatility +
+            w4 * norm_competition_density
+        )
+        
+        # Step 4: Discretize into categories using terciles
+        if market_demand_index < 0.33:
+            demand_category = "Low"
+        elif market_demand_index < 0.67:
+            demand_category = "Medium"
+        else:
+            demand_category = "High"
+        
+        # Additional market insights
+        market_insights = {
+            "price_trend": "Increasing" if avg_price_trend > 0.05 else "Decreasing" if avg_price_trend < -0.05 else "Stable",
+            "price_volatility": "High" if norm_price_volatility > 0.7 else "Low" if norm_price_volatility < 0.3 else "Moderate",
+            "competition_level": "Low" if norm_competition_density < 0.3 else "High" if norm_competition_density > 0.7 else "Medium",
+            "booking_pressure": "Low" if norm_days_to_go < 0.3 else "High" if norm_days_to_go > 0.7 else "Medium"
+        }
+        
+        return {
+            "market_demand_index": round(market_demand_index, 3),
+            "demand_category": demand_category,
+            "signals": {
+                "price_level": {
+                    "value": round(avg_price, 2),
+                    "normalized": round(norm_avg_price, 3),
+                    "weight": w1
+                },
+                "booking_urgency": {
+                    "value": round(avg_days_to_go, 1),
+                    "normalized": round(norm_days_to_go, 3),
+                    "weight": w2
+                },
+                "price_volatility": {
+                    "value": round(avg_price_volatility, 2),
+                    "normalized": round(norm_price_volatility, 3),
+                    "weight": w3
+                },
+                "price_trend": {
+                    "value": round(avg_price_trend * 100, 1),  # Convert to percentage
+                    "normalized": round(norm_price_trend, 3),
+                    "direction": "Increasing" if avg_price_trend > 0.05 else "Decreasing" if avg_price_trend < -0.05 else "Stable"
+                },
+                "competition_density": {
+                    "unique_hotels": unique_hotels,
+                    "unique_partners": unique_partners,
+                    "total_combinations": competition_density,
+                    "normalized": round(norm_competition_density, 3),
+                    "weight": w4
+                }
+            },
+            "market_insights": market_insights,
+            "data_summary": {
+                "total_offers": len(df),
+                "unique_hotels": unique_hotels,
+                "unique_partners": unique_partners,
+                "price_range": f"${df['price_per_night'].min():.2f} - ${df['price_per_night'].max():.2f}",
+                "days_range": f"{df['days_to_go'].min()} - {df['days_to_go'].max()} days"
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error calculating market conditions: {str(e)}")
+
+from collections import defaultdict
+
+@app.get("/market_state/{location}")
+def get_market_state(location: str):
+    """Aggregate real offer/user data to compute market state for a location (was destination)"""
+    import json
+    try:
+        offers_path = os.path.join('data', 'trial_sampled_offers.csv')
+        users_path = os.path.join('data', 'enhanced_user_profiles.csv')
+        if not os.path.exists(offers_path) or not os.path.exists(users_path):
+            return {"error": "Required data files not found"}
+        offers_df = pd.read_csv(offers_path)
+        users_df = pd.read_csv(users_path)
+        # Filter offers by location
+        offers = offers_df[offers_df['location'] == location]
+        if offers.empty:
+            return {"error": f"No offers found for location {location}"}
+        # Users for this location
+        user_ids = offers['user_id'].unique().tolist()
+        users = users_df[users_df['user_id'].isin(user_ids)]
+        # Calculate market state as before, but for this location
+        # Step 1: Calculate the four signals for this location
+        avg_price = offers['price_per_night'].mean()
+        avg_days_to_go = offers['days_to_go'].mean()
+        price_trends = []
+        price_volatilities = []
+        for _, row in offers.iterrows():
+            try:
+                price_history = json.loads(row['price_history_24h'])
+                if len(price_history) >= 2:
+                    trend = (price_history[-1] - price_history[0]) / price_history[0]
+                    price_trends.append(trend)
+                    price_changes = [price_history[i] - price_history[i-1] for i in range(1, len(price_history))]
+                    volatility = np.std(price_changes) if price_changes else 0
+                    price_volatilities.append(volatility)
+            except (json.JSONDecodeError, KeyError, TypeError):
+                price_trends.append(0)
+                price_volatilities.append(row.get('price_fluctuation_variance', 0))
+        avg_price_trend = np.mean(price_trends) if price_trends else 0
+        avg_price_volatility = np.mean(price_volatilities) if price_volatilities else 0
+        # Competition density: unique hotels x unique partners
+        competition_density = offers['hotel_id'].nunique() * offers['partner_name'].nunique()
+        # Demand index: composite
+        norm_price = min(1.0, max(0.0, avg_price / 1000))
+        norm_days_to_go = min(1.0, max(0.0, avg_days_to_go / 180))
+        norm_volatility = min(1.0, max(0.0, avg_price_volatility / 50))
+        norm_competition = min(1.0, max(0.0, competition_density / 100))
+        demand_index = 0.25 * norm_price + 0.25 * norm_days_to_go + 0.2 * norm_volatility + 0.3 * norm_competition
+        return {
+            "location": location,
+            "avg_price": avg_price,
+            "avg_days_to_go": avg_days_to_go,
+            "avg_price_trend": avg_price_trend,
+            "avg_price_volatility": avg_price_volatility,
+            "competition_density": competition_density,
+            "demand_index": demand_index,
+            "user_count": len(users),
+            "offer_count": len(offers)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error computing market state: {str(e)}")
+
+@app.get("/dynamic_price_sensitivity/{user_id}")
+def get_dynamic_price_sensitivity(user_id: str):
+    """Return dynamic price sensitivity for a user, combining base sensitivity, market state, and days to go."""
+    import json
+    import logging
+    try:
+        users_path = os.path.join('data', 'enhanced_user_profiles.csv')
+        offers_path = os.path.join('data', 'trial_sampled_offers.csv')
+        if not os.path.exists(users_path) or not os.path.exists(offers_path):
+            return {"error": "Required data files not found"}
+        users_df = pd.read_csv(users_path)
+        offers_df = pd.read_csv(offers_path)
+        user_row = users_df[users_df['user_id'] == user_id]
+        user_offers = offers_df[offers_df['user_id'] == user_id]
+        logging.info(f"[DPS] user_id={user_id}, user_row_empty={user_row.empty}, user_offers_empty={user_offers.empty}")
+        if user_row.empty:
+            return {"error": f"User {user_id} not found in enhanced_user_profiles.csv"}
+        if user_offers.empty:
+            return {"error": f"No offers found for user {user_id} in trial_sampled_offers.csv"}
+        # Get location from the first offer
+        location = user_offers.iloc[0].get('location', None)
+        logging.info(f"[DPS] user_id={user_id}, location={location}")
+        if location is None or str(location).strip() == "":
+            return {"error": f"No location found for user {user_id}'s offers"}
+        # Query market state for this location
+        from fastapi.testclient import TestClient
+        client = TestClient(app)
+        resp = client.get(f"/market_state/{location}")
+        if resp.status_code != 200:
+            return {"error": f"Market state not found for location {location}"}
+        market_state = resp.json()
+        # Use days_to_go from offers
+        avg_days_to_go = user_offers['days_to_go'].mean()
+        # Base sensitivity from user profile
+        base_sensitivity = float(user_row.iloc[0].get('price_sensitivity', 0.5))
+        # Combine into dynamic price sensitivity
+        volatility = market_state.get('avg_price_volatility', 0)
+        trend = market_state.get('avg_price_trend', 0)
+        dynamic_sensitivity = 0.4 * base_sensitivity + 0.2 * volatility + 0.2 * trend + 0.2 * (1 - avg_days_to_go / 180)
+        return {
+            "user_id": user_id,
+            "location": location,
+            "base_sensitivity": base_sensitivity,
+            "market_volatility": volatility,
+            "market_trend": trend,
+            "avg_days_to_go": avg_days_to_go,
+            "dynamic_price_sensitivity": dynamic_sensitivity
+        }
+    except Exception as e:
+        logging.exception(f"[DPS] Exception for user_id={user_id}")
+        return {"error": f"Exception: {str(e)}"}
+
+@app.get("/offer_probabilities/{user_id}")
+def get_offer_probabilities(user_id: str):
+    """Return click and booking probabilities for all offers for a user."""
+    import json
+    try:
+        users_path = os.path.join('data', 'enhanced_user_profiles.csv')
+        offers_path = os.path.join('data', 'trial_sampled_offers.csv')
+        if not os.path.exists(users_path) or not os.path.exists(offers_path):
+            return {"error": "Required data files not found"}
+        users_df = pd.read_csv(users_path)
+        offers_df = pd.read_csv(offers_path)
+        user_row = users_df[users_df['user_id'] == user_id]
+        user_offers = offers_df[offers_df['user_id'] == user_id]
+        if user_row.empty or user_offers.empty:
+            return {"error": f"No data for user {user_id}"}
+        user = user_row.iloc[0]
+        location = user_offers.iloc[0]['location']
+        # Query market state for this location
+        from fastapi.testclient import TestClient
+        client = TestClient(app)
+        resp = client.get(f"/market_state/{location}")
+        if resp.status_code != 200:
+            return {"error": f"Market state not found for location {location}"}
+        market_state = resp.json()
+        # Fetch dynamic price sensitivity for this user
+        dps_resp = client.get(f"/dynamic_price_sensitivity/{user_id}")
+        if dps_resp.status_code == 200:
+            dps_data = dps_resp.json()
+            dynamic_sensitivity = dps_data.get('dynamic_price_sensitivity', 0.5)
+        else:
+            dynamic_sensitivity = 0.5
+        # Calculate probabilities as before, but use location-based market state
+        # For each offer, calculate click and booking probability
+        results = []
+        for idx, offer in user_offers.iterrows():
+            # Click probability factors
+            loyalty = 1.0 if user['loyalty_status'] in ['Gold', 'Platinum'] else 0.7 if user['loyalty_status'] == 'Silver' else 0.5
+            price_score = max(0.1, 1 - dynamic_sensitivity * (offer['price_per_night'] / (user['budget_max'] + 1)))
+            days_to_go_score = max(0.1, 1 - abs(offer['days_to_go'] - 30) / 365)
+            # Service match (simple: 1 if offer includes any preferred amenity, else 0.7)
+            preferred_amenities = str(user['preferred_amenities']).split(',') if pd.notna(user['preferred_amenities']) else []
+            offer_services = str(offer.get('special_offers', '')).split(',') if pd.notna(offer.get('special_offers', '')) else []
+            service_match = 1.0 if any(a.strip() in offer_services for a in preferred_amenities) else 0.7
+            # Market state (use demand index from dynamic price sensitivity call)
+            market_factor = 1 - abs(market_state.get('demand_index', 0.5) - 0.5)
+            # Combine (simple weighted product)
+            click_prob = loyalty * price_score * days_to_go_score * service_match * market_factor
+            click_prob = min(max(click_prob, 0.01), 0.99)
+            # Booking probability factors
+            price_diff = offer['price_per_night'] - offer.get('trivago_price', offer['price_per_night'])
+            price_diff_score = max(0.1, 1 - abs(price_diff) / (user['budget_max'] + 1))
+            partner_policy = 1.0 if offer.get('cancellation_policy', '') == 'Free' else 0.8
+            brand_score = 1.0 if offer.get('partner_name', '') in ['Booking.com', 'Expedia'] else 0.9
+            hotel_rating = float(offer.get('star_rating', 3)) / 5.0
+            booking_prob = price_diff_score * partner_policy * brand_score * hotel_rating
+            booking_prob = min(max(booking_prob, 0.01), 0.99)
+            results.append({
+                "user_id": user_id,
+                "offer_id": offer['offer_id'] if 'offer_id' in offer else idx,
+                "offer_rank": offer['rank'] if 'rank' in offer else idx+1,
+                "click_probability": click_prob,
+                "booking_probability": booking_prob,
+                "loyalty": loyalty,
+                "price_score": price_score,
+                "days_to_go_score": days_to_go_score,
+                "service_match": service_match,
+                "market_factor": market_factor,
+                "price_diff_score": price_diff_score,
+                "partner_policy": partner_policy,
+                "brand_score": brand_score,
+                "hotel_rating": hotel_rating,
+                "dynamic_sensitivity": dynamic_sensitivity
+            })
+        return {"user_id": user_id, "location": location, "offers": results}
+    except Exception as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Error computing offer probabilities: {str(e)}")
+
+@app.get("/test_pandas")
+def test_pandas():
+    """Test endpoint to verify pandas is working"""
+    try:
+        import pandas as pd
+        import numpy as np
+        return {"message": "Pandas is working", "pd_version": pd.__version__, "np_version": np.__version__}
+    except Exception as e:
+        return {"error": f"Pandas test failed: {str(e)}"}
+
+@app.post("/run_bandit_simulation")
+def run_bandit_simulation():
+    """
+    Run bandit simulation according to specifications:
+    1. Consider offers in trial_sampled_offers.csv
+    2. For each user, for each offer, simulate all possible ranks (rank i among all possible offers for user)
+    3. Generate 1000 clicks for each arm-bandit (offer j at rank i for user U)
+    4. Use recursive average online formula for reward learning
+    5. Return table with user_id, offer_id, rank, probability of click, and list of rewards learnt
+    """
+    try:
+        # Explicit imports to avoid scoping issues
+        import pandas as pd
+        import numpy as np
+        import os
+        
+        # Read the offers data
+        offers_path = os.path.join('data', 'trial_sampled_offers.csv')
+        if not os.path.exists(offers_path):
+            return {"error": "trial_sampled_offers.csv not found"}
+        
+        # Load data using pandas
+        offers_df = pd.read_csv(offers_path)
+        if offers_df.empty:
+            return {"error": "No offers found in trial_sampled_offers.csv"}
+        
+        results = []
+        clicks_per_arm = 1000
+        
+        for user_id in offers_df['user_id'].unique():
+            user_offers = offers_df[offers_df['user_id'] == user_id].copy()
+            n_ranks = len(user_offers)
+            for _, offer in user_offers.iterrows():
+                offer_id = offer['offer_id']
+                base_prob = float(offer['preference_score'])
+                for rank in range(1, n_ranks + 1):
+                    # Simulate as if this offer is shown at this rank
+                    rank_factor = 1.0 / rank  # Higher rank (lower number) = higher probability
+                    true_click_prob = min(0.95, max(0.05, base_prob * rank_factor))
+                    # Simulate 1000 clicks using recursive average online formula
+                    rewards = []
+                    cumulative_avg = 0.0
+                    for click_num in range(1, clicks_per_arm + 1):
+                        click = 1 if np.random.random() < true_click_prob else 0
+                        rewards.append(click)
+                        cumulative_avg = cumulative_avg + (click - cumulative_avg) / click_num
+                    learned_probability = cumulative_avg
+                    results.append({
+                        'user_id': user_id,
+                        'offer_id': offer_id,
+                        'rank': rank,
+                        'probability_of_click': learned_probability,
+                        'rewards_learnt': rewards,
+                        'true_click_prob': true_click_prob,
+                        'preference_score': base_prob
+                    })
+        # Normalize probabilities per user per rank
+        import copy
+        user_rank_to_total_prob = {}
+        for r in results:
+            key = (r['user_id'], r['rank'])
+            user_rank_to_total_prob.setdefault(key, 0.0)
+            user_rank_to_total_prob[key] += r['probability_of_click']
+        normalized_results = []
+        for r in results:
+            key = (r['user_id'], r['rank'])
+            norm_prob = r['probability_of_click'] / user_rank_to_total_prob[key] if user_rank_to_total_prob[key] > 0 else 0.0
+            r_copy = copy.deepcopy(r)
+            r_copy['normalized_probability_of_click'] = norm_prob
+            normalized_results.append(r_copy)
+        # Save results to CSV
+        results_df = pd.DataFrame(normalized_results)
+        if not results_df.empty:
+            results_df['user_id'] = results_df['user_id'].astype(str)
+            results_df['offer_id'] = results_df['offer_id'].astype(str)
+            results_df['rank'] = results_df['rank'].astype(int)
+            results_df['probability_of_click'] = results_df['probability_of_click'].astype(float)
+            results_df['true_click_prob'] = results_df['true_click_prob'].astype(float)
+            results_df['preference_score'] = results_df['preference_score'].astype(float)
+            results_df['normalized_probability_of_click'] = results_df['normalized_probability_of_click'].astype(float).round(2)
+        csv_path = '/data/bandit_simulation_results.csv'
+        results_df.drop(columns=['rewards_learnt','probability_of_click','true_click_prob']).to_csv(csv_path, index=False)
+        # Calculate summary statistics
+        total_arms = len(normalized_results)
+        total_users = len(offers_df['user_id'].unique())
+        total_offers = len(offers_df['offer_id'].unique())
+        # Return results (including a sample of the normalized table for preview)
+        return {
+            'total_users': total_users,
+            'total_offers': total_offers,
+            'total_arms': total_arms,
+            'clicks_per_arm': clicks_per_arm,
+            'csv_path': csv_path,
+            'message': f"Bandit simulation completed. Generated {total_arms} arm-bandit results with {clicks_per_arm} clicks each.",
+            'sample_table': normalized_results[:5]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error running bandit simulation: {str(e)}")
+
+@app.get("/bandit_simulation_results")
+def get_bandit_simulation_results():
+    """Return the contents of bandit_simulation_results.csv as JSON, handling NaN/inf/null values."""
+    import os
+    import pandas as pd
+    import numpy as np
+    try:
+        file_path = os.path.join('data', 'bandit_simulation_results.csv')
+        if not os.path.exists(file_path):
+            return {"message": "No bandit_simulation_results.csv found", "data": []}
+        df = pd.read_csv(file_path)
+        df = df.fillna(0.0)
+        df = df.replace([np.inf, -np.inf], 0.0)
+        data = df.to_dict(orient='records')
+        for record in data:
+            for key, value in record.items():
+                if isinstance(value, float) and (np.isnan(value) or np.isinf(value)):
+                    record[key] = 0.0
+                elif value is None:
+                    record[key] = ""
+        return {"data": data, "records": len(data)}
+    except Exception as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Error reading bandit_simulation_results: {str(e)}")
+
+
+    try:
+        import pandas as pd
+        import numpy as np
+        import random
+        
+        # Load offers data
+        offers_df = pd.read_csv('data/trial_sampled_offers.csv')
+        
+        # Group offers by user_id and assign ranks
+        user_offers = {}
+        for user_id in offers_df['user_id'].unique():
+            user_offers[user_id] = offers_df[offers_df['user_id'] == user_id].copy()
+            # Sort by preference_score (higher is better) and assign ranks
+            user_offers[user_id] = user_offers[user_id].sort_values('preference_score', ascending=False)
+            user_offers[user_id]['rank'] = range(1, len(user_offers[user_id]) + 1)
+        
+        results = []
+        
+        # For each user and their offers
+        for user_id, user_df in user_offers.items():
+            # For each offer (arm) at each rank
+            for _, offer in user_df.iterrows():
+                offer_id = offer['offer_id']
+                rank = offer['rank']
+                
+                # Initialize reward learning with recursive average online formula
+                # R_new = R_old + (reward - R_old) / n
+                cumulative_reward = 0
+                n_clicks = 0
+                rewards_history = []
+                
+                # Simulate 1000 clicks for this arm-bandit
+                for click in range(1000):
+                    # Generate reward based on offer characteristics
+                    # Higher preference_score, lower price, better reviews = higher reward probability
+                    base_reward_prob = min(0.8, max(0.1, offer['preference_score']))
+                    
+                    # Add rank penalty (higher rank = lower probability)
+                    rank_penalty = 1.0 / rank
+                    reward_prob = base_reward_prob * rank_penalty
+                    
+                    # Add some randomness
+                    reward_prob = min(0.9, max(0.05, reward_prob + random.uniform(-0.1, 0.1)))
+                    
+                    # Generate reward (1 for click, 0 for no click)
+                    reward = 1 if random.random() < reward_prob else 0
+                    
+                    # Update cumulative reward using recursive average online formula
+                    n_clicks += 1
+                    cumulative_reward = cumulative_reward + (reward - cumulative_reward) / n_clicks
+                    rewards_history.append(cumulative_reward)
+                
+                # Calculate final click probability
+                click_probability = cumulative_reward
+                
+                results.append({
+                    'user_id': user_id,
+                    'offer_id': offer_id,
+                    'rank': rank,
+                    'click_probability': round(click_probability, 4),
+                    'rewards_learned': [round(r, 4) for r in rewards_history[::100]]  # Sample every 100th reward
+                })
+        
+        # Normalize probabilities to sum to 1 for each user
+        for user_id in user_offers.keys():
+            user_results = [r for r in results if r['user_id'] == user_id]
+            total_prob = sum(r['click_probability'] for r in user_results)
+            
+            if total_prob > 0:
+                for result in user_results:
+                    if result['user_id'] == user_id:
+                        result['click_probability'] = round(result['click_probability'] / total_prob, 4)
+        
+        return {
+            "status": "success",
+            "message": f"Bandit simulation completed for {len(user_offers)} users",
+            "results": results
+        }
+        
+    except Exception as e:
+        print(f"Error in bandit simulation: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error running bandit simulation: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

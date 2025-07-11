@@ -12,7 +12,7 @@ services:
     volumes:
       - ./data_models:/app/data_models
       - ./optimization:/app/optimization
-      - ./data:/app/data
+      - ./data:/data 
     networks:
       - hotel-ranking-network
     healthcheck:
@@ -30,6 +30,8 @@ services:
       - "3838:3838"
     environment:
       - API_URL=http://backend:8001
+    volumes:
+      - ./data:/data 
     depends_on:
       backend:
         condition: service_healthy
