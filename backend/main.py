@@ -1905,6 +1905,99 @@ def user_market_state_csv_function():
     user_locs['market_state_label'] = user_locs['location'].map(market_labels)
     user_locs.to_csv(out_path, index=False)
 
+@app.post("/conversion_probabilities_csv")
+def conversion_probabilities_csv():
+    """Compute and save conversion probabilities for all user-offer pairs to data/conversion_probabilities.csv."""
+    import pandas as pd
+    import numpy as np
+    import os
+    import traceback
+    offers_path = os.path.join('data', 'trial_sampled_offers.csv')
+    users_path = os.path.join('data', 'enhanced_user_profiles.csv')
+    dps_path = os.path.join('data', 'user_dynamic_price_sensitivity.csv')
+    out_path = os.path.join('data', 'conversion_probabilities.csv')
+    try:
+        if not (os.path.exists(offers_path) and os.path.exists(users_path) and os.path.exists(dps_path)):
+            return {"error": "Required data files not found"}
+        offers_df = pd.read_csv(offers_path)
+        users_df = pd.read_csv(users_path)
+        dps_df = pd.read_csv(dps_path)
+        results = []
+        for idx, offer in offers_df.iterrows():
+            user_id = offer['user_id']
+            offer_id = offer['offer_id'] if 'offer_id' in offer else idx
+            destination = offer['location'] if 'location' in offer else ''
+            user_row = users_df[users_df['user_id'] == user_id]
+            if user_row.empty:
+                continue
+            user = user_row.iloc[0]
+            # Get dynamic price sensitivity for this user
+            dps_row = dps_df[dps_df['user_id'] == user_id]
+            if dps_row.empty:
+                dynamic_sensitivity = 0.5
+            else:
+                dynamic_sensitivity = float(dps_row.iloc[0].get('dynamic_price_sensitivity', 0.5))
+            # --- Conversion probability model ---
+            trivago_price = offer.get('trivago_price', offer['price_per_night']) if 'trivago_price' in offer else offer['price_per_night']
+            partner_price = offer['price_per_night']
+            price_diff = trivago_price - partner_price
+            # Hotel rating (normalized 0.5 to 1)
+            hotel_rating = float(offer.get('star_rating', 3))
+            hotel_rating_score = 0.5 + 0.1 * (hotel_rating - 3)  # 3-star = 0.5, 5-star = 0.7
+            # Amenities match (fraction of preferred amenities present)
+            preferred_amenities = str(user.get('preferred_amenities', '')).split(',') if pd.notna(user.get('preferred_amenities', '')) else []
+            offer_amenities = str(offer.get('amenities', '')).split(',') if pd.notna(offer.get('amenities', '')) else []
+            amenities_match = sum(1 for a in preferred_amenities if a.strip() in [b.strip() for b in offer_amenities])
+            amenities_score = 0.5 + 0.1 * min(amenities_match, 5)  # up to 1.0
+            # User profile: loyalty status
+            loyalty = user.get('loyalty_status', '')
+            loyalty_score = 1.0 if loyalty in ['Gold', 'Platinum'] else 0.8 if loyalty == 'Silver' else 0.6
+            # Partner brand
+            partner = offer.get('partner_name', '')
+            brand_score = 1.0 if partner in ['Booking.com', 'Expedia'] else 0.9
+            # --- Logistic regression style logit ---
+            logit = (
+                -0.5 * price_diff +
+                1.5 * hotel_rating_score +
+                0.8 * amenities_score +
+                1.2 * brand_score +
+                0.5 * loyalty_score -
+                partner_price * dynamic_sensitivity * 0.01
+            )
+            probability_of_conversion = 1 / (1 + np.exp(-logit))
+            results.append({
+                'user_id': user_id,
+                'offer_id': offer_id,
+                'destination': destination,
+                'conversion_probability': round(probability_of_conversion, 4)
+            })
+        out_df = pd.DataFrame(results)
+        # Use absolute path for Docker volume
+        out_path = '/data/conversion_probabilities.csv'
+        out_df.to_csv(out_path, index=False)
+        print(f"[DEBUG] conversion_probabilities.csv written to {out_path}, exists: {os.path.exists(out_path)}")
+        print(f"[DEBUG] Current working directory: {os.getcwd()}")
+        if not os.path.exists(out_path):
+            print(f"[WARNING] conversion_probabilities.csv NOT FOUND at {out_path} after writing!")
+        return {"message": f"conversion_probabilities.csv created with {len(out_df)} rows.", "csv_path": out_path}
+    except Exception as e:
+        traceback.print_exc()
+        return {"error": f"Exception: {str(e)}"}
+
+@app.get("/conversion_probability/{user_id}/{offer_id}")
+def get_conversion_probability(user_id: str, offer_id: str):
+    """Return conversion probability for a user-offer pair from conversion_probabilities.csv."""
+    import pandas as pd
+    import os
+    csv_path = os.path.join('data', 'conversion_probabilities.csv')
+    if not os.path.exists(csv_path):
+        return {"error": "conversion_probabilities.csv not found. Please generate it first."}
+    df = pd.read_csv(csv_path)
+    row = df[(df['user_id'] == user_id) & (df['offer_id'].astype(str) == str(offer_id))]
+    if row.empty:
+        return {"error": f"No conversion probability found for user {user_id} and offer {offer_id}"}
+    return row.iloc[0].to_dict()
+
 if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1 and sys.argv[1] == "compute_user_market_state":

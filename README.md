@@ -2,6 +2,66 @@
 
 python data/generate_enhanced_datasets.py --hotels 500 --offers 1000 --users 200
 
+# Backend Data File Management
+
+## Data Directory and File Visibility
+
+All backend-generated data files (CSVs) are written to the `/data/` directory inside the container. This directory is mapped to the `./data/` directory on the host via Docker Compose:
+
+```yaml
+volumes:
+  - ./data:/data
+```
+
+**Important:**
+- All backend code must use absolute paths (e.g., `/data/filename.csv`) for reading and writing data files.
+- Do **not** use relative paths like `data/filename.csv` or `/app/data/filename.csv`.
+- This ensures that all files are visible both inside the container and on the host machine in the `data/` directory.
+
+## Key Data Files and Their Purpose
+
+| File                                 | Location         | Purpose                                                      | Key Columns / Notes                                  |
+|--------------------------------------|------------------|--------------------------------------------------------------|------------------------------------------------------|
+| enhanced_user_profiles.csv           | /data/           | User profiles for simulation                                 | user_id, price_sensitivity, preferred_amenities, ... |
+| enhanced_hotels.csv                  | /data/           | Hotel metadata                                               | hotel_id, name, location, ...                        |
+| enhanced_partner_offers.csv          | /data/           | Partner offer details                                        | offer_id, hotel_id, partner_name, price_per_night... |
+| trial_sampled_offers.csv             | /data/           | Sampled offers for current scenario                          | user_id, offer_id, location, days_to_go, ...         |
+| user_dynamic_price_sensitivity.csv   | /data/           | Dynamic price sensitivity per user/destination               | user_id, destination, base_price_sensitivity, dynamic_price_sensitivity, ... |
+| user_market_state.csv                | /data/           | Market demand index and state per user/destination           | location, demand_index, market_state_label, ...       |
+| bandit_simulation_results.csv        | /data/           | Results of bandit simulation                                 | user_id, offer_id, rank, probability_of_click, ...    |
+| conversion_probabilities.csv         | /data/           | Conversion probability for each user-offer                   | user_id, offer_id, destination, conversion_probability|
+
+## Workflow for Generating and Accessing Data Files
+
+- **Dynamic Price Sensitivity**
+  - Triggered via the UI or API endpoint `/user_dynamic_price_sensitivity_csv`.
+  - Output: `/data/user_dynamic_price_sensitivity.csv` (visible on host as `data/user_dynamic_price_sensitivity.csv`).
+
+- **Conversion Probabilities**
+  - Triggered via the UI or API endpoint `/conversion_probabilities_csv`.
+  - Output: `/data/conversion_probabilities.csv` (visible on host as `data/conversion_probabilities.csv`).
+
+- **Other Data Files**
+  - Generated as part of scenario setup, sampling, or simulation.
+  - Always written to `/data/`.
+
+## Troubleshooting File Visibility
+
+- If you do not see a file in your host's `data/` directory after triggering its generation:
+  1. Ensure the backend writes to `/data/filename.csv` (not a relative or /app/data path).
+  2. Check your `docker-compose.yml` for the correct volume mapping (`./data:/data`).
+  3. Restart the backend container after any changes to volume mapping or file paths.
+  4. Use backend debug logs to confirm the actual file path and working directory.
+
+- You can inspect files inside the container with:
+  ```sh
+  docker compose exec backend ls -l /data
+  ```
+
+- All files in `/data/` inside the container should appear in `./data/` on the host.
+
+---
+
 # Mathematical Approach & Core Formulas (2024 Update)
 
 This project uses a multi-objective, simulation-driven approach for hotel offer ranking and market analysis. Below are the core formulas and their roles in the backend and UI.

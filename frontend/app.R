@@ -1196,6 +1196,42 @@ fetch_market_state <- function(location) {
   }
 }
 
+# --- Conversion Probability Integration ---
+# Helper to fetch conversion probability for a user-offer pair
+fetch_conversion_probability <- function(user_id, offer_id) {
+  res <- GET(paste0(API_URL, "/conversion_probability/", user_id, "/", offer_id))
+  if (http_status(res)$category == "Success") {
+    prob <- fromJSON(content(res, "text", encoding = "UTF-8"))
+    if (!is.null(prob$conversion_probability)) return(prob$conversion_probability)
+  }
+  return(NA)
+}
+
+# Helper to trigger batch CSV generation for conversion probabilities
+generate_conversion_probabilities_csv <- function() {
+  res <- POST(paste0(API_URL, "/conversion_probabilities_csv"))
+  if (http_status(res)$category == "Success") {
+    showNotification("Conversion probabilities CSV generated.", type = "message")
+  } else {
+    showNotification("Failed to generate conversion probabilities CSV.", type = "error")
+  }
+}
+
+# Add an action button for admin/testing to generate the CSV
+addResourcePath("custom", "./")
+
+# Add the button to the UI (e.g., in the sidebar or at the top right)
+insertUI(
+  selector = "body",
+  where = "beforeBegin",
+  ui = actionButton("generate_conversion_csv_btn", "Generate Conversion Probabilities CSV", class = "btn-info", style = "position: fixed; top: 60px; right: 10px; z-index: 1001;")
+)
+
+# Observe the button click in the server
+observeEvent(input$generate_conversion_csv_btn, {
+  generate_conversion_probabilities_csv()
+})
+
 # Reactive value to store user/market table
 values$user_market_table <- NULL
 
@@ -1527,7 +1563,11 @@ output$merged_offers_table <- DT::renderDataTable({
     showNotification("No offers data to display.", type = "error")
     return(NULL)
   }
-  DT::datatable(data, options = list(pageLength = 10, scrollX = TRUE), server = FALSE)
+  df <- as.data.frame(data, stringsAsFactors = FALSE)
+  if ("user_id" %in% colnames(df) && "offer_id" %in% colnames(df)) {
+    df$conversion_probability <- mapply(fetch_conversion_probability, df$user_id, df$offer_id)
+  }
+  DT::datatable(df, options = list(pageLength = 10, scrollX = TRUE), server = FALSE)
 })
 
 # After simulation, update merged_offers with click probabilities from bandit results
@@ -1616,6 +1656,10 @@ output$offers_table <- DT::renderDataTable({
       dps <- fetch_dynamic_sensitivity(uid)
       if (!is.null(dps$dynamic_price_sensitivity)) dps$dynamic_price_sensitivity else NA
     })
+  }
+  # Add conversion probability if offer_id is present
+  if ("user_id" %in% colnames(df) && "offer_id" %in% colnames(df)) {
+    df$conversion_probability <- mapply(fetch_conversion_probability, df$user_id, df$offer_id)
   }
   # Add utility, CTR, trust columns if present in backend output
   if (!"utility_score" %in% colnames(df)) df$utility_score <- NA
