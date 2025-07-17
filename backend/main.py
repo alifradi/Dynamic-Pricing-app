@@ -874,6 +874,8 @@ def save_scenario_data(scenario_data: dict, request: Request = None):
         run_bandit_simulation_and_save_csv()
         # Save user market state CSV
         user_market_state_csv_function()
+        # NEW: Save user dynamic price sensitivity CSV
+        user_dynamic_price_sensitivity_csv()
         return {
             "message": f"Scenario data saved successfully",
             "filename": filename,
@@ -1704,55 +1706,57 @@ def user_dynamic_price_sensitivity_csv():
     import pandas as pd
     import numpy as np
     import os
+    import traceback
     offers_path = os.path.join('data', 'trial_sampled_offers.csv')
     users_path = os.path.join('data', 'enhanced_user_profiles.csv')
     out_path = os.path.join('data', 'user_dynamic_price_sensitivity.csv')
-    if not os.path.exists(offers_path) or not os.path.exists(users_path):
-        return {"error": "Required data files not found"}
-    offers_df = pd.read_csv(offers_path)
-    users_df = pd.read_csv(users_path)
-    # For each user, get their destination (location), base price sensitivity, and days_to_go
-    user_rows = []
-    for user_id in offers_df['user_id'].unique():
-        user_offers = offers_df[offers_df['user_id'] == user_id]
-        if user_offers.empty:
-            continue
-        location = user_offers.iloc[0]['location']
-        days_to_go = user_offers['days_to_go'].mean()
-        offered_prices = offers_df[offers_df['location'] == location]['price_per_night']
-        price_mean = offered_prices.mean()
-        price_std = offered_prices.std()
-        price_min = offered_prices.min()
-        price_max = offered_prices.max()
-        n_offers = len(offered_prices)
-        n_users = offers_df[offers_df['location'] == location]['user_id'].nunique()
-        user_row = users_df[users_df['user_id'] == user_id]
-        if user_row.empty:
-            continue
-        base_sensitivity = float(user_row.iloc[0].get('price_sensitivity', 0.5))
-        # Dynamic price sensitivity: combine base, days_to_go, and price volatility
-        # Example: 0.5*base + 0.2*(1 - days_to_go/180) + 0.3*(price_std/(price_mean+1))
-        dynamic_sensitivity = (
-            0.5 * base_sensitivity +
-            0.2 * (1 - min(days_to_go, 180)/180) +
-            0.3 * (price_std/(price_mean+1) if price_mean > 0 else 0)
-        )
-        user_rows.append({
-            'user_id': user_id,
-            'destination': location,
-            'base_price_sensitivity': round(base_sensitivity, 4),
-            'dynamic_price_sensitivity': round(dynamic_sensitivity, 4),
-            'num_offers': n_offers,
-            'num_users': n_users,
-            'price_mean': round(price_mean, 2),
-            'price_std': round(price_std, 2),
-            'price_min': round(price_min, 2),
-            'price_max': round(price_max, 2),
-            'avg_days_to_go': round(days_to_go, 1)
-        })
-    out_df = pd.DataFrame(user_rows)
-    out_df.to_csv(out_path, index=False)
-    return {"message": f"user_dynamic_price_sensitivity.csv created with {len(out_df)} rows.", "csv_path": out_path}
+    print(f"[DEBUG] Called user_dynamic_price_sensitivity_csv. Offers path: {offers_path}, Users path: {users_path}, Output path: {out_path}")
+    try:
+        if not os.path.exists(offers_path) or not os.path.exists(users_path):
+            print(f"[ERROR] Required data files not found: {offers_path}, {users_path}")
+            return {"error": "Required data files not found"}
+        offers_df = pd.read_csv(offers_path)
+        users_df = pd.read_csv(users_path)
+        user_rows = []
+        for user_id in offers_df['user_id'].unique():
+            user_offers = offers_df[offers_df['user_id'] == user_id]
+            if user_offers.empty:
+                continue
+            location = user_offers.iloc[0]['location']
+            days_to_go = user_offers['days_to_go'].mean()
+            offered_prices = offers_df[offers_df['location'] == location]['price_per_night']
+            price_mean = offered_prices.mean()
+            price_std = offered_prices.std()
+            n_offers = len(offered_prices)
+            n_users = offers_df[offers_df['location'] == location]['user_id'].nunique()
+            user_row = users_df[users_df['user_id'] == user_id]
+            if user_row.empty:
+                continue
+            base_sensitivity = float(user_row.iloc[0].get('price_sensitivity', 0.5))
+            dynamic_sensitivity = (
+                0.5 * base_sensitivity +
+                0.2 * (1 - min(days_to_go, 180)/180) +
+                0.3 * (price_std/(price_mean+1) if price_mean > 0 else 0)
+            )
+            user_rows.append({
+                'user_id': user_id,
+                'destination': location,
+                'base_price_sensitivity': round(base_sensitivity, 4),
+                'dynamic_price_sensitivity': round(dynamic_sensitivity, 4),
+                'num_offers': n_offers,
+                'num_users': n_users,
+                'price_mean': round(price_mean, 2),
+                'price_std': round(price_std, 2),
+                'avg_days_to_go': round(days_to_go, 1)
+            })
+        out_df = pd.DataFrame(user_rows)
+        out_df.to_csv(out_path, index=False)
+        print(f"[DEBUG] user_dynamic_price_sensitivity.csv written to {out_path} with {len(out_df)} rows.")
+        return {"message": f"user_dynamic_price_sensitivity.csv created with {len(out_df)} rows.", "csv_path": out_path}
+    except Exception as e:
+        print(f"[ERROR] Exception in user_dynamic_price_sensitivity_csv: {e}")
+        traceback.print_exc()
+        return {"error": f"Exception: {str(e)}"}
 
 def save_market_state_csv():
     """Compute and save market state for each location in trial_sampled_offers.csv as /data/user_market_state.csv."""
@@ -1772,31 +1776,46 @@ def save_market_state_csv():
     median_user_count = all_user_counts.median() if not all_user_counts.empty else 1
     median_offer_count = all_offer_counts.median() if not all_offer_counts.empty else 1
     rows = []
+    # --- Normalization helpers ---
+    def norm(val, minv, maxv):
+        if maxv > minv:
+            return (val - minv) / (maxv - minv)
+        else:
+            return 0.0
+    # Precompute global min/max for normalization
+    price_min, price_max = offers_df['price_per_night'].min(), offers_df['price_per_night'].max()
+    days_min, days_max = offers_df['days_to_go'].min(), offers_df['days_to_go'].max()
+    price_var_min, price_var_max = offers_df['price_fluctuation_variance'].min(), offers_df['price_fluctuation_variance'].max()
+    comp_min, comp_max = 1, 100
     for location in offers_df['location'].unique():
         offers = offers_df[offers_df['location'] == location]
         user_ids = offers['user_id'].unique().tolist()
         users = users_df[users_df['user_id'].isin(user_ids)]
         avg_price = offers['price_per_night'].mean()
         avg_days_to_go = offers['days_to_go'].mean()
-        price_trends = []
-        for _, row in offers.iterrows():
-            try:
-                price_history = json.loads(row['price_history_24h'])
-                if len(price_history) >= 2:
-                    trend = (price_history[-1] - price_history[0]) / price_history[0]
-                    price_trends.append(trend)
-            except Exception:
-                price_trends.append(0)
-        avg_price_trend = np.mean(price_trends) if price_trends else 0
+        price_var = offers['price_fluctuation_variance'].mean()
+        unique_hotels = offers['hotel_id'].nunique()
+        unique_partners = offers['partner_name'].nunique()
+        competition_density = unique_hotels * unique_partners
+        # --- Normalized signals ---
+        norm_avg_price = norm(avg_price, price_min, price_max)
+        norm_days_to_go = norm(avg_days_to_go, days_min, days_max)
+        norm_price_var = norm(price_var, price_var_min, price_var_max)
+        norm_competition_density = norm(competition_density, comp_min, comp_max)
+        # --- Composite Market Demand Index ---
+        w1, w2, w3, w4 = 0.25, 0.25, 0.25, 0.25
+        demand_index = (
+            w1 * norm_avg_price +
+            w2 * (1 - norm_days_to_go) +
+            w3 * norm_price_var +
+            w4 * norm_competition_density
+        )
+        # --- Label logic (unchanged) ---
         user_count = len(users)
         offer_count = len(offers)
-        norm_trend = (avg_price_trend + 0.5) / 1.0
-        norm_user = user_count / (all_user_counts.max() or 1)
-        norm_offer = offer_count / (all_offer_counts.max() or 1)
-        demand_index = (norm_trend + norm_user + norm_offer) / 3
-        if (demand_index > 0.66 or avg_price_trend > 0.05) and user_count >= median_user_count and offer_count >= median_offer_count:
+        if (demand_index > 0.66) and user_count >= median_user_count and offer_count >= median_offer_count:
             market_state_label = 'high'
-        elif (demand_index < 0.33 or avg_price_trend < -0.05) and user_count <= median_user_count and offer_count <= median_offer_count:
+        elif (demand_index < 0.33) and user_count <= median_user_count and offer_count <= median_offer_count:
             market_state_label = 'low'
         else:
             market_state_label = 'medium'
@@ -1804,9 +1823,8 @@ def save_market_state_csv():
             'location': location,
             'avg_price': avg_price,
             'avg_days_to_go': avg_days_to_go,
-            'avg_price_trend': avg_price_trend,
-            'user_count': user_count,
-            'offer_count': offer_count,
+            'price_variance': price_var,
+            'competition_density': competition_density,
             'demand_index': demand_index,
             'market_state_label': market_state_label
         })

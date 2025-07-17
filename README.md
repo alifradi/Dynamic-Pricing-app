@@ -2,95 +2,79 @@
 
 python data/generate_enhanced_datasets.py --hotels 500 --offers 1000 --users 200
 
-# Mathematical Approach & Formula Documentation
+# Mathematical Approach & Core Formulas (2024 Update)
 
-This project uses interpretable, research-driven formulas to simulate user behavior, offer ranking, and market dynamics. All formulas are provided in LaTeX for clarity and reproducibility.
+This project uses a multi-objective, simulation-driven approach for hotel offer ranking and market analysis. Below are the core formulas and their roles in the backend and UI.
 
-## Preference Score
-
-The **preference score** quantifies how well an offer matches a user's preferences. It is a weighted sum of several factors:
-
-- **Budget Preference**: The closer the offer’s price is to the user’s preferred budget range, the higher the score (weighted 30%).
-- **Star Rating**: Higher hotel star ratings increase the score (weighted 20%).
-- **Location Match**: If the offer’s location matches the user’s preferred location, the score increases (weighted 30%).
-- **Room Type Match**: If the offer’s room type matches the user’s preferred room type, the score increases (weighted 10%).
-- **Amenities Match**: The more the hotel’s amenities overlap with the user’s preferred amenities, the higher the score (weighted 10%).
-
-The formula:
+## 1. Composite Market Demand Index
+A weighted index to characterize market demand by combining normalized proxies for price, booking urgency, volatility, and competition:
 
 $$
-\text{preference\_score} = 0.3 \cdot S_{\text{budget}} + 0.2 \cdot S_{\text{star}} + 0.3 \cdot S_{\text{location}} + 0.1 \cdot S_{\text{room}} + 0.1 \cdot S_{\text{amenities}}
-$$
-
-Where each $S$ is a normalized score (0–1) for the respective factor.
-
-## Probability of Click
-
-This is the simulated (learned) probability that a user will click on a given offer when it is shown at a specific rank. It is estimated by simulating many (e.g., 1000) user interactions (clicks/no clicks) for each (user, offer, rank) combination, using a recursive average formula.
-
-The value reflects both the offer’s inherent attractiveness (preference_score) and the effect of its position (rank) in the list.
-
-### Theoretical (True) Click Probability
-
-$$
-\text{true\_click\_prob} = \min(0.95, \max(0.05, \text{preference\_score} \times \text{rank\_factor}))
+\text{Market\_Demand\_Index} = w_1 \cdot \text{norm\_avg\_price} + w_2 \cdot (1 - \text{norm\_days\_to\_go}) + w_3 \cdot \text{norm\_price\_variance} + w_4 \cdot \text{norm\_competition\_density}
 $$
 
 Where:
+- $\text{norm\_avg\_price}$: Normalized average price for the location
+- $\text{norm\_days\_to\_go}$: Normalized average days to go
+- $\text{norm\_price\_variance}$: Normalized price variance for the location
+- $\text{norm\_competition\_density}$: Normalized competition density (unique hotels × unique partners)
+- $w_1, w_2, w_3, w_4$: Weights (default 0.25 each, configurable)
+
+## 2. Dynamic Price Sensitivity
+Each user's dynamic price sensitivity is modeled as:
 
 $$
-\text{rank\_factor} = \frac{1}{\text{rank}}
-$$
-
-### Simulated (Learned) Probability
-
-For each (user, offer, rank), simulate $N$ trials (e.g., $N=1000$):
-
-- For each trial $i$, generate a click (1) with probability $\text{true\_click\_prob}$, else no click (0).
-- Update the running average using the recursive formula:
-
-$$
-R_{i} = R_{i-1} + \frac{(\text{click}_i - R_{i-1})}{i}
-$$
-
-Where $R_i$ is the average after $i$ trials.
-
-## Probability of Conversion
-
-This is the estimated probability that a click on an offer will convert to a booking. It is calculated as a product of interpretable factors:
-
-$$
-\text{probability\_of\_conversion} = S_{\text{price}} \times S_{\text{rating}} \times S_{\text{amenities}} \times S_{\text{loyalty}} \times S_{\text{brand}}
+\text{dynamic\_sensitivity} = 0.5 \cdot S_{\text{base}} + 0.2 \cdot \left(1 - \frac{\min(D, 180)}{180}\right) + 0.3 \cdot \left(\frac{\sigma_p}{\mu_p + 1}\right)
 $$
 
 Where:
-- $S_{\text{price}} = \max\left(0.1, 1 - \frac{|\text{trivago\_price} - \text{partner\_price}|}{\text{user\_budget\_max} + 1}\right)$
-- $S_{\text{rating}} = 0.5 + 0.1 \times (\text{hotel\_rating} - 3)$
-- $S_{\text{amenities}} = 0.5 + 0.1 \times \min(\text{amenities\_match}, 5)$
-- $S_{\text{loyalty}} = 1.0$ if user is Gold/Platinum, $0.8$ if Silver, $0.6$ otherwise
-- $S_{\text{brand}} = 1.0$ if partner is Booking.com/Expedia, $0.9$ otherwise
+- $S_{\text{base}}$: User's basic price sensitivity (from profile)
+- $D$: Days to go for check-in (from offers)
+- $\mu_p$, $\sigma_p$: Mean and std of all offered prices in the destination
 
-The result is clipped to $[0.01, 0.99]$.
-
-## Normalized Probability of Click (Optional)
-
-This is a research-oriented column. It is computed using softmax normalization (per user, per rank) on the simulated probability_of_click values:
+## 3. Multi-Objective Utility Function
+Defines the total expected utility $U(i, j)$ of placing offer $j$ at rank $i$:
 
 $$
-\text{normalized\_probability\_of\_click}_i = \frac{\exp(\text{probability\_of\_click}_i)}{\sum_j \exp(\text{probability\_of\_click}_j)}
+U(i, j) = w_{\text{rev}} \cdot R_{ij} + w_{\text{rel}} \cdot Q_{ij} + w_{\text{trust}} \cdot T_{ij}
 $$
 
-This gives a relative likelihood of click among competing offers at the same rank, but is not required for practical modeling or optimization. In real-world ranking, probability_of_click and true_click_prob are independent signals and do not need to sum to 1.
+Where:
+- $R_{ij}$: Revenue for offer $j$ at position $i$
+- $Q_{ij}$: Relevance (quality) score
+- $T_{ij}$: Trust score
+- $w_{\text{rev}}, w_{\text{rel}}, w_{\text{trust}}$: Tunable weights
+
+## 4. Price Competitiveness CTR Model
+Predicts click-through rate (CTR) as a function of price competitiveness:
+
+$$
+\text{CTR}_{ij} = \text{base\_CTR}_j \cdot e^{-\beta (\text{price}_j - \text{min\_price})}
+$$
+
+Where $\beta$ is a user or market price sensitivity parameter.
+
+## 5. Price Volatility Penalty on Trust
+Penalizes trust for offers with unstable prices:
+
+$$
+T_{ij} = \text{base\_trust}_j - \gamma \cdot \sigma^2(\text{price}_j, t-24h)
+$$
+
+Where $\gamma$ is a volatility penalty weight and $\sigma^2$ is the variance of price over the last 24h.
 
 ---
 
-# Preference Score 
+# How These Formulas Are Used
+- **Backend:**
+  - Market demand index is computed for each location and saved in `user_market_state.csv`.
+  - Dynamic price sensitivity is computed for each user and saved in `user_dynamic_price_sensitivity.csv`.
+  - Utility, CTR, and trust penalty functions are available for ranking and simulation logic.
+- **Frontend (Shiny App):**
+  - Displays dynamic price sensitivity, market demand index, and other metrics for users and offers.
+  - Uses backend outputs for scenario analysis, ranking, and market intelligence.
 
-Budget Preference: The closer the offer’s price is to the user’s preferred budget range, the higher the score (weighted 30%).
-Star Rating: Higher hotel star ratings increase the score (weighted 20%).
-Location Match: If the offer’s location matches the user’s preferred location, the score increases (weighted 30%).
-Room Type Match: If the offer’s room type matches the user’s preferred room type, the score increases (weighted 10%).
-Amenities Match: The more the hotel’s amenities overlap with the user’s preferred amenities, the higher the score (weighted 10%).
+---
 
 # Probability of click
 
@@ -149,3 +133,11 @@ preference_score      How well the offer matches the user’s preferences (compo
 probability_of_click  Simulated/learned probability of click for (user, offer, rank) after 1000 trials.
 true_click_prob       Theoretical probability of click for (user, offer, rank) used as the “ground truth”.
 normalized_probability_of_click  (Optional) Softmax-normalized probability for relative comparison among offers at the same rank for a user.
+
+## Where to Find Key Metrics in the UI
+
+- **Dynamic Price Sensitivity**: Displayed in the User/Market table and Offers table. Updated automatically after you click 'Consider Scenario'.
+- **Market Demand Index**: Displayed in the User/Market table and as a plot in the Market Analysis tab. Updated after scenario consideration.
+- **Fallback Logic**: If backend data is missing, the UI will show 'NA' or hide the metric until new data is available.
+
+See tooltips in the UI for explanations of each metric. For formulas, see the Mathematical Approach & Core Formulas section above.

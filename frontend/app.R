@@ -231,6 +231,12 @@ ui <- dashboardPage(
               column(4, selectizeInput("selected_users_for_offers", "Select User ID(s):", choices = NULL, multiple = TRUE, width = "100%")),
               column(8, div(style = "margin-top: 25px;", textOutput("offers_loading_status")))
             ),
+            tags$div(
+              style = "margin-bottom: 10px;",
+              tags$span("Dynamic Price Sensitivity: ", title = "A user-specific metric combining base price sensitivity, days to go, and market volatility. See README for formula."),
+              tags$span(" | "),
+              tags$span("Market Demand Index: ", title = "Composite index of price, urgency, volatility, and competition. See README for formula.")
+            ),
             DT::dataTableOutput("merged_offers_table")
           )
         )
@@ -1230,11 +1236,6 @@ observeEvent(input$refresh_user_market_btn, {
   removeModal()
 })
 
-output$user_market_table <- DT::renderDataTable({
-  if (is.null(values$user_market_table)) return(NULL)
-  datatable(values$user_market_table, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE)
-})
-
 # Auto-refresh on app start
 observe({
   if (is.null(values$user_market_table)) {
@@ -1544,6 +1545,116 @@ observe({
   if (!is.null(values$user_ids) && length(values$user_ids) > 0) {
     updateSelectizeInput(session, "selected_users_for_offers", choices = values$user_ids, server = TRUE)
   }
+})
+
+# --- Add dynamic price sensitivity and market demand index to user/market table ---
+# Helper to fetch user dynamic price sensitivity CSV
+fetch_user_dynamic_sensitivity_csv <- function() {
+  tryCatch({
+    res <- httr::POST(paste0(API_URL, "/user_dynamic_price_sensitivity_csv"))
+    if (http_status(res)$category == "Success") {
+      df <- jsonlite::fromJSON(httr::content(res, as = "text"))
+      if (!is.null(df$csv_path) && file.exists(df$csv_path)) {
+        return(readr::read_csv(df$csv_path))
+      }
+    }
+    return(NULL)
+  }, error = function(e) NULL)
+}
+
+# Helper to fetch user market state CSV
+fetch_user_market_state_csv <- function() {
+  tryCatch({
+    path <- "../data/user_market_state.csv"
+    if (file.exists(path)) {
+      return(readr::read_csv(path))
+    }
+    return(NULL)
+  }, error = function(e) NULL)
+}
+
+# Add a reactive value to store the user/market table with new metrics
+values$user_market_table_new <- NULL
+
+# On app load or refresh, fetch and merge new metrics
+observe({
+  dyn_sens_df <- fetch_user_dynamic_sensitivity_csv()
+  market_state_df <- fetch_user_market_state_csv()
+  if (!is.null(dyn_sens_df) && !is.null(market_state_df)) {
+    merged <- dplyr::left_join(dyn_sens_df, market_state_df, by = c("destination" = "location"))
+    values$user_market_table_new <- merged
+  } else {
+    values$user_market_table_new <- NULL
+  }
+})
+
+# Render the new user/market table
+output$user_market_table <- DT::renderDataTable({
+  df <- values$user_market_table_new
+  if (is.null(df) || nrow(df) == 0) return(NULL)
+  DT::datatable(df, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE)
+})
+
+# --- Add dynamic price sensitivity, utility, CTR, trust to offers table if available ---
+# Helper to fetch dynamic price sensitivity for a user
+fetch_dynamic_sensitivity <- function(user_id) {
+  res <- GET(paste0(API_URL, "/dynamic_price_sensitivity/", user_id))
+  if (http_status(res)$category == "Success") {
+    return(fromJSON(content(res, "text", encoding = "UTF-8")))
+  } else {
+    return(NULL)
+  }
+}
+
+# Update offers table rendering to include new columns if present
+output$offers_table <- DT::renderDataTable({
+  if (is.null(values$user_offers)) return(NULL)
+  df <- as.data.frame(values$user_offers, stringsAsFactors = FALSE)
+  # Add dynamic price sensitivity if available
+  if ("user_id" %in% colnames(df)) {
+    df$dynamic_price_sensitivity <- sapply(df$user_id, function(uid) {
+      dps <- fetch_dynamic_sensitivity(uid)
+      if (!is.null(dps$dynamic_price_sensitivity)) dps$dynamic_price_sensitivity else NA
+    })
+  }
+  # Add utility, CTR, trust columns if present in backend output
+  if (!"utility_score" %in% colnames(df)) df$utility_score <- NA
+  if (!"price_competitiveness_ctr" %in% colnames(df)) df$price_competitiveness_ctr <- NA
+  if (!"trust_score" %in% colnames(df)) df$trust_score <- NA
+  DT::datatable(
+    df,
+    options = list(
+      scrollX = TRUE,
+      scrollY = "400px",
+      pageLength = 25,
+      lengthMenu = c(10, 25, 50, 100),
+      autoWidth = FALSE,
+      columnDefs = list(list(targets = "_all", className = "dt-center"))
+    ),
+    rownames = FALSE,
+    filter = "top",
+    selection = "single"
+  )
+})
+
+# --- Add/Update plot for market demand index by location ---
+output$market_demand_index_plot <- renderPlotly({
+  df <- values$user_market_table_new
+  if (is.null(df) || nrow(df) == 0) return(NULL)
+  p <- ggplot(df, aes(x = destination, y = demand_index, fill = market_state_label)) +
+    geom_bar(stat = "identity") +
+    labs(title = "Market Demand Index by Location", x = "Location", y = "Demand Index") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  ggplotly(p)
+})
+
+# --- Add tooltips/info boxes for new metrics ---
+output$dynamic_price_sensitivity_info <- renderUI({
+  HTML("<b>Dynamic Price Sensitivity:</b> Combines user base sensitivity, days to go, and price volatility in the destination. See README for formula.")
+})
+output$market_demand_index_info <- renderUI({
+  HTML("<b>Market Demand Index:</b> Composite index of normalized price, booking urgency, price volatility, and competition density. See README for formula.")
 })
 
 }
