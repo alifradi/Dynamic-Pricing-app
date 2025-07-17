@@ -70,14 +70,13 @@ This project uses a multi-objective, simulation-driven approach for hotel offer 
 A weighted index to characterize market demand by combining normalized proxies for price, booking urgency, volatility, and competition:
 
 ```math
-\text{Market\_Demand\_Index} = w_1 \cdot \text{norm\_avg\_price} + w_2 \cdot (1 - \text{norm\_days\_to\_go}) + w_3 \cdot \text{norm\_price\_variance} + w_4 \cdot \text{norm\_competition\_density}
+\text{MarketDemandIndex} = w_1 \cdot \text{normAvgPrice} + w_2 \cdot (1 - \text{normDaysToGo}) + w_3 \cdot \text{normPriceVariance} + w_4 \cdot \text{normCompetitionDensity}
 ```
-
 Where:
-- $\text{norm\_avg\_price}$: Normalized average price for the location
-- $\text{norm\_days\_to\_go}$: Normalized average days to go
-- $\text{norm\_price\_variance}$: Normalized price variance for the location
-- $\text{norm\_competition\_density}$: Normalized competition density (unique hotels × unique partners)
+- $\text{normAvgPrice}$: Normalized average price for the location
+- $\text{normDaysToGo}$: Normalized average days to go
+- $\text{normPriceVariance}$: Normalized price variance for the location
+- $\text{normCompetitionDensity}$: Normalized competition density (unique hotels × unique partners)
 - $w_1, w_2, w_3, w_4$: Weights (default 0.25 each, configurable)
 
 ## 2. Dynamic Price Sensitivity
@@ -166,13 +165,23 @@ This is the estimated probability that a click on an offer will convert to a boo
 ```math
 \text{probability\_of\_conversion} = S_{\text{price}} \times S_{\text{rating}} \times S_{\text{amenities}} \times S_{\text{loyalty}} \times S_{\text{brand}}
 ```
+Where each $S$ factor is defined as:
 
-Where:
-- $S_{\text{price}} = \max\left(0.1, 1 - \frac{|\text{trivago\_price} - \text{partner\_price}|}{\text{user\_budget\_max} + 1}\right)$
-- $S_{\text{rating}} = 0.5 + 0.1 \times (\text{hotel\_rating} - 3)$
-- $S_{\text{amenities}} = 0.5 + 0.1 \times \min(\text{amenities\_match}, 5)$
-- $S_{\text{loyalty}} = 1.0$ if user is Gold/Platinum, $0.8$ if Silver, $0.6$ otherwise
-- $S_{\text{brand}} = 1.0$ if partner is Booking.com/Expedia, $0.9$ otherwise
+```math
+S_{\text{price}} = \max\left(0.1, 1 - \frac{|\text{trivago\_price} - \text{partner\_price}|}{\text{user\_budget\_max} + 1}\right)
+```
+```math
+S_{\text{rating}} = 0.5 + 0.1 \times (\text{hotel\_rating} - 3)
+```
+```math
+S_{\text{amenities}} = 0.5 + 0.1 \times \min(\text{amenities\_match}, 5)
+```
+```math
+S_{\text{loyalty}} = \begin{cases} 1.0 & \text{if user is Gold/Platinum} \\ 0.8 & \text{if Silver} \\ 0.6 & \text{otherwise} \end{cases}
+```
+```math
+S_{\text{brand}} = \begin{cases} 1.0 & \text{if partner is Booking.com/Expedia} \\ 0.9 & \text{otherwise} \end{cases}
+```
 
 The result is clipped to $[0.01, 0.99]$.
 
