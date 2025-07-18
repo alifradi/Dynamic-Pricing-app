@@ -12,6 +12,9 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 import pulp
+import subprocess
+import tempfile
+import os
 
 # Import our data models
 from data_models.models import (
@@ -1997,6 +2000,177 @@ def get_conversion_probability(user_id: str, offer_id: str):
     if row.empty:
         return {"error": f"No conversion probability found for user {user_id} and offer {offer_id}"}
     return row.iloc[0].to_dict()
+
+@app.post("/run_deterministic_optimization")
+def run_deterministic_optimization():
+    """Run deterministic optimization using MiniZinc and return results"""
+    try:
+        # Load data from CSV files
+        offers_df = pd.read_csv(os.path.join('data', 'trial_sampled_offers.csv'))
+        users_df = pd.read_csv(os.path.join('data', 'enhanced_user_profiles.csv'))
+        
+        if offers_df.empty or users_df.empty:
+            raise HTTPException(status_code=400, detail="No data available for optimization")
+        
+        # Prepare data for optimization
+        optimization_data = {
+            'offers': [],
+            'users': []
+        }
+        
+        # Process offers
+        for _, offer in offers_df.iterrows():
+            optimization_data['offers'].append({
+                'offer_id': int(offer['offer_id']),
+                'conversion_probability': float(offer.get('conversion_probability', 0.1)),
+                'bid_amount': float(offer.get('commission_rate', 10.0)),
+                'hotel_type': offer.get('hotel_type', 'standard'),
+                'price_level': 'high' if offer.get('price_per_night', 0) > 200 else 'medium' if offer.get('price_per_night', 0) > 100 else 'low'
+            })
+        
+        # Process users
+        unique_users = offers_df['user_id'].unique()
+        for user_id in unique_users:
+            user_data = users_df[users_df['user_id'] == user_id]
+            if not user_data.empty:
+                user = user_data.iloc[0]
+                optimization_data['users'].append({
+                    'user_id': str(user_id),
+                    'user_type': user.get('user_type', 'leisure'),
+                    'budget_level': 'high' if user.get('budget_max', 0) > 200 else 'medium' if user.get('budget_max', 0) > 100 else 'low'
+                })
+        
+        # Run optimization using the Python script
+        result = subprocess.run([
+            'python', 'run_deterministic_optimization.py'
+        ], capture_output=True, text=True, timeout=300)
+        
+        if result.returncode != 0:
+            raise HTTPException(status_code=500, detail=f"Optimization failed: {result.stderr}")
+        
+        # Read results from generated files
+        results = {}
+        
+        # Read JSON results
+        json_path = os.path.join('deterministic_optimization_results.json')
+        if os.path.exists(json_path):
+            with open(json_path, 'r') as f:
+                results['json'] = json.load(f)
+        
+        # Read CSV results
+        csv_path = os.path.join('deterministic_optimization_results.csv')
+        if os.path.exists(csv_path):
+            csv_df = pd.read_csv(csv_path)
+            results['csv'] = csv_df.to_dict(orient='records')
+        
+        return {
+            "status": "success",
+            "message": "Deterministic optimization completed",
+            "results": results
+        }
+        
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=408, detail="Optimization timed out")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error running optimization: {str(e)}")
+
+@app.post("/run_stochastic_optimization")
+def run_stochastic_optimization():
+    """Run stochastic optimization using MiniZinc and return results"""
+    try:
+        # Load data from CSV files
+        offers_df = pd.read_csv(os.path.join('data', 'trial_sampled_offers.csv'))
+        users_df = pd.read_csv(os.path.join('data', 'enhanced_user_profiles.csv'))
+        
+        if offers_df.empty or users_df.empty:
+            raise HTTPException(status_code=400, detail="No data available for optimization")
+        
+        # Prepare data for optimization
+        optimization_data = {
+            'offers': [],
+            'weights': {
+                'conversion': 0.4,
+                'revenue': 0.4,
+                'trust': 0.2
+            }
+        }
+        
+        # Process offers
+        for _, offer in offers_df.iterrows():
+            optimization_data['offers'].append({
+                'offer_id': int(offer['offer_id']),
+                'conversion_probability': float(offer.get('conversion_probability', 0.1)),
+                'revenue': float(offer.get('commission_rate', 10.0)),
+                'trust_score': float(offer.get('trust_score', 0.5)),
+                'price_consistency': float(offer.get('price_consistency', 0.5))
+            })
+        
+        # Run optimization using the Python script
+        result = subprocess.run([
+            'python', 'run_stochastic_optimization.py'
+        ], capture_output=True, text=True, timeout=300)
+        
+        if result.returncode != 0:
+            raise HTTPException(status_code=500, detail=f"Optimization failed: {result.stderr}")
+        
+        # Read results from generated files
+        results = {}
+        
+        # Read JSON results
+        json_path = os.path.join('stochastic_optimization_results.json')
+        if os.path.exists(json_path):
+            with open(json_path, 'r') as f:
+                results['json'] = json.load(f)
+        
+        # Read CSV results
+        csv_path = os.path.join('stochastic_optimization_results.csv')
+        if os.path.exists(csv_path):
+            csv_df = pd.read_csv(csv_path)
+            results['csv'] = csv_df.to_dict(orient='records')
+        
+        return {
+            "status": "success",
+            "message": "Stochastic optimization completed",
+            "results": results
+        }
+        
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=408, detail="Optimization timed out")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error running optimization: {str(e)}")
+
+@app.get("/optimization_results")
+def get_optimization_results():
+    """Get the latest optimization results"""
+    try:
+        results = {}
+        
+        # Check for deterministic results
+        det_json_path = os.path.join('deterministic_optimization_results.json')
+        det_csv_path = os.path.join('deterministic_optimization_results.csv')
+        
+        if os.path.exists(det_json_path):
+            with open(det_json_path, 'r') as f:
+                results['deterministic'] = json.load(f)
+        
+        if os.path.exists(det_csv_path):
+            results['deterministic_csv'] = pd.read_csv(det_csv_path).to_dict(orient='records')
+        
+        # Check for stochastic results
+        stoch_json_path = os.path.join('stochastic_optimization_results.json')
+        stoch_csv_path = os.path.join('stochastic_optimization_results.csv')
+        
+        if os.path.exists(stoch_json_path):
+            with open(stoch_json_path, 'r') as f:
+                results['stochastic'] = json.load(f)
+        
+        if os.path.exists(stoch_csv_path):
+            results['stochastic_csv'] = pd.read_csv(stoch_csv_path).to_dict(orient='records')
+        
+        return results
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading optimization results: {str(e)}")
 
 if __name__ == "__main__":
     import sys

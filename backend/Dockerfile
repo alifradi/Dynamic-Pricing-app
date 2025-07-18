@@ -7,6 +7,7 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     curl \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
@@ -23,11 +24,23 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY data_models ./data_models/
 COPY optimization ./optimization/
 
+# Copy MiniZinc models and runners
+COPY backend/stochastic_optimization.mzn .
+COPY backend/deterministic_optimization.mzn .
+COPY backend/run_stochastic_optimization.py .
+COPY backend/run_deterministic_optimization.py .
+COPY backend/test_minizinc.py .
+COPY backend/requirements_optimization.txt .
+
 # Create necessary directories
 RUN mkdir -p /app/data_models /app/optimization
 
-# Set Python path
+# Install optimization dependencies
+RUN pip install --no-cache-dir -r requirements_optimization.txt
+
+# Set Python path and MiniZinc path
 ENV PYTHONPATH=/app
+ENV PATH="/root/.local/bin:${PATH}"
 
 # Expose port
 EXPOSE 8001

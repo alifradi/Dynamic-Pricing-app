@@ -1,35 +1,32 @@
 user_id,offer_id,destination,conversion_probability
-U000005,O000062,"Bangkok, Thailand",0.9206
-U000005,O000057,"Amsterdam, Netherlands",0.9115
-U000005,O000087,"Amsterdam, Netherlands",0.9088
-U000005,O000055,"Dubai, UAE",0.9229
-U000005,O000085,"Dubai, UAE",0.9225
-U000005,O000032,"Bangkok, Thailand",0.9292
-U000005,O000092,"Bangkok, Thailand",0.9299
-U000005,O000025,"Dubai, UAE",0.927
-U000005,O000070,"Madrid, Spain",0.9265
-U000005,O000002,"Bangkok, Thailand",0.9234
-U000005,O000027,"Amsterdam, Netherlands",0.91
-U000005,O000100,"Madrid, Spain",0.9242
-U000005,O000040,"Madrid, Spain",0.9229
-U000005,O000010,"Madrid, Spain",0.9226
-U000005,O000074,"Rome, Italy",0.9104
-U000005,O000014,"Rome, Italy",0.91
-U000005,O000056,"Amsterdam, Netherlands",0.9201
-U000005,O000044,"Rome, Italy",0.9172
-U000005,O000099,"Prague, Czech Republic",0.9188
-U000005,O000009,"Prague, Czech Republic",0.9189
-U000005,O000039,"Prague, Czech Republic",0.9289
-U000005,O000069,"Prague, Czech Republic",0.9212
-U000005,O000045,"Tokyo, Japan",0.8833
-U000005,O000097,"Berlin, Germany",0.8857
-U000005,O000083,"Vienna, Austria",0.8918
-U000005,O000067,"Berlin, Germany",0.8848
-U000005,O000007,"Berlin, Germany",0.8831
-U000005,O000075,"Tokyo, Japan",0.878
-U000005,O000023,"Vienna, Austria",0.8882
-U000005,O000086,"Amsterdam, Netherlands",0.9258
-U000005,O000037,"Berlin, Germany",0.8787
-U000005,O000026,"Amsterdam, Netherlands",0.9194
-U000005,O000053,"Vienna, Austria",0.8847
-U000005,O000015,"Tokyo, Japan",0.8682
+U000005,O000057,"Amsterdam, Netherlands",0.9043
+U000005,O000087,"Amsterdam, Netherlands",0.901
+U000005,O000055,"Dubai, UAE",0.9165
+U000005,O000085,"Dubai, UAE",0.916
+U000005,O000020,"São Paulo, Brazil",0.9117
+U000005,O000050,"São Paulo, Brazil",0.911
+U000005,O000025,"Dubai, UAE",0.9203
+U000005,O000027,"Amsterdam, Netherlands",0.9024
+U000005,O000080,"São Paulo, Brazil",0.904
+U000005,O000054,"Barcelona, Spain",0.8982
+U000005,O000056,"Amsterdam, Netherlands",0.9167
+U000005,O000099,"Prague, Czech Republic",0.9141
+U000005,O000076,"Sydney, Australia",0.8842
+U000005,O000009,"Prague, Czech Republic",0.9143
+U000005,O000016,"Sydney, Australia",0.8825
+U000005,O000039,"Prague, Czech Republic",0.925
+U000005,O000069,"Prague, Czech Republic",0.9171
+U000005,O000081,"Los Angeles, USA",0.8833
+U000005,O000024,"Barcelona, Spain",0.901
+U000005,O000084,"Barcelona, Spain",0.901
+U000005,O000045,"Tokyo, Japan",0.8728
+U000005,O000011,"Paris, France",0.8723
+U000005,O000021,"Los Angeles, USA",0.8782
+U000005,O000075,"Tokyo, Japan",0.8662
+U000005,O000046,"Sydney, Australia",0.8727
+U000005,O000086,"Amsterdam, Netherlands",0.9221
+U000005,O000071,"Paris, France",0.8668
+U000005,O000051,"Los Angeles, USA",0.8731
+U000005,O000026,"Amsterdam, Netherlands",0.9159
+U000005,O000041,"Paris, France",0.8763
+U000005,O000015,"Tokyo, Japan",0.854

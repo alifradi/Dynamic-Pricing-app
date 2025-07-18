@@ -118,9 +118,9 @@ ui <- dashboardPage(
     ),
     
     # Test button for debugging
-    div(style = "position: fixed; top: 10px; right: 10px; z-index: 1000;",
-        actionButton("test_btn", "Test App", class = "btn-warning btn-sm")
-    ),
+    # div(style = "position: fixed; top: 10px; right: 10px; z-index: 1000;",
+    #     actionButton("test_btn", "Test App", class = "btn-warning btn-sm")
+    # ),
     
     tabItems(
       # --- TAB 1: SCENARIO SETUP ---
@@ -164,29 +164,7 @@ ui <- dashboardPage(
           fluidRow(
             column(6,
               box(
-                title = "Strategy Configuration", status = "primary", solidHeader = TRUE, width = 12,
-                
-                h4("Market Conditions Analysis"),
-                actionButton("calculate_market_conditions_btn", "Calculate Market Conditions", 
-                            class = "btn-info btn-block", icon = icon("calculator")),
-                
-                hr(),
-                
-                div(class = "metric-box",
-                    div(class = "metric-value", textOutput("market_demand_index")),
-                    div(class = "metric-label", "Market Demand Index")
-                ),
-                
-                div(class = "metric-box",
-                    div(class = "metric-value", textOutput("demand_category")),
-                    div(class = "metric-label", "Demand Category")
-                ),
-                
-                # Removed Market Demand Override and Price Sensitivity Override sliders
-                # - Market demand is auto-detected from the four market signals
-                # - Price sensitivity is calculated per user based on their profile
-                
-                hr(),
+                title = "Strategy Selection", status = "primary", solidHeader = TRUE, width = 12,
                 
                 h4("Strategy Selection"),
                 selectInput("ranking_strategy", "Ranking Strategy:",
@@ -203,13 +181,15 @@ ui <- dashboardPage(
                   sliderInput("weight_revenue", "Revenue Weight:", 
                              min = 0, max = 1, value = 0.4, step = 0.1),
                   sliderInput("weight_trust", "Trust Weight:", 
-                             min = 0, max = 1, value = 0.2, step = 0.1)
-                ),
-                
-                hr(),
-                
-                actionButton("apply_strategy_btn", "Apply Strategy", 
-                            class = "btn-primary btn-block", icon = icon("cogs"))
+                             min = 0, max = 1, value = 0.2, step = 0.1),
+                  hr(),
+                  h5("MiniZinc Optimization:"),
+                  actionButton("run_deterministic_opt_btn", "Run Deterministic LP", class = "btn-success btn-block"),
+                  actionButton("run_stochastic_opt_btn", "Run Stochastic LP", class = "btn-warning btn-block"),
+                  hr(),
+                  verbatimTextOutput("optimization_status"),
+                  DT::dataTableOutput("optimization_results_table")
+                )
               )
             ),
             column(6,
@@ -348,7 +328,8 @@ server <- function(input, output, session) {
     bandit_results = NULL, # New reactive value for bandit simulation results
     merged_offers = NULL, # New reactive value for merged offers table
     bandit_sim_results_table = NULL, # New reactive value for bandit simulation results table
-    bandit_simulation_from_csv = NULL
+    bandit_simulation_from_csv = NULL,
+    optimization_results = NULL # New reactive value for optimization results
   )
 
   # Define fetch_and_update_user_ids but do NOT call it at the top level
@@ -1048,11 +1029,7 @@ server <- function(input, output, session) {
     })
   })
   
-  # MAB simulation plot
-  output$bandit_sim_results_table <- DT::renderDataTable({
-    req(values$bandit_sim_results_table)
-    DT::datatable(values$bandit_sim_results_table, options = list(scrollX = TRUE, pageLength = 10), rownames = FALSE)
-  })
+  # MAB simulation plot - REMOVED DUPLICATE OUTPUT
 
   output$mab_simulation_plot <- renderPlotly({
     if (is.null(values$mab_results)) {
@@ -1251,20 +1228,20 @@ generate_conversion_probabilities_csv <- function() {
   }
 }
 
-# Add an action button for admin/testing to generate the CSV
-addResourcePath("custom", "./")
+# Add an action button for admin/testing to generate the CSV - REMOVED
+# addResourcePath("custom", "./")
 
-# Add the button to the UI (e.g., in the sidebar or at the top right)
-insertUI(
-  selector = "body",
-  where = "beforeBegin",
-  ui = actionButton("generate_conversion_csv_btn", "Generate Conversion Probabilities CSV", class = "btn-info", style = "position: fixed; top: 60px; right: 10px; z-index: 1001;")
-)
+# Add the button to the UI (e.g., in the sidebar or at the top right) - REMOVED
+# insertUI(
+#   selector = "body",
+#   where = "beforeBegin",
+#   ui = actionButton("generate_conversion_csv_btn", "Generate Conversion Probabilities CSV", class = "btn-info", style = "position: fixed; top: 60px; right: 10px; z-index: 1001;")
+# )
 
-# Observe the button click in the server
-observeEvent(input$generate_conversion_csv_btn, {
-  generate_conversion_probabilities_csv()
-})
+# Observe the button click in the server - REMOVED
+# observeEvent(input$generate_conversion_csv_btn, {
+#   generate_conversion_probabilities_csv()
+# })
 
 # Reactive value to store user/market table
 values$user_market_table <- NULL
@@ -1389,7 +1366,11 @@ observeEvent(input$run_bandit_sim_btn, {
       stop("Data from backend is missing 'rank' column.")
     }
 
+    # Create a proper long format for merging with offers
     df_long <- tidyr::pivot_longer(df_wide, cols = -rank, names_to = "user_id", values_to = "probability_of_click")
+    
+    # Add offer_id column for proper merging (assuming one offer per user for now)
+    df_long$offer_id <- paste0("O", sprintf("%06d", as.numeric(factor(df_long$user_id))))
     
     values$bandit_results <- df_long
     values$bandit_sim_results_table <- df_wide # For table view
@@ -1417,14 +1398,25 @@ values$bandit_sim_csv <- NULL
 observeEvent(input$run_bandit_sim_btn, {
   csv_path <- "/data/bandit_simulation_results.csv"  # Adjust if your mount path is different
   if (file.exists(csv_path)) {
-    df <- readr::read_csv(csv_path, col_types = readr::cols(.default = 'c'))
-    # Convert numeric columns
-    num_cols <- c("rank", "probability_of_click", "true_click_prob", "preference_score", "normalized_probability_of_click")
-    for (col in num_cols) {
-      if (col %in% names(df)) df[[col]] <- as.numeric(df[[col]])
-    }
-    values$bandit_sim_csv <- df
-    showNotification("Loaded bandit_simulation_results.csv from disk", type = "message")
+    tryCatch({
+      df <- readr::read_csv(csv_path, col_types = readr::cols(.default = 'c'))
+      # Convert numeric columns safely
+      num_cols <- c("rank", "probability_of_click", "true_click_prob", "preference_score", "normalized_probability_of_click")
+      for (col in num_cols) {
+        if (col %in% names(df)) {
+          df[[col]] <- as.numeric(as.character(df[[col]]))
+        }
+      }
+      # Ensure user_id and offer_id are character
+      if ("user_id" %in% names(df)) df$user_id <- as.character(df$user_id)
+      if ("offer_id" %in% names(df)) df$offer_id <- as.character(df$offer_id)
+      
+      values$bandit_sim_csv <- df
+      showNotification("Loaded bandit_simulation_results.csv from disk", type = "message")
+    }, error = function(e) {
+      values$bandit_sim_csv <- NULL
+      showNotification(paste("Error reading CSV:", e$message), type = "error")
+    })
   } else {
     values$bandit_sim_csv <- NULL
     showNotification("bandit_simulation_results.csv not found on disk", type = "error")
@@ -1447,40 +1439,184 @@ output$bandit_sim_table <- DT::renderDataTable({
 })
 
 output$bandit_sim_summary <- renderPrint({
-  if (is.null(values$bandit_sim_summary)) return(NULL)
-  s <- values$bandit_sim_summary
-  cat(
-    "Bandit Simulation Summary:\n",
-    "Total Users:", s$total_users, "\n",
-    "Total Offers:", s$total_offers, "\n",
-    "Total Arms:", s$total_arms, "\n",
-    "Clicks per Arm:", s$clicks_per_arm, "\n",
-    "CSV Path:", s$csv_path, "\n\n"
-  )
+  if (is.null(values$bandit_sim_csv)) {
+    cat("No bandit simulation data available.\n")
+    cat("Click 'Estimate ranking impact over clicks' to run simulation.\n")
+    return()
+  }
   
-  if (!is.null(values$bandit_sim_user_sums)) {
-    cat("User Probability Sums (should be ~1.0 for each user):\n")
-    for (user_id in names(values$bandit_sim_user_sums)) {
-      cat(user_id, ":", round(values$bandit_sim_user_sums[[user_id]], 3), "\n")
-    }
+  df <- values$bandit_sim_csv
+  cat("Bandit Simulation Summary:\n")
+  cat("Total Rows:", nrow(df), "\n")
+  cat("Total Columns:", ncol(df), "\n")
+  cat("Columns:", paste(names(df), collapse = ", "), "\n\n")
+  
+  if ("user_id" %in% names(df)) {
+    cat("Unique Users:", length(unique(df$user_id)), "\n")
+  }
+  if ("offer_id" %in% names(df)) {
+    cat("Unique Offers:", length(unique(df$offer_id)), "\n")
+  }
+  if ("rank" %in% names(df)) {
+    cat("Rank Range:", min(df$rank, na.rm = TRUE), "to", max(df$rank, na.rm = TRUE), "\n")
+  }
+  if ("probability_of_click" %in% names(df)) {
+    cat("Click Probability Range:", round(min(df$probability_of_click, na.rm = TRUE), 3), "to", 
+        round(max(df$probability_of_click, na.rm = TRUE), 3), "\n")
   }
 })
 
 output$bandit_sim_barplot <- renderPlotly({
-  if (is.null(values$bandit_results)) return(NULL)
+  if (is.null(values$bandit_sim_csv)) {
+    p <- ggplot() + 
+      geom_text(aes(x = 0.5, y = 0.5, label = "No simulation data available"), size = 4) +
+      theme_void()
+    return(ggplotly(p))
+  }
   
-  p <- ggplot(values$bandit_results, aes(x = factor(rank), y = probability_of_click, fill = user_id)) +
-    geom_bar(stat = "identity", position = "dodge") +
-    labs(
-      title = "Bandit Simulation: Click Probability by Rank",
-      x = "Rank",
-      y = "Probability of Click",
-      fill = "User ID"
-    ) +
-    theme_minimal() +
-    scale_fill_brewer(palette = "Set2")
+  df <- values$bandit_sim_csv
   
-  ggplotly(p)
+  # Check if we have the required columns
+  if (!all(c("rank", "probability_of_click") %in% names(df))) {
+    p <- ggplot() + 
+      geom_text(aes(x = 0.5, y = 0.5, label = "Missing required columns for plotting"), size = 4) +
+      theme_void()
+    return(ggplotly(p))
+  }
+  
+  # Ensure data types are correct and handle any errors
+  tryCatch({
+    # Convert rank to factor and probability to numeric safely
+    df$rank <- as.numeric(as.character(df$rank))
+    df$probability_of_click <- as.numeric(as.character(df$probability_of_click))
+    
+    # Remove any NA values
+    df <- df[!is.na(df$rank) & !is.na(df$probability_of_click), ]
+    
+    if (nrow(df) == 0) {
+      p <- ggplot() + 
+        geom_text(aes(x = 0.5, y = 0.5, label = "No valid data for plotting"), size = 4) +
+        theme_void()
+      return(ggplotly(p))
+    }
+    
+    # Create the plot
+    p <- ggplot(df, aes(x = factor(rank), y = probability_of_click)) +
+      geom_bar(stat = "identity", fill = "#3498db", alpha = 0.7) +
+      labs(
+        title = "Bandit Simulation: Click Probability by Rank",
+        x = "Rank",
+        y = "Probability of Click"
+      ) +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    
+    ggplotly(p)
+  }, error = function(e) {
+    # Return a simple error plot if anything goes wrong
+    p <- ggplot() + 
+      geom_text(aes(x = 0.5, y = 0.5, label = paste("Plot error:", e$message)), size = 3) +
+      theme_void()
+    ggplotly(p)
+  })
+})
+
+# --- MiniZinc Optimization Event Handlers ---
+observeEvent(input$run_deterministic_opt_btn, {
+  output$optimization_status <- renderText("Running deterministic optimization, please wait...")
+  showModal(modalDialog("Running deterministic optimization... this may take a moment.", footer = NULL))
+
+  tryCatch({
+    # Run the deterministic optimization
+    res <- POST(paste0(API_URL, "/run_deterministic_optimization"))
+    if (http_status(res)$category != "Success") {
+      stop("Failed to run deterministic optimization on backend.")
+    }
+
+    results <- fromJSON(content(res, "text", encoding = "UTF-8"))
+    
+    if (results$status == "success") {
+      output$optimization_status <- renderText("Deterministic optimization completed successfully!")
+      showNotification("Deterministic optimization completed successfully!", type = "message")
+      
+      # Store results for display
+      values$optimization_results <- results$results
+    } else {
+      stop("Optimization failed: " + results$message)
+    }
+
+  }, error = function(e) {
+    output$optimization_status <- renderText(paste("Error:", e$message))
+    showNotification(e$message, type = "error")
+  }, finally = {
+    removeModal()
+  })
+})
+
+observeEvent(input$run_stochastic_opt_btn, {
+  output$optimization_status <- renderText("Running stochastic optimization, please wait...")
+  showModal(modalDialog("Running stochastic optimization... this may take a moment.", footer = NULL))
+
+  tryCatch({
+    # Run the stochastic optimization
+    res <- POST(paste0(API_URL, "/run_stochastic_optimization"))
+    if (http_status(res)$category != "Success") {
+      stop("Failed to run stochastic optimization on backend.")
+    }
+
+    results <- fromJSON(content(res, "text", encoding = "UTF-8"))
+    
+    if (results$status == "success") {
+      output$optimization_status <- renderText("Stochastic optimization completed successfully!")
+      showNotification("Stochastic optimization completed successfully!", type = "message")
+      
+      # Store results for display
+      values$optimization_results <- results$results
+    } else {
+      stop("Optimization failed: " + results$message)
+    }
+
+  }, error = function(e) {
+    output$optimization_status <- renderText(paste("Error:", e$message))
+    showNotification(e$message, type = "error")
+  }, finally = {
+    removeModal()
+  })
+})
+
+# Render optimization results table
+output$optimization_results_table <- DT::renderDataTable({
+  if (is.null(values$optimization_results)) {
+    return(NULL)
+  }
+  
+  # Try to display CSV results if available
+  if (!is.null(values$optimization_results$csv)) {
+    df <- as.data.frame(values$optimization_results$csv)
+    datatable(df, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE)
+  } else if (!is.null(values$optimization_results$json)) {
+    # Display JSON results in a simplified format
+    json_data <- values$optimization_results$json
+    if (!is.null(json_data$optimization_results)) {
+      opt_results <- json_data$optimization_results
+      
+      # Create a summary table
+      summary_data <- data.frame(
+        Metric = c("Total Expected Income", "Number of Offers", "Number of Users"),
+        Value = c(
+          round(opt_results$total_expected_income, 2),
+          opt_results$parameters$n_offers,
+          opt_results$parameters$n_users
+        )
+      )
+      
+      datatable(summary_data, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE)
+    } else {
+      return(NULL)
+    }
+  } else {
+    return(NULL)
+  }
 })
 
 # --- Update Offers & Probabilities for Selected User ---
@@ -1520,98 +1656,222 @@ output$offers_table_multi <- DT::renderDataTable({
 
 # After simulation, update offers table with click probabilities, price sensitivity, and market state
 # (Assume simulation results are loaded into values$bandit_results)
-observeEvent(values$bandit_results, {
-  if (is.null(values$user_offers_multi) || is.null(values$bandit_results)) return()
-  offers <- values$user_offers_multi
-  bandit <- values$bandit_results
-  # Merge click_probability by user_id and offer_id
-  offers <- dplyr::left_join(offers, bandit, by = c("user_id", "offer_id"))
-  values$user_offers_multi <- offers
-})
+# TEMPORARILY DISABLED TO AVOID DATA TYPE CONFLICTS
+# observeEvent(values$bandit_results, {
+#   if (is.null(values$user_offers_multi) || is.null(values$bandit_results)) return()
+#   offers <- values$user_offers_multi
+#   bandit <- values$bandit_results
+#   
+#   # Ensure data types are compatible before merging
+#   if ("user_id" %in% names(offers)) offers$user_id <- as.character(offers$user_id)
+#   if ("offer_id" %in% names(offers)) offers$offer_id <- as.character(offers$offer_id)
+#   if ("user_id" %in% names(bandit)) bandit$user_id <- as.character(bandit$user_id)
+#   if ("offer_id" %in% names(bandit)) bandit$offer_id <- as.character(bandit$offer_id)
+#   
+#   # Merge click_probability by user_id and offer_id
+#   offers <- dplyr::left_join(offers, bandit, by = c("user_id", "offer_id"))
+#   values$user_offers_multi <- offers
+# })
 
 # --- Robust checks for empty vectors/data frames in merging logic ---
 observeEvent(input$selected_users_for_offers, {
   user_ids <- input$selected_users_for_offers
   if (is.null(user_ids) || length(user_ids) == 0) {
     values$merged_offers <- NULL
-    output$offers_loading_status <- renderText({"No user(s) selected"})
+    output$offers_loading_status <- renderText({
+      tryCatch({
+        "No user(s) selected"
+      }, error = function(e) {
+        "Status error"
+      })
+    })
     return()
   }
-  res <- tryCatch(httr::GET(paste0(API_URL, "/trial_sampled_offers")), error = function(e) NULL)
-  if (is.null(res) || httr::status_code(res) != 200) {
-    values$merged_offers <- NULL
-    output$offers_loading_status <- renderText({"Failed to fetch offers from backend."})
-    showNotification("Failed to fetch offers from backend.", type = "error")
-    return()
-  }
-  offers_data <- tryCatch(jsonlite::fromJSON(httr::content(res, as = "text")), error = function(e) NULL)
-  if (is.null(offers_data$data) || length(offers_data$data) == 0) {
-    values$merged_offers <- NULL
-    output$offers_loading_status <- renderText({"No offers found for selected user(s)"})
-    showNotification("No offers found for selected user(s)", type = "error")
-    return()
-  }
-  filtered_offers <- dplyr::filter(as.data.frame(offers_data$data), user_id %in% user_ids)
-  if (nrow(filtered_offers) == 0) {
-    values$merged_offers <- NULL
-    output$offers_loading_status <- renderText({"No offers found for selected user(s)"})
-    showNotification("No offers found for selected user(s)", type = "error")
-    return()
-  }
-  # For each user, fetch price sensitivity and market state, and append to offers
-  merged <- filtered_offers
-  merged$price_sensitivity <- NA
-  merged$market_state <- NA
-  merged$booking_probability <- NA
-  for (uid in unique(filtered_offers$user_id)) {
-    dps <- tryCatch(jsonlite::fromJSON(httr::content(httr::GET(paste0(API_URL, "/dynamic_price_sensitivity/", uid)), as = "text")), error = function(e) NULL)
-    locs <- filtered_offers$location[filtered_offers$user_id == uid]
-    if (length(locs) == 0) {
-      ms <- NULL
-    } else {
-      ms <- tryCatch(jsonlite::fromJSON(httr::content(httr::GET(paste0(API_URL, "/market_state/", locs[1])), as = "text")), error = function(e) NULL)
+  
+  # Show loading message
+  output$offers_loading_status <- renderText({
+    tryCatch({
+      "Loading merged data from CSV files..."
+    }, error = function(e) {
+      "Error updating status"
+    })
+  })
+  
+  tryCatch({
+    # Load data from the three CSV files
+    market_state_path <- "/data/market_state_by_location.csv"
+    bandit_results_path <- "/data/bandit_simulation_results.csv"
+    conversion_probs_path <- "/data/conversion_probabilities.csv"
+    
+    # Check if files exist
+    if (!file.exists(market_state_path) || !file.exists(bandit_results_path) || !file.exists(conversion_probs_path)) {
+      stop("One or more required CSV files are missing")
     }
-    merged$price_sensitivity[merged$user_id == uid] <- if (!is.null(dps)) dps$dynamic_price_sensitivity else NA
-    merged$market_state[merged$user_id == uid] <- if (!is.null(ms)) ms$demand_index else NA
-    # Optionally, fetch booking probability from offer_probabilities endpoint
-    opp <- tryCatch(jsonlite::fromJSON(httr::content(httr::GET(paste0(API_URL, "/offer_probabilities/", uid)), as = "text")), error = function(e) NULL)
-    if (!is.null(opp) && !is.null(opp$offers)) {
-      for (i in 1:nrow(merged[merged$user_id == uid,])) {
-        oid <- merged$offer_id[merged$user_id == uid][i]
-        # Defensive: check opp$offers is a list and oid is not NA
-        if (is.na(oid) || length(opp$offers) == 0) next
-        idx <- which(sapply(opp$offers, function(x) x$offer_id == oid))
-        if (length(idx) == 0) next
-        bp <- opp$offers[[idx]]$booking_probability
-        merged$booking_probability[merged$user_id == uid & merged$offer_id == oid] <- bp
-      }
+    
+    # Read the CSV files
+    market_state <- read.csv(market_state_path, stringsAsFactors = FALSE)
+    bandit_results <- read.csv(bandit_results_path, stringsAsFactors = FALSE)
+    conversion_probs <- read.csv(conversion_probs_path, stringsAsFactors = FALSE)
+    
+    # Ensure proper data types
+    bandit_results$user_id <- as.character(bandit_results$user_id)
+    bandit_results$offer_id <- as.character(bandit_results$offer_id)
+    conversion_probs$user_id <- as.character(conversion_probs$user_id)
+    conversion_probs$offer_id <- as.character(conversion_probs$offer_id)
+    
+    # Filter by selected user IDs
+    bandit_filtered <- bandit_results[bandit_results$user_id %in% user_ids, ]
+    conversion_filtered <- conversion_probs[conversion_probs$user_id %in% user_ids, ]
+    
+    if (nrow(bandit_filtered) == 0) {
+      stop("No bandit simulation data found for selected user(s)")
     }
-  }
-  values$merged_offers <- merged
-  output$offers_loading_status <- renderText({paste(nrow(merged), "offers loaded for", length(user_ids), "user(s)")})
+    
+    # Merge bandit results with conversion probabilities
+    merged_data <- dplyr::left_join(bandit_filtered, conversion_filtered, by = c("user_id", "offer_id"))
+    
+    # Merge with market state data using destination/location
+    if ("destination" %in% colnames(merged_data)) {
+      merged_data <- dplyr::left_join(merged_data, market_state, by = c("destination" = "location"))
+    }
+    
+    # Select and rename columns for better display
+    final_columns <- c(
+      "user_id", "offer_id", "rank", "probability_of_click", "true_click_prob", "preference_score",
+      "destination", "conversion_probability", "avg_price", "avg_days_to_go", "avg_price_trend",
+      "user_count", "offer_count", "demand_index", "market_state_label"
+    )
+    
+    # Keep only columns that exist in the merged data
+    existing_columns <- final_columns[final_columns %in% colnames(merged_data)]
+    merged_data <- merged_data[, existing_columns, drop = FALSE]
+    
+    values$merged_offers <- merged_data
+    
+    # Debug: Print information about the loaded data
+    print(paste("Loaded", nrow(merged_data), "merged records for", length(user_ids), "user(s)"))
+    print(paste("Columns:", paste(colnames(merged_data), collapse = ", ")))
+    
+    output$offers_loading_status <- renderText({
+      tryCatch({
+        paste(nrow(merged_data), "merged records loaded for", length(user_ids), "user(s)")
+      }, error = function(e) {
+        "Status update error"
+      })
+    })
+    
+  }, error = function(e) {
+    values$merged_offers <- NULL
+    output$offers_loading_status <- renderText({
+      tryCatch({
+        paste("Error:", e$message)
+      }, error = function(e2) {
+        "Error occurred"
+      })
+    })
+    showNotification(paste("Error loading merged data:", e$message), type = "error")
+  })
 })
 
 output$merged_offers_table <- DT::renderDataTable({
-  data <- values$merged_offers
-  if (is.null(data) || !is.data.frame(data) || nrow(data) == 0) {
-    showNotification("No offers data to display.", type = "error")
-    return(NULL)
-  }
-  df <- as.data.frame(data, stringsAsFactors = FALSE)
-  if ("user_id" %in% colnames(df) && "offer_id" %in% colnames(df)) {
-    df$conversion_probability <- mapply(fetch_conversion_probability, df$user_id, df$offer_id)
-  }
-  DT::datatable(df, options = list(pageLength = 10, scrollX = TRUE), server = FALSE)
+  tryCatch({
+    data <- values$merged_offers
+    if (is.null(data) || !is.data.frame(data) || nrow(data) == 0) {
+      # Show a placeholder table when no data is available
+      placeholder_df <- data.frame(
+        Message = "No merged data available. Please select a user and ensure CSV files are loaded.",
+        stringsAsFactors = FALSE
+      )
+      return(DT::datatable(
+        placeholder_df,
+        options = list(pageLength = 1, dom = 't'),
+        rownames = FALSE
+      ))
+    }
+    
+    # Ensure data is properly formatted
+    df <- as.data.frame(data, stringsAsFactors = FALSE)
+    
+    # Check for required columns
+    if (!"user_id" %in% colnames(df)) {
+      showNotification("Missing user_id column in merged data", type = "warning")
+      placeholder_df <- data.frame(
+        Message = "Data format error: missing user_id column",
+        stringsAsFactors = FALSE
+      )
+      return(DT::datatable(
+        placeholder_df,
+        options = list(pageLength = 1, dom = 't'),
+        rownames = FALSE
+      ))
+    }
+    
+    # Ensure all columns are properly formatted
+    for (col in colnames(df)) {
+      if (is.factor(df[[col]])) {
+        df[[col]] <- as.character(df[[col]])
+      }
+    }
+    
+    # Format numeric columns for better display
+    numeric_cols <- c("probability_of_click", "true_click_prob", "preference_score", 
+                     "conversion_probability", "avg_price", "avg_days_to_go", 
+                     "avg_price_trend", "demand_index")
+    
+    for (col in numeric_cols) {
+      if (col %in% colnames(df)) {
+        df[[col]] <- as.numeric(as.character(df[[col]]))
+      }
+    }
+    
+    # Create the datatable with formatting
+    dt <- DT::datatable(
+      df, 
+      options = list(
+        pageLength = 15, 
+        scrollX = TRUE,
+        autoWidth = TRUE,
+        columnDefs = list(
+          list(targets = "_all", className = "dt-center")
+        )
+      ), 
+      rownames = FALSE,
+      caption = "Merged Data: Bandit Simulation Results + Conversion Probabilities + Market State"
+    )
+    
+    return(dt)
+    
+  }, error = function(e) {
+    showNotification(paste("Error rendering merged table:", e$message), type = "error")
+    # Return a simple error table
+    error_df <- data.frame(
+      Error = paste("Table rendering error:", e$message),
+      stringsAsFactors = FALSE
+    )
+    return(DT::datatable(
+      error_df,
+      options = list(pageLength = 1, dom = 't'),
+      rownames = FALSE
+    ))
+  })
 })
 
 # After simulation, update merged_offers with click probabilities from bandit results
-observeEvent(values$bandit_results, {
-  if (is.null(values$merged_offers) || is.null(values$bandit_results)) return()
-  offers <- values$merged_offers
-  bandit <- values$bandit_results
-  offers <- dplyr::left_join(offers, bandit, by = c("user_id", "offer_id"))
-  values$merged_offers <- offers
-})
+# TEMPORARILY DISABLED TO AVOID DATA TYPE CONFLICTS
+# observeEvent(values$bandit_results, {
+#   if (is.null(values$merged_offers) || is.null(values$bandit_results)) return()
+#   offers <- values$merged_offers
+#   bandit <- values$bandit_results
+#   
+#   # Ensure data types are compatible before merging
+#   if ("user_id" %in% names(offers)) offers$user_id <- as.character(offers$user_id)
+#   if ("offer_id" %in% names(offers)) offers$offer_id <- as.character(offers$offer_id)
+#   if ("user_id" %in% names(bandit)) bandit$user_id <- as.character(bandit$user_id)
+#   if ("offer_id" %in% names(bandit)) bandit$offer_id <- as.character(bandit$offer_id)
+#   
+#   offers <- dplyr::left_join(offers, bandit, by = c("user_id", "offer_id"))
+#   values$merged_offers <- offers
+# })
 
 # Ensure user ID dropdown for offers is populated on app load or after sampling
 observe({
