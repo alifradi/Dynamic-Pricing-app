@@ -111,7 +111,7 @@ volumes:
 
 ---
 
-# Mathematical Approach & Core Formulas (2024 Update)
+# Mathematical Approach & Core Formulas
 
 This project uses a multi-objective, simulation-driven approach for hotel offer ranking and market analysis. Below are the core formulas and their roles in the backend and UI.
 
