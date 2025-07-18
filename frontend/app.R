@@ -57,7 +57,8 @@ ui <- dashboardPage(
       menuItem("Scenario Setup", tabName = "scenario", icon = icon("cogs")),
       menuItem("Strategy Selection", tabName = "strategy", icon = icon("chart-line")),
       menuItem("Results & Analysis", tabName = "results", icon = icon("chart-bar")),
-      menuItem("Market Analysis", tabName = "market", icon = icon("globe"))
+      menuItem("Market Analysis", tabName = "market", icon = icon("globe")),
+      menuItem("Generated Data", tabName = "generated_data", icon = icon("table"))
     )
   ),
   
@@ -312,6 +313,11 @@ ui <- dashboardPage(
             DT::dataTableOutput("competitor_analysis_table")
           )
         )
+      ),
+      tabItem(tabName = "generated_data",
+        box(title = "Generated Data Overview", status = "primary", solidHeader = TRUE, width = 12,
+          DT::dataTableOutput("generated_data_table")
+        )
       )
     )
   )
@@ -344,7 +350,51 @@ server <- function(input, output, session) {
     bandit_sim_results_table = NULL, # New reactive value for bandit simulation results table
     bandit_simulation_from_csv = NULL
   )
-  
+
+  # Define fetch_and_update_user_ids but do NOT call it at the top level
+  fetch_and_update_user_ids <- function() {
+    tryCatch({
+      if (!is.null(values$user_offers) && length(values$user_offers) > 0) {
+        df <- as.data.frame(values$user_offers, stringsAsFactors = FALSE)
+        if ("user_id" %in% colnames(df)) {
+          user_ids <- unique(df$user_id)
+          user_ids <- user_ids[!is.na(user_ids) & user_ids != ""]
+          if (length(user_ids) > 0) {
+            values$user_ids <- user_ids
+            updateSelectInput(session, "user_profile_select_offers", choices = user_ids)
+            updateSelectizeInput(session, "selected_users_for_offers", choices = user_ids)
+            print(paste("Updated user IDs from offers data:", length(user_ids), "users"))
+            write(paste("Updated user IDs from offers data:", length(user_ids), "users"), "/tmp/shiny_debug.log", append = TRUE)
+          } else {
+            values$user_ids <- NULL
+            updateSelectInput(session, "user_profile_select_offers", choices = NULL)
+            updateSelectizeInput(session, "selected_users_for_offers", choices = NULL)
+            print("No valid user IDs found in offers data")
+            write("No valid user IDs found in offers data", "/tmp/shiny_debug.log", append = TRUE)
+          }
+        } else {
+          values$user_ids <- NULL
+          updateSelectInput(session, "user_profile_select_offers", choices = NULL)
+          updateSelectizeInput(session, "selected_users_for_offers", choices = NULL)
+          print("No user_id column found in offers data")
+          write("No user_id column found in offers data", "/tmp/shiny_debug.log", append = TRUE)
+        }
+      } else {
+        values$user_ids <- NULL
+        updateSelectInput(session, "user_profile_select_offers", choices = NULL)
+        updateSelectizeInput(session, "selected_users_for_offers", choices = NULL)
+        print("No offers data available to extract user IDs")
+        write("No offers data available to extract user IDs", "/tmp/shiny_debug.log", append = TRUE)
+      }
+    }, error = function(e) {
+      values$user_ids <- NULL
+      updateSelectInput(session, "user_profile_select_offers", choices = NULL)
+      updateSelectizeInput(session, "selected_users_for_offers", choices = NULL)
+      print(paste("Error updating user IDs:", e$message))
+      write(paste("Error updating user IDs:", e$message), "/tmp/shiny_debug.log", append = TRUE)
+    })
+  }
+
   # Helper to fetch and update offers table from /trial_sampled_offers
   fetch_and_update_offers <- function() {
     tryCatch({
@@ -389,6 +439,29 @@ server <- function(input, output, session) {
   # On app load, fetch the offers table and load bandit results from CSV
   fetch_and_update_offers()
 
+  # Robust error handling for the merged generated data table
+  output$generated_data_table <- DT::renderDataTable({
+    user_ids <- input$selected_users_for_offers
+    data <- tryCatch({
+      # Check for file existence before reading
+      if (!file.exists("/data/market_state_by_location.csv") ||
+          !file.exists("/data/bandit_simulation_results.csv") ||
+          !file.exists("/data/conversion_probabilities.csv")) {
+        showNotification("One or more required data files are missing.", type = "error")
+        return(NULL)
+      }
+      load_generated_data(user_ids)
+    }, error = function(e) {
+      showNotification("Error loading generated data table.", type = "error")
+      return(NULL)
+    })
+    if (is.null(data) || nrow(data) == 0) {
+      showNotification("No generated data available for the selected user(s).", type = "warning")
+      return(NULL)
+    }
+    DT::datatable(data, options = list(pageLength = 20, scrollX = TRUE), rownames = FALSE)
+  })
+
   # Load bandit simulation results from CSV on startup
   tryCatch({
     bandit_results_df <- read.csv("../data/bandit_simulation_results.csv")
@@ -396,7 +469,7 @@ server <- function(input, output, session) {
     print("Successfully loaded bandit_simulation_results.csv")
   }, error = function(e) {
     print(paste("Error loading bandit_simulation_results.csv:", e$message))
-    showNotification("Could not load bandit simulation results from CSV.", type = "error")
+    # Do not showNotification here
   })
 
   # Render the loaded bandit simulation results in the UI
@@ -418,52 +491,6 @@ server <- function(input, output, session) {
     showNotification("App is working! Test button clicked.", type = "default")
   })
   
-  # Helper to fetch and update user IDs from offers data
-  fetch_and_update_user_ids <- function() {
-    tryCatch({
-      # Extract user IDs from the offers data instead of calling a separate endpoint
-      if (!is.null(values$user_offers) && length(values$user_offers) > 0) {
-        # Convert to data frame and extract unique user IDs
-        df <- as.data.frame(values$user_offers, stringsAsFactors = FALSE)
-        if ("user_id" %in% colnames(df)) {
-          user_ids <- unique(df$user_id)
-          user_ids <- user_ids[!is.na(user_ids) & user_ids != ""]
-          if (length(user_ids) > 0) {
-            values$user_ids <- user_ids
-            updateSelectInput(session, "user_profile_select_offers", choices = user_ids)
-            updateSelectizeInput(session, "selected_users_for_offers", choices = user_ids)
-            print(paste("Updated user IDs from offers data:", length(user_ids), "users"))
-            write(paste("Updated user IDs from offers data:", length(user_ids), "users"), "/tmp/shiny_debug.log", append = TRUE)
-          } else {
-            values$user_ids <- NULL
-            updateSelectInput(session, "user_profile_select_offers", choices = NULL)
-            updateSelectizeInput(session, "selected_users_for_offers", choices = NULL)
-            print("No valid user IDs found in offers data")
-            write("No valid user IDs found in offers data", "/tmp/shiny_debug.log", append = TRUE)
-          }
-        } else {
-          values$user_ids <- NULL
-          updateSelectInput(session, "user_profile_select_offers", choices = NULL)
-          updateSelectizeInput(session, "selected_users_for_offers", choices = NULL)
-          print("No user_id column found in offers data")
-          write("No user_id column found in offers data", "/tmp/shiny_debug.log", append = TRUE)
-        }
-      } else {
-        values$user_ids <- NULL
-        updateSelectInput(session, "user_profile_select_offers", choices = NULL)
-        updateSelectizeInput(session, "selected_users_for_offers", choices = NULL)
-        print("No offers data available to extract user IDs")
-        write("No offers data available to extract user IDs", "/tmp/shiny_debug.log", append = TRUE)
-      }
-    }, error = function(e) {
-      values$user_ids <- NULL
-      updateSelectInput(session, "user_profile_select_offers", choices = NULL)
-      updateSelectizeInput(session, "selected_users_for_offers", choices = NULL)
-      print(paste("Error updating user IDs:", e$message))
-      write(paste("Error updating user IDs:", e$message), "/tmp/shiny_debug.log", append = TRUE)
-    })
-  }
-
   # When user selection changes, fetch user profile from backend
   observeEvent(input$user_profile_select_offers, {
     user_id <- input$user_profile_select_offers
@@ -583,7 +610,7 @@ server <- function(input, output, session) {
     )
   })
 
-  # After successful scenario save, fetch the offers table and user IDs
+  # --- Automatically generate conversion_probabilities.csv after 'Consider Scenario' ---
   observeEvent(input$consider_scenario_btn, {
     print("Consider Scenario button clicked")
     print(paste("fresh_offers is null:", is.null(values$user_offers)))
@@ -640,6 +667,13 @@ server <- function(input, output, session) {
       showNotification(paste("Error saving scenario:", e$message), type = "error")
       write(paste("Error saving scenario:", e$message), "/tmp/shiny_debug.log", append = TRUE)
     })
+    # After scenario is saved, trigger conversion probabilities CSV generation
+    res <- POST(paste0(API_URL, "/conversion_probabilities_csv"))
+    if (http_status(res)$category == "Success") {
+      showNotification("Conversion probabilities CSV generated.", type = "message")
+    } else {
+      showNotification("Failed to generate conversion probabilities CSV.", type = "error")
+    }
   })
 
   # --- TAB 2: STRATEGY SELECTION ---
@@ -1630,8 +1664,11 @@ observe({
 
 # Render the new user/market table
 output$user_market_table <- DT::renderDataTable({
-  df <- values$user_market_table_new
-  if (is.null(df) || nrow(df) == 0) return(NULL)
+  df <- tryCatch(values$user_market_table_new, error = function(e) NULL)
+  if (is.null(df) || nrow(df) == 0) {
+    showNotification("No user/market data available to display.", type = "warning")
+    return(NULL)
+  }
   DT::datatable(df, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE)
 })
 
@@ -1700,6 +1737,73 @@ output$dynamic_price_sensitivity_info <- renderUI({
 output$market_demand_index_info <- renderUI({
   HTML("<b>Market Demand Index:</b> Composite index of normalized price, booking urgency, price volatility, and competition density. See README for formula.")
 })
+
+# --- Add a new tab or box to show merged generated data ---
+# Helper to load and merge the three CSVs
+load_generated_data <- function(selected_user_ids) {
+  # Read CSVs with explicit column types
+  market_state <- tryCatch(read.csv("/data/market_state_by_location.csv", stringsAsFactors = FALSE), error = function(e) NULL)
+  bandit_results <- tryCatch(read.csv("/data/bandit_simulation_results.csv", 
+                                      colClasses = c(user_id = "character", offer_id = "character"), stringsAsFactors = FALSE), error = function(e) NULL)
+  conversion_probs <- tryCatch(read.csv("/data/conversion_probabilities.csv", 
+                                        colClasses = c(user_id = "character", offer_id = "character"), stringsAsFactors = FALSE), error = function(e) NULL)
+  # Coerce keys to character
+  if (!is.null(bandit_results)) {
+    bandit_results$user_id <- as.character(bandit_results$user_id)
+    bandit_results$offer_id <- as.character(bandit_results$offer_id)
+  }
+  if (!is.null(conversion_probs)) {
+    conversion_probs$user_id <- as.character(conversion_probs$user_id)
+    conversion_probs$offer_id <- as.character(conversion_probs$offer_id)
+  }
+  # Filter by selected user IDs if provided
+  if (!is.null(selected_user_ids) && length(selected_user_ids) > 0) {
+    bandit_results <- bandit_results[bandit_results$user_id %in% selected_user_ids, ]
+    conversion_probs <- conversion_probs[conversion_probs$user_id %in% selected_user_ids, ]
+  }
+  # Merge bandit_results and conversion_probs on user_id, offer_id
+  merged <- tryCatch({
+    merge(bandit_results, conversion_probs, by = c("user_id", "offer_id"), all.x = TRUE)
+  }, error = function(e) NULL)
+  # Merge with market_state on destination/location
+  if (!is.null(merged) && !is.null(market_state) && "destination" %in% colnames(merged)) {
+    merged <- tryCatch({
+      merge(merged, market_state, by.x = "destination", by.y = "location", all.x = TRUE)
+    }, error = function(e) merged)
+  }
+  return(merged)
+}
+
+# Add a new output for the merged table
+output$generated_data_table <- DT::renderDataTable({
+  user_ids <- input$selected_users_for_offers
+  data <- tryCatch({
+    if (!file.exists("/data/market_state_by_location.csv") ||
+        !file.exists("/data/bandit_simulation_results.csv") ||
+        !file.exists("/data/conversion_probabilities.csv")) {
+      showNotification("One or more required data files are missing.", type = "error")
+      return(NULL)
+    }
+    load_generated_data(user_ids)
+  }, error = function(e) {
+    showNotification("Error loading generated data table.", type = "error")
+    return(NULL)
+  })
+  if (is.null(data) || nrow(data) == 0) {
+    showNotification("No generated data available for the selected user(s).", type = "warning")
+    return(NULL)
+  }
+  DT::datatable(data, options = list(pageLength = 20, scrollX = TRUE), rownames = FALSE)
+})
+
+# Add a new tab or box in the UI for the generated data table
+# For example, add to the 'Results & Analysis' tab or as a new tab
+# Example UI addition:
+# tabItem(tabName = "generated_data",
+#   box(title = "Generated Data Overview", status = "primary", solidHeader = TRUE, width = 12,
+#     DT::dataTableOutput("generated_data_table")
+#   )
+# )
 
 }
 
