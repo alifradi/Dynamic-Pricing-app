@@ -171,6 +171,138 @@ T_{ij} = \text{base\_trust}_j - \gamma \cdot \sigma^2(\text{price}_j, t-24h)
 
 Where $\gamma$ is a volatility penalty weight and $\sigma^2$ is the variance of price over the last 24h.
 
+## 6. Linear Programming Optimization Model
+
+### Objective Function
+The main optimization objective maximizes expected revenue while considering multiple factors:
+
+```math
+\max_{x_{ij}} \sum_{i=1}^{n_{\text{offers}}} \sum_{j=1}^{n_{\text{positions}}} x_{ij} \cdot \left(w_{\text{conv}} \cdot C_i + w_{\text{rev}} \cdot R_i + w_{\text{trust}} \cdot T_i\right) \cdot \frac{1}{\log_2(j + 2)}
+```
+
+Where:
+- $x_{ij}$: Binary decision variable (1 if offer $i$ is placed at position $j$)
+- $C_i$: Conversion likelihood score for offer $i$
+- $R_i$: Revenue score for offer $i$
+- $T_i$: Trust score for offer $i$
+- $w_{\text{conv}}, w_{\text{rev}}, w_{\text{trust}}$: Objective weights
+- $\frac{1}{\log_2(j + 2)}$: Position weight (higher positions get more weight)
+
+### Constraints
+
+**Position Uniqueness:**
+```math
+\sum_{i=1}^{n_{\text{offers}}} x_{ij} \leq 1 \quad \forall j \in \{1, \ldots, n_{\text{positions}}\}
+```
+
+**Offer Uniqueness:**
+```math
+\sum_{j=1}^{n_{\text{positions}}} x_{ij} \leq 1 \quad \forall i \in \{1, \ldots, n_{\text{offers}}\}
+```
+
+**Price Competitiveness:**
+```math
+x_{ij} = 0 \quad \forall i, j \text{ where } \text{price}_i > 1.5 \cdot \min_{k} \text{price}_k \text{ and } j \leq 3
+```
+
+**Partner Diversity:**
+```math
+\sum_{i \in \text{Partner}_p} \sum_{j=1}^{5} x_{ij} \leq 2 \quad \forall \text{partner } p
+```
+
+## 7. Conversion Probability Model
+
+The conversion probability for an offer is calculated as a product of interpretable factors:
+
+```math
+P(\text{conversion}) = S_{\text{price}} \times S_{\text{rating}} \times S_{\text{amenities}} \times S_{\text{loyalty}} \times S_{\text{brand}}
+```
+
+Where each factor is defined as:
+
+**Price Factor:**
+```math
+S_{\text{price}} = \max\left(0.1, 1 - \frac{|\text{trivago\_price} - \text{partner\_price}|}{\text{user\_budget\_max} + 1}\right)
+```
+
+**Rating Factor:**
+```math
+S_{\text{rating}} = 0.5 + 0.1 \times (\text{hotel\_rating} - 3)
+```
+
+**Amenities Factor:**
+```math
+S_{\text{amenities}} = 0.5 + 0.1 \times \min(\text{amenities\_match}, 5)
+```
+
+**Loyalty Factor:**
+```math
+S_{\text{loyalty}} = \begin{cases} 
+1.0 & \text{if user is Gold/Platinum} \\ 
+0.8 & \text{if Silver} \\ 
+0.6 & \text{otherwise} 
+\end{cases}
+```
+
+**Brand Factor:**
+```math
+S_{\text{brand}} = \begin{cases} 
+1.0 & \text{if partner is Booking.com/Expedia} \\ 
+0.9 & \text{otherwise} 
+\end{cases}
+```
+
+## 8. Click Probability Model
+
+### True Click Probability
+The theoretical probability that a user would click on an offer at a given rank:
+
+```math
+\text{true\_click\_prob} = \min(0.95, \max(0.05, \text{preference\_score} \times \text{rank\_factor}))
+```
+
+Where:
+```math
+\text{rank\_factor} = \frac{1}{\text{rank}}
+```
+
+### Normalized Click Probability
+For relative comparison among offers at the same rank:
+
+```math
+\text{normalized\_probability\_of\_click}_i = \frac{\exp(\text{probability\_of\_click}_i)}{\sum_j \exp(\text{probability\_of\_click}_j)}
+```
+
+## 9. Trust Score Calculation
+
+The user trust score combines multiple factors:
+
+```math
+\text{trust\_score} = 0.4 \times \text{price\_score} + 0.3 \times \text{consistency\_score} + 0.3 \times \text{brand\_trust}
+```
+
+Where:
+
+**Price Score:**
+```math
+\text{price\_score} = 100 \times \left(1 - \frac{\text{offer\_price} - \min(\text{prices})}{\max(\text{prices}) - \min(\text{prices})}\right)
+```
+
+**Consistency Score:**
+```math
+\text{consistency\_score} = 100 \times \left(1 - \frac{|\text{trivago\_price} - \text{partner\_price}|}{\text{partner\_price}}\right)
+```
+
+## 10. Expected Revenue Calculation
+
+The expected revenue for each offer-position combination:
+
+```math
+\text{expected\_revenue}_{ij} = \text{bid\_amount}_i \times \text{conversion\_probability}_i \times \text{user\_preference}_{ij} \times \frac{1}{j + 1}
+```
+
+Where $\frac{1}{j + 1}$ represents the rank decay factor.
+
 ---
 
 # How These Formulas Are Used
@@ -188,7 +320,7 @@ Where $\gamma$ is a volatility penalty weight and $\sigma^2$ is the variance of 
 
 This is the simulated (learned) probability that a user will click on a given offer when it is shown at a specific rank.
 It is estimated by simulating many (e.g., 1000) user interactions (clicks/no clicks) for each (user, offer, rank) combination, using a recursive average formula.
-The value reflects both the offer’s inherent attractiveness (preference_score) and the effect of its position (rank) in the list.
+The value reflects both the offer's inherent attractiveness (preference_score) and the effect of its position (rank) in the list.
 
 # true click prob
 
@@ -205,7 +337,7 @@ where
 \text{rank\_factor} = \frac{1}{\text{rank}}
 ```
 
-This value is used as the “ground truth” probability for simulating clicks in the bandit simulation.
+This value is used as the "ground truth" probability for simulating clicks in the bandit simulation.
 
 # probability_of_conversion
 
@@ -247,9 +379,9 @@ This gives a relative likelihood of click among competing offers at the same ran
 
 Summary Table:
 Column                Meaning
-preference_score      How well the offer matches the user’s preferences (composite score, 0–1).
+preference_score      How well the offer matches the user's preferences (composite score, 0–1).
 probability_of_click  Simulated/learned probability of click for (user, offer, rank) after 1000 trials.
-true_click_prob       Theoretical probability of click for (user, offer, rank) used as the “ground truth”.
+true_click_prob       Theoretical probability of click for (user, offer, rank) used as the "ground truth".
 normalized_probability_of_click  (Optional) Softmax-normalized probability for relative comparison among offers at the same rank for a user.
 
 ## Where to Find Key Metrics in the UI
