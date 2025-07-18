@@ -1,6 +1,55 @@
-# Data Generator use
+# trivago Hotel Offer Ranking Simulator
 
-python data/generate_enhanced_datasets.py --hotels 500 --offers 1000 --users 200
+## Project Overview & Business Context
+
+trivago, as a leading hotel metasearch engine, faces a unique challenge: it does not set hotel prices, but must rank competing offers for the same hotel from multiple partners (e.g., Booking.com, Expedia, HotelDirect). The core business problem is to design a ranking system that:
+- Maximizes trivago's commission revenue (by promoting higher-commission offers)
+- Maintains high user conversion (by showing relevant, attractive offers)
+- Preserves long-term user trust (by avoiding manipulative or inconsistent rankings)
+
+This project simulates and optimizes this multi-objective ranking problem, providing a realistic, data-driven environment for strategy development and experimentation.
+
+## Features & Modeling Approach
+
+### Market Demand Characterization
+- **Market Demand Index (MDI):** We construct a composite index for each destination using proxies such as price trends (from 24h price history), competition density (unique hotels × partners), and booking urgency (days to go). This index dynamically segments the market into low, medium, or high demand states.
+
+### Dynamic Price Sensitivity
+- **User-Specific Modeling:** Each user's price sensitivity is not static. It is dynamically adjusted based on their days_to_go, the volatility and level of prices in their destination, and their base profile. This allows the system to simulate realistic user behavior under different market conditions.
+
+### Predictive Models (Forecasting)
+- **pCTR (Predicted Click-Through Rate):** ML models estimate the probability a user will click an offer, based on price competitiveness, brand, and user context.
+- **pCVR (Predicted Conversion Rate):** ML models estimate the probability a click will convert to a booking, incorporating price difference, hotel quality, amenities match, and user/brand factors.
+- These predictions serve as key inputs to the optimization layer.
+
+### Optimization Strategies
+- **Stochastic Linear Programming (LP):**
+  - Maximizes expected revenue subject to business constraints (e.g., minimum trust score, partner diversity).
+  - Mathematical Formulation:
+    ```math
+    \max_{x} \sum_{i,j} x_{ij} (w_{rev} R_{ij} + w_{rel} Q_{ij} + w_{trust} T_{ij})
+    ```
+    where $x_{ij}$ is the assignment of offer $j$ to rank $i$, and $R_{ij}$, $Q_{ij}$, $T_{ij}$ are revenue, relevance, and trust scores.
+- **Reinforcement Learning (DQN):**
+  - Acts as a strategic layer, learning the optimal policy for configuring the LP solver's constraints based on observed market state.
+  - Enables adaptive, context-aware ranking strategies that evolve over time.
+- **Multi-Armed Bandit (MAB):**
+  - Used for visualizing and experimenting with the exploration-exploitation trade-off between different ranking strategies.
+  - Provides empirical feedback on which strategy performs best under varying market/user conditions.
+
+## Architecture
+
+- **Frontend (R/Shiny):**
+  - Serves as the interactive UI layer for scenario setup, strategy selection, and results visualization.
+  - Handles user input, displays tables/plots, and provides a seamless analyst experience.
+- **Backend (Python/FastAPI):**
+  - Contains all business logic, including data simulation, ML predictions, and optimization models (LP, RL, MAB).
+  - Exposes a REST API for all operations, making the system modular and scalable.
+  - All data generation, scenario saving, and advanced modeling happens here.
+- **Communication:**
+  - The frontend and backend communicate exclusively via REST API calls, ensuring clear separation of concerns and easy extensibility.
+
+---
 
 # Backend Data File Management
 
