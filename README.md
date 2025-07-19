@@ -28,13 +28,13 @@ The simulator implements a sophisticated four-stage pipeline that mirrors real-w
 
 ```mermaid
 graph TD
-    A["1. Raw Data Files (users, hotels, offers)"] --> B{2. Bandit Simulation};
-    B -- Est. Click Probs --> C[bandit_simulation_results.csv];
-    C --> D{3. Market & User Characterization};
+    A[Raw Data Files] --> B[Bandit Simulation];
+    B --> C[bandit_simulation_results.csv];
+    C --> D[Market & User Characterization];
     A --> D;
-    D -- Market State & Conv. Probs --> E[all_parameters_scenario.csv];
-    E --> F{4. Strategy Application & Ranking};
-    F -- Ranked Lists & Metrics --> G[Results & Visualizations];
+    D --> E[all_parameters_scenario.csv];
+    E --> F[Strategy Application & Ranking];
+    F --> G[Results & Visualizations];
 ```
 
 ### Stage 1: Raw Data Generation
