@@ -28,7 +28,7 @@ The simulator implements a sophisticated four-stage pipeline that mirrors real-w
 
 ```mermaid
 graph TD
-    A[1. Raw Data Files<br/>(users, hotels, offers)] --> B{2. Bandit Simulation};
+    A["1. Raw Data Files (users, hotels, offers)"] --> B{2. Bandit Simulation};
     B -- Est. Click Probs --> C[bandit_simulation_results.csv];
     C --> D{3. Market & User Characterization};
     A --> D;
@@ -116,19 +116,25 @@ Before running the application, you need to generate the base datasets. The appl
 Navigate to the `data/` directory and run the data generation script:
 
 ```bash
-cd data
+# Maximum dataset (may take several minutes)
+python data/generate_enhanced_datasets.py --hotels 10000 --offers 50000 --users 1000
+```
 
-# Generate default datasets (10,000 each)
-python generate_enhanced_datasets.py
+#### Command Line Syntax
 
-# Generate custom-sized datasets
-python generate_enhanced_datasets.py --hotels 200 --offers 5000 --users 100
+```bash
+python generate_enhanced_datasets.py [OPTIONS]
 
-# Generate small datasets for testing
-python generate_enhanced_datasets.py --hotels 50 --offers 200 --users 20
+Options:
+  --hotels INT    Number of hotels to generate (default: 10000)
+  --offers INT    Number of partner offers to generate (default: 10000)  
+  --users INT     Number of user profiles to generate (default: 10000)
+  -h, --help      Show help message
 ```
 
 #### Command Line Options
+
+**Note**: Use `--hotels`, `--offers`, and `--users` (not `--num_hotels`, `--num_offers`, `--num_users`).
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
@@ -140,21 +146,51 @@ python generate_enhanced_datasets.py --hotels 50 --offers 200 --users 20
 
 ```bash
 # Quick test with minimal data
-python generate_enhanced_datasets.py --hotels 50 --offers 200 --users 20
+python data/generate_enhanced_datasets.py --hotels 50 --offers 200 --users 20
 
-# Medium-sized dataset for development
-python generate_enhanced_datasets.py --hotels 500 --offers 2000 --users 100
+# Small dataset for development
+python data/generate_enhanced_datasets.py --hotels 200 --offers 1000 --users 50
 
-# Production-sized dataset
-python generate_enhanced_datasets.py --hotels 10000 --offers 50000 --users 1000
+# Medium-sized dataset (recommended for testing)
+python data/generate_enhanced_datasets.py --hotels 500 --offers 2000 --users 100
+
+# Large dataset for production simulation
+python data/generate_enhanced_datasets.py --hotels 2000 --offers 40000 --users 100
+
+# Maximum dataset (may take several minutes)
+python data/generate_enhanced_datasets.py --hotels 10000 --offers 50000 --users 1000
 ```
 
 #### Generated Files
 
-The script creates three main CSV files:
+The script creates three main CSV files in the `data/` directory:
 - `enhanced_hotels.csv`: Hotel properties with amenities, ratings, and location data
-- `enhanced_partner_offers.csv`: Partner offers with pricing, availability, and commission data
+- `enhanced_partner_offers.csv`: Partner offers with pricing, availability, and commission data  
 - `enhanced_user_profiles.csv`: User profiles with preferences, budgets, and travel patterns
+
+#### Expected Output
+
+When successful, you should see output like:
+```
+🏨 Starting Enhanced Hotel Dataset Generation...
+📊 Generating Hotels dataset (2000 rows)...
+✅ Hotels dataset saved: 2000 rows, 15 columns
+💰 Generating Partner Offers dataset (40000 rows)...
+✅ Partner Offers dataset saved: 40000 rows, 19 columns
+👥 Generating User Profiles dataset (100 rows)...
+✅ User Profiles dataset saved: 100 rows, 17 columns
+
+📈 Dataset Summary:
+Hotels: 2000 rows across 20 cities
+Partner Offers: 40000 rows from 15 partners
+User Profiles: 100 rows with 5 user types
+
+🎉 All datasets generated successfully!
+Files created:
+- enhanced_hotels.csv
+- enhanced_partner_offers.csv
+- enhanced_user_profiles.csv
+```
 
 ### Quick Start
 ```bash
@@ -162,10 +198,8 @@ The script creates three main CSV files:
 git clone <repository-url>
 cd Dynamic-Pricing-app
 
-# Generate base datasets
-cd data
-python generate_enhanced_datasets.py --hotels 200 --offers 5000 --users 100
-cd ..
+# Generate base datasets (recommended for testing)
+python data/generate_enhanced_datasets.py --hotels 500 --offers 2000 --users 100
 
 # Start the application
 docker-compose up --build

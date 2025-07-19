@@ -1,6 +1,21 @@
 user_id,user_type,age_group,location,group_size,loyalty_status,price_sensitivity,budget_min,budget_max,previous_bookings,room_type_preference,preferred_amenities,travel_date_start,travel_date_end,booking_date,lead_time_days,stay_duration
-U000001,Family,65+,Madrid,4,None,0.871,53,192,1,Family,"WiFi,Breakfast,Pool",2025-08-04,2025-08-06,2025-07-28,7,2
-U000002,Business,36-45,Vienna,1,Gold,0.473,94,417,16,Single,"Business Center,Gym,Room Service,Spa",2025-09-22,2025-09-26,2025-09-11,11,4
-U000003,Leisure,46-55,Barcelona,1,None,0.573,65,237,0,Single,"WiFi,Pet Friendly,Spa,Beach Access,Laundry,Bar",2025-07-26,2025-07-29,2025-07-14,12,3
-U000004,Leisure,65+,Miami,2,None,0.715,42,154,0,Double,"Beach Access,Bar",2025-10-26,2025-10-28,2025-09-17,39,2
-U000005,Leisure,65+,Los Angeles,1,Platinum,0.767,42,151,47,Single,"Restaurant,WiFi,Bar,Spa",2025-09-05,2025-09-06,2025-07-30,37,1
+U000001,Leisure,36-45,Sydney,3,Platinum,0.718,52,188,21,Deluxe,"Spa,WiFi,Restaurant,Business Center,Pool,Beach Access",2025-08-08,2025-08-12,2025-08-03,5,4
+U000002,Leisure,36-45,Miami,2,None,0.486,56,207,2,Double,"Pool,Spa",2025-12-28,2025-12-31,2025-11-14,44,3
+U000003,Business,46-55,London,1,Gold,0.068,127,572,12,Single,"Bar,Parking,Gym,WiFi",2025-10-23,2025-10-26,2025-10-12,11,3
+U000004,Luxury,18-25,Sydney,1,Platinum,0.252,129,770,41,Single,"Restaurant,Breakfast,Bar",2025-11-16,2025-11-23,2025-11-15,1,7
+U000005,Leisure,36-45,Miami,1,Silver,0.545,55,203,3,Single,"WiFi,Bar",2025-10-07,2025-10-08,2025-09-24,13,1
+U000006,Luxury,18-25,Sydney,2,Gold,0.221,131,778,12,Deluxe,"Bar,Concierge",2025-09-12,2025-09-21,2025-08-27,16,9
+U000007,Leisure,46-55,Mumbai,1,None,0.544,65,239,2,Single,"WiFi,Room Service,Beach Access,Concierge,Spa",2025-07-26,2025-08-04,2025-07-22,4,9
+U000008,Budget,18-25,São Paulo,1,None,0.881,15,59,2,Single,"Kitchen,Breakfast,Parking,Laundry,Pool",2025-12-01,2025-12-03,2025-11-24,7,2
+U000009,Business,56-65,Amsterdam,1,Gold,0.112,116,520,17,Single,"Kitchen,Air Conditioning",2025-09-29,2025-09-30,2025-09-20,9,1
+U000010,Budget,46-55,Istanbul,2,None,0.811,30,114,2,Double,"Room Service,Conference Rooms,Parking",2025-08-31,2025-09-06,2025-08-28,3,6
+U000011,Luxury,65+,Istanbul,2,Gold,0.257,166,988,15,Suite,"Bar,Concierge,Restaurant,Laundry,Room Service",2025-10-14,2025-10-16,2025-09-21,23,2
+U000012,Luxury,65+,New York,1,None,0.333,162,960,1,Single,"Air Conditioning,Concierge,Restaurant,Spa",2025-10-14,2025-10-17,2025-09-29,15,3
+U000013,Business,46-55,Berlin,1,None,0.258,120,535,1,Single,"Room Service,Parking",2025-09-03,2025-09-07,2025-08-31,3,4
+U000014,Luxury,18-25,London,2,Gold,0.338,126,745,13,Suite,"Restaurant,Kitchen,Room Service",2026-01-02,2026-01-07,2025-12-12,21,5
+U000015,Luxury,65+,Amsterdam,2,Gold,0.277,165,980,10,Deluxe,"Bar,Room Service",2025-09-28,2025-10-02,2025-08-12,47,4
+U000016,Business,65+,Tokyo,1,Gold,0.485,77,340,12,Single,"Business Center,Room Service,Gym,WiFi",2025-08-08,2025-08-09,2025-07-04,35,1
+U000017,Leisure,65+,São Paulo,1,Platinum,0.788,41,149,47,Single,"Balcony,WiFi",2025-11-30,2025-12-04,2025-10-21,40,4
+U000018,Business,46-55,London,1,Silver,0.281,119,530,7,Single,"Room Service,Business Center",2025-09-29,2025-09-30,2025-09-19,10,1
+U000019,Family,36-45,Barcelona,4,Gold,0.71,69,252,18,Family,"Restaurant,Gym",2025-11-02,2025-11-06,2025-10-12,21,4
+U000020,Luxury,26-35,Barcelona,3,Platinum,0.312,163,968,40,Suite,"Concierge,Kitchen,Bar,Breakfast,Room Service",2026-01-11,2026-01-20,2025-12-21,21,9
