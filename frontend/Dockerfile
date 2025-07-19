@@ -36,6 +36,11 @@ RUN chown -R shiny:shiny /srv/shiny-server/hotel-ranking/
 RUN echo 'run_as shiny;\n\
 server {\n\
   listen 3838;\n\
+  location / {\n\
+    site_dir /srv/shiny-server/hotel-ranking;\n\
+    log_dir /var/log/shiny-server;\n\
+    directory_index on;\n\
+  }\n\
   location /hotel-ranking {\n\
     site_dir /srv/shiny-server/hotel-ranking;\n\
     log_dir /var/log/shiny-server;\n\

@@ -1,13 +1,64 @@
-# trivago Hotel Offer Ranking Simulator
+# trivago Offer Ranking Simulator
 
 ## Project Overview & Business Context
 
 trivago, as a leading hotel metasearch engine, faces a unique challenge: it does not set hotel prices, but must rank competing offers for the same hotel from multiple partners (e.g., Booking.com, Expedia, HotelDirect). The core business problem is to design a ranking system that:
-- Maximizes trivago's commission revenue (by promoting higher-commission offers)
-- Maintains high user conversion (by showing relevant, attractive offers)
-- Preserves long-term user trust (by avoiding manipulative or inconsistent rankings)
+- **Maximizes trivago's commission revenue** (by promoting higher-commission offers)
+- **Maintains high user conversion** (by showing relevant, attractive offers)
+- **Preserves long-term user trust** (by avoiding manipulative or inconsistent rankings)
 
 This project simulates and optimizes this multi-objective ranking problem, providing a realistic, data-driven environment for strategy development and experimentation.
+
+### trivago's Business Model
+
+trivago operates as a **metasearch platform** that aggregates hotel offers from multiple booking partners. When users search for hotels, trivago displays a ranked list of offers from different partners (Booking.com, Expedia, Hotels.com, etc.) for the same hotel. trivago earns revenue through:
+
+1. **Cost-per-click (CPC) commissions** from partners when users click on offers
+2. **Revenue sharing** when users complete bookings through partner links
+3. **Display advertising** from hotel chains and partners
+
+The ranking algorithm must balance:
+- **Revenue optimization**: Promoting offers with higher commission rates
+- **User experience**: Showing relevant, competitively-priced offers
+- **Trust maintenance**: Avoiding manipulative rankings that erode user confidence
+
+## Methodology & Workflow
+
+The simulator implements a sophisticated four-stage pipeline that mirrors real-world hotel ranking systems:
+
+```mermaid
+graph TD
+    A[1. Raw Data Files<br/>(users, hotels, offers)] --> B{2. Bandit Simulation};
+    B -- Est. Click Probs --> C[bandit_simulation_results.csv];
+    C --> D{3. Market & User Characterization};
+    A --> D;
+    D -- Market State & Conv. Probs --> E[all_parameters_scenario.csv];
+    E --> F{4. Strategy Application & Ranking};
+    F -- Ranked Lists & Metrics --> G[Results & Visualizations];
+```
+
+### Stage 1: Raw Data Generation
+- **User Profiles**: Demographics, preferences, price sensitivity, loyalty status
+- **Hotel Data**: Properties, amenities, ratings, locations
+- **Partner Offers**: Pricing, commission rates, availability, special features
+
+### Stage 2: Bandit Simulation
+- Simulates user click behavior across different ranking positions
+- Estimates click-through rates (CTR) for each offer-position combination
+- Accounts for position bias (higher positions get more clicks)
+- Generates `bandit_simulation_results.csv` with probability estimates
+
+### Stage 3: Market & User Characterization
+- **Market Demand Index**: Combines price trends, competition density, booking urgency
+- **Dynamic Price Sensitivity**: User-specific sensitivity based on market conditions
+- **Conversion Probabilities**: Likelihood of booking after clicking an offer
+- Outputs comprehensive scenario data for optimization
+
+### Stage 4: Strategy Application & Ranking
+- **Greedy Strategy**: Maximize commission revenue
+- **User-First Strategy**: Prioritize user satisfaction and low prices
+- **Stochastic LP**: Multi-objective optimization using linear programming
+- **RL Policy**: Adaptive strategy based on market conditions
 
 ## Features & Modeling Approach
 
@@ -49,73 +100,110 @@ This project simulates and optimizes this multi-objective ranking problem, provi
 - **Communication:**
   - The frontend and backend communicate exclusively via REST API calls, ensuring clear separation of concerns and easy extensibility.
 
----
+## Installation & Setup
 
-# Backend Data File Management
+### Prerequisites
+- Docker and Docker Compose
+- At least 4GB RAM available for Docker
+- Python 3.8+ (for data generation)
 
-## Data Directory and File Visibility
+### Data Generation
 
-All backend-generated data files (CSVs) are written to the `/data/` directory inside the container. This directory is mapped to the `./data/` directory on the host via Docker Compose:
+Before running the application, you need to generate the base datasets. The application includes a comprehensive data generator that creates realistic hotel, partner offers, and user profile datasets.
 
-```yaml
-volumes:
-  - ./data:/data
+#### Generate Base Datasets
+
+Navigate to the `data/` directory and run the data generation script:
+
+```bash
+cd data
+
+# Generate default datasets (10,000 each)
+python generate_enhanced_datasets.py
+
+# Generate custom-sized datasets
+python generate_enhanced_datasets.py --hotels 200 --offers 5000 --users 100
+
+# Generate small datasets for testing
+python generate_enhanced_datasets.py --hotels 50 --offers 200 --users 20
 ```
 
-**Important:**
-- All backend code must use absolute paths (e.g., `/data/filename.csv`) for reading and writing data files.
-- Do **not** use relative paths like `data/filename.csv` or `/app/data/filename.csv`.
-- This ensures that all files are visible both inside the container and on the host machine in the `data/` directory.
+#### Command Line Options
 
-## Key Data Files and Their Purpose
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--hotels` | 10000 | Number of hotels to generate |
+| `--offers` | 10000 | Number of partner offers to generate |
+| `--users` | 10000 | Number of user profiles to generate |
 
-| File                                 | Location         | Purpose                                                      | Key Columns / Notes                                  |
-|--------------------------------------|------------------|--------------------------------------------------------------|------------------------------------------------------|
-| enhanced_user_profiles.csv           | /data/           | User profiles for simulation                                 | user_id, price_sensitivity, preferred_amenities, ... |
-| enhanced_hotels.csv                  | /data/           | Hotel metadata                                               | hotel_id, name, location, ...                        |
-| enhanced_partner_offers.csv          | /data/           | Partner offer details                                        | offer_id, hotel_id, partner_name, price_per_night... |
-| trial_sampled_offers.csv             | /data/           | Sampled offers for current scenario                          | user_id, offer_id, location, days_to_go, ...         |
-| user_dynamic_price_sensitivity.csv   | /data/           | Dynamic price sensitivity per user/destination               | user_id, destination, base_price_sensitivity, dynamic_price_sensitivity, ... |
-| user_market_state.csv                | /data/           | Market demand index and state per user/destination           | location, demand_index, market_state_label, ...       |
-| bandit_simulation_results.csv        | /data/           | Results of bandit simulation                                 | user_id, offer_id, rank, probability_of_click, ...    |
-| conversion_probabilities.csv         | /data/           | Conversion probability for each user-offer                   | user_id, offer_id, destination, conversion_probability|
+#### Example Commands
 
-## Workflow for Generating and Accessing Data Files
+```bash
+# Quick test with minimal data
+python generate_enhanced_datasets.py --hotels 50 --offers 200 --users 20
 
-- **Dynamic Price Sensitivity**
-  - Triggered via the UI or API endpoint `/user_dynamic_price_sensitivity_csv`.
-  - Output: `/data/user_dynamic_price_sensitivity.csv` (visible on host as `data/user_dynamic_price_sensitivity.csv`).
+# Medium-sized dataset for development
+python generate_enhanced_datasets.py --hotels 500 --offers 2000 --users 100
 
-- **Conversion Probabilities**
-  - Triggered via the UI or API endpoint `/conversion_probabilities_csv`.
-  - Output: `/data/conversion_probabilities.csv` (visible on host as `data/conversion_probabilities.csv`).
+# Production-sized dataset
+python generate_enhanced_datasets.py --hotels 10000 --offers 50000 --users 1000
+```
 
-- **Other Data Files**
-  - Generated as part of scenario setup, sampling, or simulation.
-  - Always written to `/data/`.
+#### Generated Files
 
-## Troubleshooting File Visibility
+The script creates three main CSV files:
+- `enhanced_hotels.csv`: Hotel properties with amenities, ratings, and location data
+- `enhanced_partner_offers.csv`: Partner offers with pricing, availability, and commission data
+- `enhanced_user_profiles.csv`: User profiles with preferences, budgets, and travel patterns
 
-- If you do not see a file in your host's `data/` directory after triggering its generation:
-  1. Ensure the backend writes to `/data/filename.csv` (not a relative or /app/data path).
-  2. Check your `docker-compose.yml` for the correct volume mapping (`./data:/data`).
-  3. Restart the backend container after any changes to volume mapping or file paths.
-  4. Use backend debug logs to confirm the actual file path and working directory.
+### Quick Start
+```bash
+# Clone the repository
+git clone <repository-url>
+cd Dynamic-Pricing-app
 
-- You can inspect files inside the container with:
-  ```sh
-  docker compose exec backend ls -l /data
-  ```
+# Generate base datasets
+cd data
+python generate_enhanced_datasets.py --hotels 200 --offers 5000 --users 100
+cd ..
 
-- All files in `/data/` inside the container should appear in `./data/` on the host.
+# Start the application
+docker-compose up --build
 
----
+# Access the application
+# Frontend: http://localhost:3838
+# Backend API: http://localhost:8001
+```
 
-# Mathematical Approach & Core Formulas
+### Data Files
+The application uses the following CSV files in the `data/` directory:
+- `enhanced_user_profiles.csv`: User demographics and preferences
+- `enhanced_hotels.csv`: Hotel properties and amenities
+- `enhanced_partner_offers.csv`: Partner offer details and pricing
+- `bandit_simulation_results.csv`: Click probability estimates
+- `conversion_probabilities.csv`: Booking conversion rates
+- `market_state_by_location.csv`: Market demand indicators
 
-This project uses a multi-objective, simulation-driven approach for hotel offer ranking and market analysis. Below are the core formulas and their roles in the backend and UI.
+## Usage Guide
 
-## 1. Composite Market Demand Index
+### Tab 1: Scenario & Model Inputs
+1. **Select User ID**: Choose from the dropdown populated with available users
+2. **Load User Scenario**: Click to load comprehensive data for the selected user
+3. **Review Raw Data**: Examine the "raw materials" that feed into the ranking models
+
+### Tab 2: Strategy Comparison
+1. **Choose Strategy**: Select from Greedy, User-First, Stochastic LP, RL Policy, or "all"
+2. **Apply Strategy**: Execute the ranking algorithm
+3. **Compare Results**: View side-by-side comparisons of different strategies
+
+### Tab 3: Dashboard & trivago Insights
+1. **Pareto Frontier**: Visualize the trade-off between revenue and user trust
+2. **Market Analysis**: Understand demand distribution and price sensitivity
+3. **Performance Metrics**: Compare strategy effectiveness across key metrics
+
+## Core Mathematical Formulas
+
+### 1. Composite Market Demand Index
 A weighted index to characterize market demand by combining normalized proxies for price, booking urgency, volatility, and competition:
 
 ```math
@@ -128,7 +216,7 @@ Where:
 - $\text{normCompetitionDensity}$: Normalized competition density (unique hotels × unique partners)
 - $w_1, w_2, w_3, w_4$: Weights (default 0.25 each, configurable)
 
-## 2. Dynamic Price Sensitivity
+### 2. Dynamic Price Sensitivity
 Each user's dynamic price sensitivity is modeled as:
 
 ```math
@@ -140,7 +228,7 @@ Where:
 - $D$: Days to go for check-in (from offers)
 - $\mu_p$, $\sigma_p$: Mean and std of all offered prices in the destination
 
-## 3. Multi-Objective Utility Function
+### 3. Multi-Objective Utility Function
 Defines the total expected utility $U(i, j)$ of placing offer $j$ at rank $i$:
 
 ```math
@@ -153,7 +241,7 @@ Where:
 - $T_{ij}$: Trust score
 - $w_{\text{rev}}, w_{\text{rel}}, w_{\text{trust}}$: Tunable weights
 
-## 4. Price Competitiveness CTR Model
+### 4. Price Competitiveness CTR Model
 Predicts click-through rate (CTR) as a function of price competitiveness:
 
 ```math
@@ -162,7 +250,7 @@ Predicts click-through rate (CTR) as a function of price competitiveness:
 
 Where $\beta$ is a user or market price sensitivity parameter.
 
-## 5. Price Volatility Penalty on Trust
+### 5. Price Volatility Penalty on Trust
 Penalizes trust for offers with unstable prices:
 
 ```math
@@ -171,9 +259,9 @@ T_{ij} = \text{base\_trust}_j - \gamma \cdot \sigma^2(\text{price}_j, t-24h)
 
 Where $\gamma$ is a volatility penalty weight and $\sigma^2$ is the variance of price over the last 24h.
 
-## 6. Linear Programming Optimization Model
+### 6. Linear Programming Optimization Model
 
-### Objective Function
+#### Objective Function
 The main optimization objective maximizes expected revenue while considering multiple factors:
 
 ```math
@@ -188,7 +276,7 @@ Where:
 - $w_{\text{conv}}, w_{\text{rev}}, w_{\text{trust}}$: Objective weights
 - $\frac{1}{\log_2(j + 2)}$: Position weight (higher positions get more weight)
 
-### Constraints
+#### Constraints
 
 **Position Uniqueness:**
 ```math
@@ -210,7 +298,7 @@ x_{ij} = 0 \quad \forall i, j \text{ where } \text{price}_i > 1.5 \cdot \min_{k}
 \sum_{i \in \text{Partner}_p} \sum_{j=1}^{5} x_{ij} \leq 2 \quad \forall \text{partner } p
 ```
 
-## 7. Conversion Probability Model
+### 7. Conversion Probability Model
 
 The conversion probability for an offer is calculated as a product of interpretable factors:
 
@@ -252,9 +340,9 @@ S_{\text{brand}} = \begin{cases}
 \end{cases}
 ```
 
-## 8. Click Probability Model
+### 8. Click Probability Model
 
-### True Click Probability
+#### True Click Probability
 The theoretical probability that a user would click on an offer at a given rank:
 
 ```math
@@ -266,14 +354,14 @@ Where:
 \text{rank\_factor} = \frac{1}{\text{rank}}
 ```
 
-### Normalized Click Probability
+#### Normalized Click Probability
 For relative comparison among offers at the same rank:
 
 ```math
 \text{normalized\_probability\_of\_click}_i = \frac{\exp(\text{probability\_of\_click}_i)}{\sum_j \exp(\text{probability\_of\_click}_j)}
 ```
 
-## 9. Trust Score Calculation
+### 9. Trust Score Calculation
 
 The user trust score combines multiple factors:
 
@@ -293,7 +381,7 @@ Where:
 \text{consistency\_score} = 100 \times \left(1 - \frac{|\text{trivago\_price} - \text{partner\_price}|}{\text{partner\_price}}\right)
 ```
 
-## 10. Expected Revenue Calculation
+### 10. Expected Revenue Calculation
 
 The expected revenue for each offer-position combination:
 
@@ -303,91 +391,64 @@ The expected revenue for each offer-position combination:
 
 Where $\frac{1}{j + 1}$ represents the rank decay factor.
 
+## API Endpoints
+
+### Core Endpoints
+- `POST /get_scenario_inputs`: Get list of available user IDs
+- `POST /get_user_scenario`: Load comprehensive scenario data for a user
+- `POST /rank`: Apply ranking strategies and return results
+
+### Data Endpoints
+- `GET /user_profiles`: Get sample user profiles
+- `GET /user_profile/{user_id}`: Get specific user profile
+- `GET /market_analysis/{destination}`: Get market analysis for destination
+
+### Optimization Endpoints
+- `POST /run_deterministic_optimization`: Run PuLP optimization
+- `POST /run_stochastic_optimization`: Run MiniZinc optimization
+- `GET /optimization_results`: Get latest optimization results
+
+## Performance Metrics
+
+The system tracks several key performance indicators:
+
+1. **Expected Revenue**: Total expected commission revenue from ranked offers
+2. **User Trust Score**: Composite score reflecting user confidence in rankings
+3. **Conversion Rate**: Percentage of clicks that convert to bookings
+4. **Click-Through Rate**: Percentage of impressions that result in clicks
+5. **Price Consistency**: Measure of price transparency and accuracy
+6. **Partner Satisfaction**: Balance of partner representation in rankings
+
+## Business Insights
+
+### Revenue vs. Trust Trade-off
+The Pareto frontier visualization reveals the fundamental tension between maximizing revenue and maintaining user trust. Optimal strategies balance these competing objectives based on market conditions.
+
+### Market Condition Adaptation
+The RL Policy strategy demonstrates how ranking algorithms can adapt to different market states:
+- **High Demand**: Prioritize revenue maximization
+- **Medium Demand**: Balanced approach
+- **Low Demand**: Focus on user satisfaction
+
+### Position Bias Impact
+The click probability analysis shows the dramatic effect of ranking position on user engagement, with top positions receiving significantly more clicks than lower positions.
+
+## Future Enhancements
+
+1. **Real-time Learning**: Implement online learning algorithms that adapt to user behavior
+2. **A/B Testing Framework**: Add capability to test different ranking strategies
+3. **Personalization**: Develop user-specific ranking models
+4. **Multi-objective Optimization**: Advanced optimization techniques for complex constraints
+5. **Predictive Analytics**: Enhanced forecasting models for market trends
+
+## Contributing
+
+This project serves as a demonstration of sophisticated hotel ranking optimization. For contributions or questions, please refer to the project documentation and code comments.
+
+## License
+
+This project is developed for educational and demonstration purposes related to hotel metasearch optimization.
+
 ---
 
-# How These Formulas Are Used
-- **Backend:**
-  - Market demand index is computed for each location and saved in `user_market_state.csv`.
-  - Dynamic price sensitivity is computed for each user and saved in `user_dynamic_price_sensitivity.csv`.
-  - Utility, CTR, and trust penalty functions are available for ranking and simulation logic.
-- **Frontend (Shiny App):**
-  - Displays dynamic price sensitivity, market demand index, and other metrics for users and offers.
-  - Uses backend outputs for scenario analysis, ranking, and market intelligence.
-
----
-
-# Probability of click
-
-This is the simulated (learned) probability that a user will click on a given offer when it is shown at a specific rank.
-It is estimated by simulating many (e.g., 1000) user interactions (clicks/no clicks) for each (user, offer, rank) combination, using a recursive average formula.
-The value reflects both the offer's inherent attractiveness (preference_score) and the effect of its position (rank) in the list.
-
-# true click prob
-
-This is the theoretical or base probability that a user would click on an offer at a given rank, before any simulation noise is added.
-It is calculated as:
-
-```math
-\text{true\_click\_prob} = \min(0.95, \max(0.05, \text{preference\_score} \times \text{rank\_factor}))
-```
-
-where
-
-```math
-\text{rank\_factor} = \frac{1}{\text{rank}}
-```
-
-This value is used as the "ground truth" probability for simulating clicks in the bandit simulation.
-
-# probability_of_conversion
-
-This is the estimated probability that a click on an offer will convert to a booking. It is calculated as a product of interpretable factors:
-
-```math
-\text{probability\_of\_conversion} = S_{\text{price}} \times S_{\text{rating}} \times S_{\text{amenities}} \times S_{\text{loyalty}} \times S_{\text{brand}}
-```
-Where each $S$ factor is defined as:
-
-```math
-S_{\text{price}} = \max\left(0.1, 1 - \frac{|\text{trivago\_price} - \text{partner\_price}|}{\text{user\_budget\_max} + 1}\right)
-```
-```math
-S_{\text{rating}} = 0.5 + 0.1 \times (\text{hotel\_rating} - 3)
-```
-```math
-S_{\text{amenities}} = 0.5 + 0.1 \times \min(\text{amenities\_match}, 5)
-```
-```math
-S_{\text{loyalty}} = \begin{cases} 1.0 & \text{if user is Gold/Platinum} \\ 0.8 & \text{if Silver} \\ 0.6 & \text{otherwise} \end{cases}
-```
-```math
-S_{\text{brand}} = \begin{cases} 1.0 & \text{if partner is Booking.com/Expedia} \\ 0.9 & \text{otherwise} \end{cases}
-```
-
-The result is clipped to $[0.01, 0.99]$.
-
-# normalized_probability_of_click
-
-This is an optional, research-oriented column. It is computed using softmax normalization (per user, per rank) on the simulated probability_of_click values:
-
-```math
-\text{normalized\_probability\_of\_click}_i = \frac{\exp(\text{probability\_of\_click}_i)}{\sum_j \exp(\text{probability\_of\_click}_j)}
-```
-
-This gives a relative likelihood of click among competing offers at the same rank for a user, but is not required for practical modeling or optimization. In real-world ranking, probability_of_click and true_click_prob are independent signals and do not need to sum to 1.
-
-
-Summary Table:
-Column                Meaning
-preference_score      How well the offer matches the user's preferences (composite score, 0–1).
-probability_of_click  Simulated/learned probability of click for (user, offer, rank) after 1000 trials.
-true_click_prob       Theoretical probability of click for (user, offer, rank) used as the "ground truth".
-normalized_probability_of_click  (Optional) Softmax-normalized probability for relative comparison among offers at the same rank for a user.
-
-## Where to Find Key Metrics in the UI
-
-- **Dynamic Price Sensitivity**: Displayed in the User/Market table and Offers table. Updated automatically after you click 'Consider Scenario'.
-- **Market Demand Index**: Displayed in the User/Market table and as a plot in the Market Analysis tab. Updated after scenario consideration.
-- **Fallback Logic**: If backend data is missing, the UI will show 'NA' or hide the metric until new data is available.
-
-See tooltips in the UI for explanations of each metric. For formulas, see the Mathematical Approach & Core Formulas section above.
+*This simulator demonstrates the complexity and sophistication required for real-world hotel ranking systems, showcasing advanced optimization techniques, user behavior modeling, and business intelligence capabilities.*

@@ -2143,34 +2143,489 @@ def run_stochastic_optimization():
 def get_optimization_results():
     """Get the latest optimization results"""
     try:
-        results = {}
-        
-        # Check for deterministic results
-        det_json_path = os.path.join('deterministic_optimization_results.json')
-        det_csv_path = os.path.join('deterministic_optimization_results.csv')
-        
-        if os.path.exists(det_json_path):
-            with open(det_json_path, 'r') as f:
-                results['deterministic'] = json.load(f)
-        
-        if os.path.exists(det_csv_path):
-            results['deterministic_csv'] = pd.read_csv(det_csv_path).to_dict(orient='records')
-        
-        # Check for stochastic results
-        stoch_json_path = os.path.join('stochastic_optimization_results.json')
-        stoch_csv_path = os.path.join('stochastic_optimization_results.csv')
-        
-        if os.path.exists(stoch_json_path):
-            with open(stoch_json_path, 'r') as f:
-                results['stochastic'] = json.load(f)
-        
-        if os.path.exists(stoch_csv_path):
-            results['stochastic_csv'] = pd.read_csv(stoch_csv_path).to_dict(orient='records')
-        
-        return results
-        
+        # Check if optimization results exist
+        results_file = "/data/optimization_results.json"
+        if os.path.exists(results_file):
+            with open(results_file, 'r') as f:
+                results = json.load(f)
+            return results
+        else:
+            return {"message": "No optimization results available. Run optimization first."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error reading optimization results: {str(e)}")
+
+# New endpoints for final implementation
+
+@app.post("/get_scenario_inputs")
+def get_scenario_inputs():
+    """Load enhanced_user_profiles.csv and return unique user_ids for dropdown"""
+    try:
+        csv_path = os.path.join('data', 'enhanced_user_profiles.csv')
+        if not os.path.exists(csv_path):
+            raise HTTPException(status_code=404, detail="User profiles CSV not found")
+        
+        df = pd.read_csv(csv_path)
+        user_ids = df['user_id'].unique().tolist()
+        
+        return {"user_ids": user_ids}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading user profiles: {str(e)}")
+
+@app.post("/get_user_scenario")
+def get_user_scenario(request: dict):
+    """Get comprehensive scenario data for a specific user"""
+    try:
+        user_id = request.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=400, detail="user_id is required")
+        
+        # Load all CSV files
+        user_profiles_path = os.path.join('data', 'enhanced_user_profiles.csv')
+        market_state_path = os.path.join('data', 'market_state_by_location.csv')
+        bandit_results_path = os.path.join('data', 'bandit_simulation_results.csv')
+        conversion_probs_path = os.path.join('data', 'conversion_probabilities.csv')
+        
+        # Check if files exist
+        for path in [user_profiles_path, market_state_path, bandit_results_path, conversion_probs_path]:
+            if not os.path.exists(path):
+                raise HTTPException(status_code=404, detail=f"Required CSV file not found: {path}")
+        
+        # Load data
+        user_profiles = pd.read_csv(user_profiles_path)
+        market_state = pd.read_csv(market_state_path)
+        bandit_results = pd.read_csv(bandit_results_path)
+        conversion_probs = pd.read_csv(conversion_probs_path)
+        
+        # Get user profile
+        user_profile = user_profiles[user_profiles['user_id'] == user_id]
+        if user_profile.empty:
+            raise HTTPException(status_code=404, detail=f"User {user_id} not found")
+        
+        user_location = user_profile.iloc[0]['location']
+        
+        # Get market state for user's location
+        market_data = market_state[market_state['location'] == user_location]
+        if market_data.empty:
+            # Use default market data if location not found
+            market_data = market_state.iloc[0:1]
+        
+        # Filter bandit results for user
+        user_bandit_data = bandit_results[bandit_results['user_id'] == user_id]
+        
+        # Filter conversion probabilities for user
+        user_conversion_data = conversion_probs[conversion_probs['user_id'] == user_id]
+        
+        # Merge data
+        merged_data = user_bandit_data.merge(
+            user_conversion_data[['offer_id', 'conversion_probability']], 
+            on='offer_id', 
+            how='left'
+        )
+        
+        # Add market state information
+        market_info = market_data.iloc[0]
+        merged_data['location'] = market_info['location']
+        merged_data['market_state_label'] = market_info['market_state_label']
+        merged_data['avg_price'] = market_info['avg_price']
+        merged_data['avg_days_to_go'] = market_info['avg_days_to_go']
+        
+        # Select and order columns as specified
+        result_columns = [
+            'location', 'market_state_label', 'avg_price', 'avg_days_to_go',
+            'offer_id', 'rank', 'probability_of_click', 'conversion_probability'
+        ]
+        
+        # Ensure all required columns exist
+        for col in result_columns:
+            if col not in merged_data.columns:
+                merged_data[col] = None
+        
+        result_data = merged_data[result_columns].fillna(0)
+        
+        # Convert to JSON-serializable format
+        result_records = result_data.to_dict(orient='records')
+        
+        return {
+            "user_id": user_id,
+            "scenario_data": result_records,
+            "market_context": {
+                "location": market_info['location'],
+                "market_state": market_info['market_state_label'],
+                "avg_price": float(market_info['avg_price']),
+                "avg_days_to_go": float(market_info['avg_days_to_go']),
+                "demand_index": float(market_info['demand_index'])
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing user scenario: {str(e)}")
+
+@app.post("/rank")
+def rank_offers_final(request: dict):
+    """Rank offers using different strategies for a specific user"""
+    try:
+        user_id = request.get("user_id")
+        strategy = request.get("strategy", "Greedy")
+        
+        if not user_id:
+            raise HTTPException(status_code=400, detail="user_id is required")
+        
+        # Load required data
+        user_profiles_path = os.path.join('data', 'enhanced_user_profiles.csv')
+        offers_path = os.path.join('data', 'enhanced_partner_offers.csv')
+        hotels_path = os.path.join('data', 'enhanced_hotels.csv')
+        bandit_results_path = os.path.join('data', 'bandit_simulation_results.csv')
+        conversion_probs_path = os.path.join('data', 'conversion_probabilities.csv')
+        market_state_path = os.path.join('data', 'market_state_by_location.csv')
+        
+        # Check if files exist
+        for path in [user_profiles_path, offers_path, hotels_path, bandit_results_path, conversion_probs_path, market_state_path]:
+            if not os.path.exists(path):
+                raise HTTPException(status_code=404, detail=f"Required CSV file not found: {path}")
+        
+        # Load data
+        user_profiles = pd.read_csv(user_profiles_path)
+        offers = pd.read_csv(offers_path)
+        hotels = pd.read_csv(hotels_path)
+        bandit_results = pd.read_csv(bandit_results_path)
+        conversion_probs = pd.read_csv(conversion_probs_path)
+        market_state = pd.read_csv(market_state_path)
+        
+        # Get user profile
+        user_profile = user_profiles[user_profiles['user_id'] == user_id]
+        if user_profile.empty:
+            raise HTTPException(status_code=404, detail=f"User {user_id} not found")
+        
+        user_location = user_profile.iloc[0]['location']
+        
+        # Get user's offers and related data
+        user_bandit_data = bandit_results[bandit_results['user_id'] == user_id]
+        user_conversion_data = conversion_probs[conversion_probs['user_id'] == user_id]
+        
+        # Merge offer data
+        offer_data = user_bandit_data.merge(
+            user_conversion_data[['offer_id', 'conversion_probability']], 
+            on='offer_id', 
+            how='left'
+        )
+        
+        # Get full offer details
+        offer_details = offers[offers['offer_id'].isin(offer_data['offer_id'])]
+        hotel_details = hotels[hotels['hotel_id'].isin(offer_details['hotel_id'])]
+        
+        # Merge all data
+        complete_data = offer_data.merge(offer_details, on='offer_id', how='left')
+        complete_data = complete_data.merge(hotel_details, on='hotel_id', how='left')
+        
+        # Get market state
+        market_info = market_state[market_state['location'] == user_location]
+        if market_info.empty:
+            market_info = market_state.iloc[0:1]
+        
+        # Apply ranking strategies
+        results = {}
+        
+        # Strategy 1: Greedy (maximize commission revenue)
+        if strategy == "Greedy" or strategy == "all":
+            greedy_ranking = _apply_greedy_strategy(complete_data)
+            results["Greedy"] = greedy_ranking
+        
+        # Strategy 2: User-First (prioritize user satisfaction)
+        if strategy == "User-First" or strategy == "all":
+            user_first_ranking = _apply_user_first_strategy(complete_data)
+            results["User-First"] = user_first_ranking
+        
+        # Strategy 3: Stochastic LP (optimization-based)
+        if strategy == "Stochastic LP" or strategy == "all":
+            stochastic_lp_ranking = _apply_stochastic_lp_strategy(complete_data)
+            results["Stochastic LP"] = stochastic_lp_ranking
+        
+        # Strategy 4: RL Policy (adaptive based on market conditions)
+        if strategy == "RL Policy" or strategy == "all":
+            rl_policy_ranking = _apply_rl_policy_strategy(complete_data, market_info.iloc[0])
+            results["RL Policy"] = rl_policy_ranking
+        
+        return {
+            "user_id": user_id,
+            "strategy": strategy,
+            "results": results,
+            "market_context": {
+                "location": market_info.iloc[0]['location'],
+                "market_state": market_info.iloc[0]['market_state_label'],
+                "demand_index": float(market_info.iloc[0]['demand_index'])
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error ranking offers: {str(e)}")
+
+def _apply_greedy_strategy(data: pd.DataFrame) -> dict:
+    """Greedy strategy: maximize commission_rate * total_price * probability_of_click * conversion_probability"""
+    try:
+        # Calculate greedy score
+        data['greedy_score'] = (
+            data['commission_rate'] * 
+            data['price_per_night'] * 
+            data['probability_of_click'] * 
+            data['conversion_probability']
+        )
+        
+        # Sort by greedy score
+        ranked_data = data.sort_values('greedy_score', ascending=False)
+        
+        # Calculate metrics
+        expected_revenue = ranked_data['greedy_score'].sum()
+        user_trust_score = _calculate_trust_score_for_ranking(ranked_data)
+        
+        return {
+            "ranked_list": ranked_data[['offer_id', 'partner_name', 'price_per_night', 'greedy_score']].head(10).to_dict('records'),
+            "expected_revenue": float(expected_revenue),
+            "user_trust_score": float(user_trust_score)
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+def _apply_user_first_strategy(data: pd.DataFrame) -> dict:
+    """User-First strategy: prioritize low price and high review score"""
+    try:
+        # Calculate user-first score (inverse price + review score)
+        max_price = data['price_per_night'].max()
+        data['user_first_score'] = (
+            (1 - data['price_per_night'] / max_price) * 0.7 +  # Price factor (70% weight)
+            (data['review_score'] / 10) * 0.3  # Review factor (30% weight)
+        )
+        
+        # Sort by user-first score
+        ranked_data = data.sort_values('user_first_score', ascending=False)
+        
+        # Calculate metrics
+        expected_revenue = (ranked_data['commission_rate'] * 
+                          ranked_data['price_per_night'] * 
+                          ranked_data['probability_of_click'] * 
+                          ranked_data['conversion_probability']).sum()
+        user_trust_score = _calculate_trust_score_for_ranking(ranked_data)
+        
+        return {
+            "ranked_list": ranked_data[['offer_id', 'partner_name', 'price_per_night', 'user_first_score']].head(10).to_dict('records'),
+            "expected_revenue": float(expected_revenue),
+            "user_trust_score": float(user_trust_score)
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+def _apply_stochastic_lp_strategy(data: pd.DataFrame) -> dict:
+    """Stochastic LP strategy: optimization-based ranking"""
+    try:
+        # Prepare data for optimization
+        n_offers = len(data)
+        n_positions = min(10, n_offers)
+        
+        # Create optimization problem
+        prob = pulp.LpProblem("Hotel_Ranking_Optimization", pulp.LpMaximize)
+        
+        # Decision variables: x[i][j] = 1 if offer i is at position j
+        x = {}
+        for i in range(n_offers):
+            for j in range(n_positions):
+                x[i, j] = pulp.LpVariable(f"x_{i}_{j}", cat='Binary')
+        
+        # Objective function: maximize expected revenue with position weights
+        objective = 0
+        for i in range(n_offers):
+            for j in range(n_positions):
+                position_weight = 1.0 / (j + 1)  # Higher positions get more weight
+                expected_value = (
+                    data.iloc[i]['commission_rate'] * 
+                    data.iloc[i]['price_per_night'] * 
+                    data.iloc[i]['probability_of_click'] * 
+                    data.iloc[i]['conversion_probability'] * 
+                    position_weight
+                )
+                objective += expected_value * x[i, j]
+        
+        prob += objective
+        
+        # Constraints
+        # Each position can have at most one offer
+        for j in range(n_positions):
+            prob += pulp.lpSum([x[i, j] for i in range(n_offers)]) <= 1
+        
+        # Each offer can be in at most one position
+        for i in range(n_offers):
+            prob += pulp.lpSum([x[i, j] for j in range(n_positions)]) <= 1
+        
+        # Solve
+        prob.solve(pulp.PULP_CBC_CMD(msg=0))
+        
+        # Extract solution
+        if prob.status == pulp.LpStatusOptimal:
+            ranking = {}
+            for i in range(n_offers):
+                for j in range(n_positions):
+                    if x[i, j].varValue == 1:
+                        ranking[j] = i
+            
+            # Create ranked list
+            ranked_offers = []
+            for pos in sorted(ranking.keys()):
+                offer_idx = ranking[pos]
+                offer_data = data.iloc[offer_idx]
+                ranked_offers.append({
+                    'offer_id': offer_data['offer_id'],
+                    'partner_name': offer_data['partner_name'],
+                    'price_per_night': float(offer_data['price_per_night']),
+                    'position': pos + 1
+                })
+            
+            # Calculate metrics
+            expected_revenue = pulp.value(prob.objective)
+            user_trust_score = _calculate_trust_score_for_ranking(data.iloc[list(ranking.values())])
+            
+            return {
+                "ranked_list": ranked_offers,
+                "expected_revenue": float(expected_revenue),
+                "user_trust_score": float(user_trust_score)
+            }
+        else:
+            return {"error": "Optimization failed"}
+            
+    except Exception as e:
+        return {"error": str(e)}
+
+def _apply_rl_policy_strategy(data: pd.DataFrame, market_info: pd.Series) -> dict:
+    """RL Policy strategy: adaptive based on market conditions"""
+    try:
+        market_state = market_info['market_state_label']
+        
+        if market_state == 'high':
+            # High demand: use greedy strategy
+            return _apply_greedy_strategy(data)
+        elif market_state == 'medium':
+            # Medium demand: use balanced approach
+            data['rl_score'] = (
+                data['commission_rate'] * 0.4 +
+                (1 - data['price_per_night'] / data['price_per_night'].max()) * 0.4 +
+                (data['review_score'] / 10) * 0.2
+            )
+        else:
+            # Low demand: prioritize user satisfaction
+            return _apply_user_first_strategy(data)
+        
+        # For medium demand, use custom scoring
+        ranked_data = data.sort_values('rl_score', ascending=False)
+        
+        # Calculate metrics
+        expected_revenue = (ranked_data['commission_rate'] * 
+                          ranked_data['price_per_night'] * 
+                          ranked_data['probability_of_click'] * 
+                          ranked_data['conversion_probability']).sum()
+        user_trust_score = _calculate_trust_score_for_ranking(ranked_data)
+        
+        return {
+            "ranked_list": ranked_data[['offer_id', 'partner_name', 'price_per_night', 'rl_score']].head(10).to_dict('records'),
+            "expected_revenue": float(expected_revenue),
+            "user_trust_score": float(user_trust_score)
+        }
+        
+    except Exception as e:
+        return {"error": str(e)}
+
+def _calculate_trust_score_for_ranking(data: pd.DataFrame) -> float:
+    """Calculate user trust score for a ranking"""
+    try:
+        if len(data) == 0:
+            return 0.0
+        
+        # Price competitiveness (lower price = higher trust)
+        min_price = data['price_per_night'].min()
+        max_price = data['price_per_night'].max()
+        if max_price > min_price:
+            price_score = 100 * (1 - (data['price_per_night'].mean() - min_price) / (max_price - min_price))
+        else:
+            price_score = 100
+        
+        # Brand trust
+        brand_trust_scores = {
+            "Booking.com": 90, "Expedia": 85, "Hotels.com": 80,
+            "Agoda": 75, "HotelDirect": 70
+        }
+        brand_score = data['partner_name'].map(lambda x: brand_trust_scores.get(x, 65)).mean()
+        
+        # Review score
+        review_score = data['review_score'].mean() * 10
+        
+        # Weighted average
+        trust_score = (price_score * 0.4 + brand_score * 0.3 + review_score * 0.3)
+        return min(100.0, max(0.0, trust_score))
+        
+    except Exception as e:
+        return 50.0  # Default trust score
+
+@app.get("/user_dynamic_price_sensitivity_data")
+def get_user_dynamic_price_sensitivity_data():
+    """Return the contents of user_dynamic_price_sensitivity.csv as JSON"""
+    import os
+    import pandas as pd
+    import numpy as np
+    try:
+        file_path = os.path.join('data', 'user_dynamic_price_sensitivity.csv')
+        if not os.path.exists(file_path):
+            return {"message": "No user_dynamic_price_sensitivity.csv found", "data": []}
+        df = pd.read_csv(file_path)
+        df = df.fillna(0.0)
+        df = df.replace([np.inf, -np.inf], 0.0)
+        data = df.to_dict(orient='records')
+        for record in data:
+            for key, value in record.items():
+                if isinstance(value, float) and (np.isnan(value) or np.isinf(value)):
+                    record[key] = 0.0
+                elif value is None:
+                    record[key] = ""
+        return {"data": data, "records": len(data)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading user_dynamic_price_sensitivity.csv: {str(e)}")
+
+@app.get("/conversion_probabilities_data")
+def get_conversion_probabilities_data():
+    """Return the contents of conversion_probabilities.csv as JSON"""
+    import os
+    import pandas as pd
+    import numpy as np
+    try:
+        file_path = os.path.join('data', 'conversion_probabilities.csv')
+        if not os.path.exists(file_path):
+            return {"message": "No conversion_probabilities.csv found", "data": []}
+        df = pd.read_csv(file_path)
+        df = df.fillna(0.0)
+        df = df.replace([np.inf, -np.inf], 0.0)
+        data = df.to_dict(orient='records')
+        for record in data:
+            for key, value in record.items():
+                if isinstance(value, float) and (np.isnan(value) or np.isinf(value)):
+                    record[key] = 0.0
+                elif value is None:
+                    record[key] = ""
+        return {"data": data, "records": len(data)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading conversion_probabilities.csv: {str(e)}")
+
+@app.get("/conversion_probability/{user_id}/{offer_id}")
+def get_conversion_probability(user_id: str, offer_id: str):
+    """Return conversion probability for a user-offer pair from conversion_probabilities.csv."""
+    import pandas as pd
+    import os
+    csv_path = os.path.join('data', 'conversion_probabilities.csv')
+    if not os.path.exists(csv_path):
+        return {"error": "conversion_probabilities.csv not found. Please generate it first."}
+    df = pd.read_csv(csv_path)
+    row = df[(df['user_id'] == user_id) & (df['offer_id'].astype(str) == str(offer_id))]
+    if row.empty:
+        return {"error": f"No conversion probability found for user {user_id} and offer {offer_id}"}
+    return row.iloc[0].to_dict()
 
 if __name__ == "__main__":
     import sys
