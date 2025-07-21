@@ -28,6 +28,14 @@ from data_models.data_generator import DataGenerator
 
 from collections import defaultdict
 
+# Define the data directory path - use the Docker volume mount path
+DATA_DIR = '/data'  # This matches the Docker Compose volume mount
+
+# Update all file path references to use DATA_DIR
+def get_data_path(filename):
+    """Get the full path for a data file"""
+    return os.path.join(DATA_DIR, filename)
+
 app = FastAPI(
     title="Enhanced Hotel Ranking Simulation API",
     description="Comprehensive API for trivago-style hotel ranking simulation with realistic data models",
@@ -74,7 +82,7 @@ def read_root():
 @app.get("/user_profiles")
 def get_sample_user_profiles():
     """Get 10 random user profiles for selection from enhanced_user_profiles.csv"""
-    csv_path = os.path.join('data', 'enhanced_user_profiles.csv')
+    csv_path = get_data_path('enhanced_user_profiles.csv')
     df = pd.read_csv(csv_path)
     sample_df = df.sample(n=10)
     # Replace NaN, inf, -inf with None for JSON compatibility
@@ -86,7 +94,7 @@ def get_sample_user_profiles():
 def get_user_profile(user_id: str):
     """Get a user profile by user_id from enhanced_user_profiles.csv"""
     try:
-        file_path = os.path.join('data', 'enhanced_user_profiles.csv')
+        file_path = get_data_path('enhanced_user_profiles.csv')
         if not os.path.exists(file_path):
             return {"profile": None}
         df = pd.read_csv(file_path)
@@ -112,32 +120,41 @@ def get_user_offers(user_id: str, num_hotels: int = 10, num_partners: int = 5, d
     """Get offers for a selected user, with hotel and offer info joined, and days_to_go column."""
     try:
         # Load user
-        users = pd.read_csv(os.path.join('data', 'enhanced_user_profiles.csv'))
+        users = pd.read_csv(get_data_path('enhanced_user_profiles.csv'))
         user = users[users['user_id'] == user_id]
         if user.empty:
             return []
         user = user.iloc[0]
         
         # Load hotels and offers
-        hotels = pd.read_csv(os.path.join('data', 'enhanced_hotels.csv'))
-        offers = pd.read_csv(os.path.join('data', 'enhanced_partner_offers.csv'))
+        hotels = pd.read_csv(get_data_path('enhanced_hotels.csv'))
+        offers = pd.read_csv(get_data_path('enhanced_partner_offers.csv'))
         
         # Filter hotels based on user preferences
         filtered_hotels = hotels.copy()
         
-        # Filter by user location (exact match)
+        # Filter by user location (handle format differences)
         if 'location' in user and pd.notna(user['location']):
-            location_filtered = hotels[hotels['location'] == user['location']]
+            user_location = user['location']
+            # Extract city name from hotel locations (e.g., "Sydney, Australia" -> "Sydney")
+            hotels['city_name'] = hotels['location'].str.split(',').str[0].str.strip()
+            location_filtered = hotels[hotels['city_name'] == user_location]
             if len(location_filtered) > 0:
                 filtered_hotels = location_filtered
-        
-        # Filter by budget range
-        budget_min = user['budget_min']
-        budget_max = user['budget_max']
+            else:
+                print(f"No hotels found for user location: {user_location}")
+                # Fallback: try exact match
+                location_filtered = hotels[hotels['location'] == user_location]
+            if len(location_filtered) > 0:
+                filtered_hotels = location_filtered
         
         # Get average prices for hotels from offers
         avg_prices = offers.groupby('hotel_id')['price_per_night'].mean().reset_index()
         avg_prices.columns = ['hotel_id', 'avg_price']
+        
+        # Filter by budget range
+        budget_min = user['budget_min']
+        budget_max = user['budget_max']
         
         # Filter hotels within budget
         hotels_with_prices = filtered_hotels.merge(avg_prices, on='hotel_id', how='left')
@@ -145,6 +162,23 @@ def get_user_offers(user_id: str, num_hotels: int = 10, num_partners: int = 5, d
             (hotels_with_prices['avg_price'] >= budget_min) & 
             (hotels_with_prices['avg_price'] <= budget_max)
         ]
+        
+        # If budget filtering results in no hotels, try with relaxed budget constraints
+        if len(budget_hotels) == 0:
+            print(f"No hotels found for user {user_id} with budget {budget_min}-{budget_max}, trying relaxed budget")
+            # Expand budget range by 50%
+            budget_range = budget_max - budget_min
+            expanded_min = max(0, budget_min - budget_range * 0.5)
+            expanded_max = budget_max + budget_range * 0.5
+            budget_hotels = hotels_with_prices[
+                (hotels_with_prices['avg_price'] >= expanded_min) & 
+                (hotels_with_prices['avg_price'] <= expanded_max)
+            ]
+        
+        # If still no hotels, use all hotels with prices
+        if len(budget_hotels) == 0:
+            print(f"Still no hotels found for user {user_id}, using all available hotels")
+            budget_hotels = hotels_with_prices.dropna(subset=['avg_price'])
         
         if len(budget_hotels) > 0:
             filtered_hotels = budget_hotels
@@ -160,15 +194,25 @@ def get_user_offers(user_id: str, num_hotels: int = 10, num_partners: int = 5, d
         # Get offers for sampled hotels
         hotel_offers = offers[offers['hotel_id'].isin(sampled_hotels['hotel_id'])]
         
-        # Sample partners per hotel
+        # Sample partners per hotel to respect num_partners parameter
         sampled_offers = []
+        total_offers_available = 0
         for hotel_id in sampled_hotels['hotel_id']:
             hotel_offers_subset = hotel_offers[hotel_offers['hotel_id'] == hotel_id]
             if len(hotel_offers_subset) > 0:
-                # Sample partners for this hotel
-                num_partners_for_hotel = min(num_partners, len(hotel_offers_subset))
-                sampled_hotel_offers = hotel_offers_subset.sample(n=num_partners_for_hotel)
+                if len(hotel_offers_subset) > num_partners:
+                    # Sample num_partners from available partners for this hotel
+                    sampled_hotel_offers = hotel_offers_subset.sample(n=num_partners)
+                    print(f"Hotel {hotel_id}: {len(sampled_hotel_offers)} offers sampled (requested {num_partners})")
+                else:
+                    # Take all available offers if less than num_partners
+                    sampled_hotel_offers = hotel_offers_subset
+                    print(f"Hotel {hotel_id}: {len(sampled_hotel_offers)} offers taken (less than requested {num_partners})")
+                
                 sampled_offers.append(sampled_hotel_offers)
+                total_offers_available += len(sampled_hotel_offers)
+        
+        print(f"Total offers available for user {user_id}: {total_offers_available}")
         
         if sampled_offers:
             offers_df = pd.concat(sampled_offers, ignore_index=True)
@@ -198,7 +242,7 @@ def get_user_offers(user_id: str, num_hotels: int = 10, num_partners: int = 5, d
         offers_df = offers_df.sort_values('preference_score', ascending=False)
         
         # Save as trial CSV
-        offers_df.to_csv(os.path.join('data', 'trial_sampled_offers.csv'), index=False)
+        offers_df.to_csv(get_data_path('trial_sampled_offers.csv'), index=False)
         
         # Convert to dict and handle any remaining NaN/inf values
         result_dict = offers_df.to_dict(orient='records')
@@ -234,7 +278,14 @@ def _calculate_preference_score(offer_row, user):
     
     # Location preference (if available)
     if 'location' in offer_row and 'location' in user:
-        if offer_row['location'] == user['location']:
+        # Handle location format differences (e.g., "Sydney" vs "Sydney, Australia")
+        offer_location = offer_row['location']
+        user_location = user['location']
+        
+        # Extract city name from offer location
+        offer_city = offer_location.split(',')[0].strip() if ',' in offer_location else offer_location
+        
+        if offer_city == user_location:
             score += 0.3
     
     # Room type preference (if available)
@@ -869,7 +920,7 @@ def save_scenario_data(scenario_data: dict, request: Request = None):
         if 'days_to_go' not in df.columns:
             df['days_to_go'] = np.random.normal(30, 5, size=len(df)).astype(int)
         filename = "trial_sampled_offers.csv"
-        filepath = os.path.join('data', filename)
+        filepath = get_data_path(filename)
         df.to_csv(filepath, index=False)
         # Save market state CSV after saving offers
         save_market_state_csv()
@@ -892,7 +943,7 @@ def save_scenario_data(scenario_data: dict, request: Request = None):
 def get_trial_sampled_offers():
     """Return the contents of trial_sampled_offers.csv as JSON, handling NaN/inf."""
     try:
-        file_path = os.path.join('data', 'trial_sampled_offers.csv')
+        file_path = get_data_path('trial_sampled_offers.csv')
         if not os.path.exists(file_path):
             return {"message": "No trial_sampled_offers.csv found", "data": []}
         df = pd.read_csv(file_path)
@@ -913,7 +964,7 @@ def get_trial_sampled_offers():
 def get_trial_user_ids():
     """Get unique user IDs from trial_sampled_offers.csv"""
     try:
-        file_path = os.path.join('data', 'trial_sampled_offers.csv')
+        file_path = get_data_path('trial_sampled_offers.csv')
         if not os.path.exists(file_path):
             return {"user_ids": []}
         
@@ -931,7 +982,7 @@ def get_trial_user_ids():
 def get_trial_offers_by_user(user_id: str):
     """Get offers from trial_sampled_offers.csv filtered by user_id"""
     try:
-        file_path = os.path.join('data', 'trial_sampled_offers.csv')
+        file_path = get_data_path('trial_sampled_offers.csv')
         if not os.path.exists(file_path):
             return {"data": [], "records": 0}
         
@@ -968,32 +1019,206 @@ def sample_offers_for_users(
     num_hotels: int = Query(10, ge=1, le=20),
     num_partners: int = Query(5, ge=1, le=10),
     days_to_go: int = Query(30, ge=1, le=365),
-    days_var: int = Query(5, ge=1, le=30)
+    days_var: int = Query(5, ge=1, le=30),
+    min_users_per_destination: int = Query(1, ge=1, le=20)
 ):
-    """Sample offers for N unique users and save all to trial_sampled_offers.csv"""
+    """Sample offers for N unique users by sampling hotels per region/destination, enforcing a minimum number of users per destination."""
     try:
-        users_df = pd.read_csv(os.path.join('data', 'enhanced_user_profiles.csv'))
+        # Load data
+        users_df = pd.read_csv(get_data_path('enhanced_user_profiles.csv'))
+        hotels_df = pd.read_csv(get_data_path('enhanced_hotels.csv'))
+        offers_df = pd.read_csv(get_data_path('enhanced_partner_offers.csv'))
+        
         if len(users_df) < num_users:
             num_users = len(users_df)
-        sampled_users = users_df.sample(n=num_users, replace=False)
+        
+        # Try up to 10 times to get a valid sample
+        for attempt in range(10):
+            sampled_users = users_df.sample(n=num_users, replace=False)
+            # Count users per destination
+            dest_counts = sampled_users['location'].value_counts()
+            valid_destinations = dest_counts[dest_counts >= min_users_per_destination].index.tolist()
+            # Filter users to only those in valid destinations
+            filtered_users = sampled_users[sampled_users['location'].isin(valid_destinations)]
+            if filtered_users['location'].nunique() > 0:
+                print(f"Attempt {attempt + 1}: Found {len(valid_destinations)} destinations with at least {min_users_per_destination} users")
+                print(f"Destination breakdown: {dest_counts.to_dict()}")
+                print(f"Valid destinations: {valid_destinations}")
+                break
+        else:
+            return {
+                "message": f"Could not find enough destinations with at least {min_users_per_destination} users after 10 attempts. Available destinations and their user counts: {dest_counts.to_dict()}",
+                "num_records": 0,
+                "error": "constraint_violation",
+                "available_destinations": dest_counts.to_dict()
+            }
+        
+        sampled_users = filtered_users
+        final_destinations = sampled_users['location'].unique()
+        final_dest_counts = sampled_users['location'].value_counts()
+        
+        print(f"Final sampling result:")
+        print(f"- Total users sampled: {len(sampled_users)}")
+        print(f"- Destinations selected: {final_destinations}")
+        print(f"- Users per destination: {final_dest_counts.to_dict()}")
+        print(f"- Constraint satisfied: All destinations have >= {min_users_per_destination} users")
+        
+        # Sample hotels per destination (not per user)
+        destination_hotels = {}
         all_offers = []
+        
+        for destination in final_destinations:
+            print(f"Processing destination: {destination}")
+            
+            # Filter hotels for this destination
+            if ',' in destination:
+                # Handle "City, Country" format
+                city_name = destination.split(',')[0].strip()
+                destination_hotels_filtered = hotels_df[hotels_df['location'].str.contains(city_name, case=False, na=False)]
+            else:
+                # Handle "City" format
+                destination_hotels_filtered = hotels_df[hotels_df['location'].str.contains(destination, case=False, na=False)]
+            
+            if len(destination_hotels_filtered) == 0:
+                print(f"No hotels found for destination: {destination}")
+                continue
+            
+            # Sample hotels for this destination
+            if len(destination_hotels_filtered) > num_hotels:
+                sampled_hotels_for_destination = destination_hotels_filtered.sample(n=num_hotels)
+            else:
+                sampled_hotels_for_destination = destination_hotels_filtered
+            
+            destination_hotels[destination] = sampled_hotels_for_destination
+            print(f"Sampled {len(sampled_hotels_for_destination)} hotels for {destination}")
+        
+        # Generate offers for each user based on their destination
+        users_with_offers = 0
+        
         for _, user in sampled_users.iterrows():
             user_id = user['user_id']
-            offers = get_user_offers(
-                user_id,
-                num_hotels=num_hotels,
-                num_partners=num_partners,
-                days_to_go=days_to_go,
-                days_var=days_var
-            )
-            if offers:
-                all_offers.extend(offers)
+            user_destination = user['location']
+            
+            # Get hotels for this user's destination
+            if user_destination in destination_hotels:
+                hotels_for_user = destination_hotels[user_destination]
+                
+                # Get all offers for these hotels
+                hotel_ids = hotels_for_user['hotel_id'].tolist()
+                offers_for_hotels = offers_df[offers_df['hotel_id'].isin(hotel_ids)]
+                
+                if len(offers_for_hotels) > 0:
+                    # Sample partners per hotel to respect num_partners parameter
+                    sampled_offers = []
+                    for hotel_id in hotel_ids:
+                        hotel_offers = offers_for_hotels[offers_for_hotels['hotel_id'] == hotel_id]
+                        print(f"Hotel {hotel_id}: {len(hotel_offers)} total offers available")
+                        
+                        if len(hotel_offers) > num_partners:
+                            # Sample num_partners from available partners for this hotel
+                            sampled_hotel_offers = hotel_offers.sample(n=num_partners)
+                            print(f"  Sampled {len(sampled_hotel_offers)} offers (requested {num_partners})")
+                        else:
+                            # Take all available offers if less than num_partners
+                            sampled_hotel_offers = hotel_offers
+                            print(f"  Took all {len(sampled_hotel_offers)} offers (less than requested {num_partners})")
+                        
+                        sampled_offers.append(sampled_hotel_offers)
+                    
+                    # Combine all sampled offers
+                    offers_for_hotels = pd.concat(sampled_offers, ignore_index=True)
+                    print(f"Total offers after partner sampling: {len(offers_for_hotels)} (expected: {len(hotel_ids)} * {num_partners} = {len(hotel_ids) * num_partners})")
+                    
+                    # Join with hotel information
+                    offers_with_hotels = offers_for_hotels.merge(hotels_for_user, on='hotel_id', suffixes=('_offer', '_hotel'))
+                    
+                    # Add user information
+                    offers_with_hotels['user_id'] = user_id
+                    offers_with_hotels['location'] = user_destination
+                    
+                    # Add days_to_go with normal distribution
+                    offers_with_hotels['days_to_go'] = np.random.normal(days_to_go, days_var, size=len(offers_with_hotels)).astype(int)
+                    offers_with_hotels['days_to_go'] = offers_with_hotels['days_to_go'].clip(lower=1, upper=365)
+                    
+                    # Add preference score
+                    offers_with_hotels['preference_score'] = offers_with_hotels.apply(
+                        lambda row: _calculate_preference_score(row, user), axis=1
+                    )
+                    
+                    # Handle NaN and infinite values
+                    offers_with_hotels['preference_score'] = offers_with_hotels['preference_score'].fillna(0.0)
+                    offers_with_hotels['preference_score'] = offers_with_hotels['preference_score'].replace([np.inf, -np.inf], 0.0)
+                    
+                    # Sort by preference score
+                    offers_with_hotels = offers_with_hotels.sort_values('preference_score', ascending=False)
+                    
+                    # Convert to dict and clean values
+                    user_offers = offers_with_hotels.to_dict(orient='records')
+                    for record in user_offers:
+                        for key, value in record.items():
+                            if isinstance(value, float) and (np.isnan(value) or np.isinf(value)):
+                                record[key] = 0.0
+                            elif value is None:
+                                record[key] = ""
+                    
+                    all_offers.extend(user_offers)
+                    users_with_offers += 1
+                    print(f"Generated {len(user_offers)} offers for user {user_id} in {user_destination}")
+                else:
+                    print(f"No offers found for user {user_id} in {user_destination}")
+            else:
+                print(f"No hotels available for user {user_id} in {user_destination}")
+        
         if all_offers:
-            offers_df = pd.DataFrame(all_offers)
-            offers_df.to_csv(os.path.join('data', 'trial_sampled_offers.csv'), index=False)
-            return {"message": f"Sampled offers for {num_users} users.", "num_records": len(offers_df)}
+            # Create final DataFrame
+            final_offers_df = pd.DataFrame(all_offers)
+            final_offers_df.to_csv(get_data_path('trial_sampled_offers.csv'), index=False)
+            
+            # Calculate metrics
+            unique_locations_with_offers = final_offers_df['location'].nunique()
+            total_offers = len(final_offers_df)
+            
+            # Calculate demand per destination (number of users per destination)
+            demand_per_destination = final_offers_df.groupby('location')['user_id'].nunique().to_dict()
+            
+            # Calculate offers per destination (number of rooms × number of partners)
+            offers_per_destination = final_offers_df.groupby('location').size().to_dict()
+            
+            print(f"Demand per destination: {demand_per_destination}")
+            print(f"Offers per destination: {offers_per_destination}")
+            
+            # Update market state CSV after generating new offers
+            save_market_state_csv()
+            
+            # Update bandit simulation results with parameters
+            run_bandit_simulation_and_save_csv(num_users=num_users, num_hotels=num_hotels, num_partners=num_partners, days_to_go=days_to_go, days_var=days_var)
+            
+            # Update user market state CSV
+            user_market_state_csv_function()
+            
+            # Update user dynamic price sensitivity CSV with parameters
+            user_dynamic_price_sensitivity_csv(num_users=num_users, num_hotels=num_hotels, num_partners=num_partners, days_to_go=days_to_go, days_var=days_var)
+            
+            # Update conversion probabilities CSV with parameters
+            conversion_probabilities_csv(num_users=num_users, num_hotels=num_hotels, num_partners=num_partners, days_to_go=days_to_go, days_var=days_var)
+            
+            return {
+                "message": f"Generated scenario with {users_with_offers} users out of {num_users} requested. Total offers: {total_offers}, Offered rooms by location: {unique_locations_with_offers}. Demand per destination: {demand_per_destination}",
+                "users_with_offers": users_with_offers,
+                "total_offers": total_offers,
+                "offered_rooms_by_location": unique_locations_with_offers,
+                "demand_per_destination": demand_per_destination,
+                "offers_per_destination": offers_per_destination,
+                "parameters": {
+                    "num_users": num_users,
+                    "num_hotels": num_hotels,
+                    "num_partners": num_partners,
+                    "days_to_go": days_to_go,
+                    "days_var": days_var
+                }
+            }
         else:
-            return {"message": "No offers generated.", "num_records": 0}
+            return {"message": "No offers generated for any users.", "num_records": 0}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error sampling offers for users: {str(e)}")
 
@@ -1002,8 +1227,8 @@ def get_latest_scenario():
     """Get the latest saved scenario data"""
     try:
         # Try to read the latest scenario file
-        latest_file = os.path.join('data', 'latest_scenario_data.csv')
-        trial_file = os.path.join('data', 'trial_sampled_offers.csv')
+        latest_file = get_data_path('latest_scenario_data.csv')
+        trial_file = get_data_path('trial_sampled_offers.csv')
         
         # Check which file exists and is more recent
         if os.path.exists(latest_file) and os.path.exists(trial_file):
@@ -1050,7 +1275,7 @@ def calculate_market_conditions():
     """Calculate enhanced market conditions using four signals from trial_sampled_offers.csv"""
     try:
         # Load the trial sampled offers data
-        file_path = os.path.join('data', 'trial_sampled_offers.csv')
+        file_path = get_data_path('trial_sampled_offers.csv')
         if not os.path.exists(file_path):
             return {"error": "No trial data available"}
         
@@ -1190,8 +1415,8 @@ def get_market_state(location: str):
     """Aggregate real offer/user data to compute market state for a location (was destination) and label it."""
     import json
     try:
-        offers_path = os.path.join('data', 'trial_sampled_offers.csv')
-        users_path = os.path.join('data', 'enhanced_user_profiles.csv')
+        offers_path = get_data_path('trial_sampled_offers.csv')
+        users_path = get_data_path('enhanced_user_profiles.csv')
         if not os.path.exists(offers_path) or not os.path.exists(users_path):
             return {"error": "Required data files not found"}
         offers_df = pd.read_csv(offers_path)
@@ -1263,8 +1488,8 @@ def user_market_state_csv():
     import pandas as pd
     import os
     import requests
-    offers_path = os.path.join('data', 'trial_sampled_offers.csv')
-    out_path = os.path.join('data', 'user_market_state.csv')
+    offers_path = get_data_path('trial_sampled_offers.csv')
+    out_path = get_data_path('user_market_state.csv')
     if not os.path.exists(offers_path):
         return {"error": "trial_sampled_offers.csv not found"}
     offers_df = pd.read_csv(offers_path)
@@ -1290,8 +1515,8 @@ def get_dynamic_price_sensitivity(user_id: str):
     import json
     import logging
     try:
-        users_path = os.path.join('data', 'enhanced_user_profiles.csv')
-        offers_path = os.path.join('data', 'trial_sampled_offers.csv')
+        users_path = get_data_path('enhanced_user_profiles.csv')
+        offers_path = get_data_path('trial_sampled_offers.csv')
         if not os.path.exists(users_path) or not os.path.exists(offers_path):
             return {"error": "Required data files not found"}
         users_df = pd.read_csv(users_path)
@@ -1341,8 +1566,8 @@ def get_offer_probabilities(user_id: str):
     """Return click and booking probabilities for all offers for a user."""
     import json
     try:
-        users_path = os.path.join('data', 'enhanced_user_profiles.csv')
-        offers_path = os.path.join('data', 'trial_sampled_offers.csv')
+        users_path = get_data_path('enhanced_user_profiles.csv')
+        offers_path = get_data_path('trial_sampled_offers.csv')
         if not os.path.exists(users_path) or not os.path.exists(offers_path):
             return {"error": "Required data files not found"}
         users_df = pd.read_csv(users_path)
@@ -1465,7 +1690,7 @@ def run_bandit_simulation():
         import os
         import copy
         # Read the offers data
-        offers_path = os.path.join('data', 'trial_sampled_offers.csv')
+        offers_path = get_data_path('trial_sampled_offers.csv')
         if not os.path.exists(offers_path):
             return {"error": "trial_sampled_offers.csv not found"}
         # Load data using pandas
@@ -1510,7 +1735,7 @@ def run_bandit_simulation():
             results_df['probability_of_click'] = results_df['probability_of_click'].astype(float)
             results_df['true_click_prob'] = results_df['true_click_prob'].astype(float)
             results_df['preference_score'] = results_df['preference_score'].astype(float)
-        csv_path = '/data/bandit_simulation_results.csv'
+        csv_path = get_data_path('bandit_simulation_results.csv')
         results_df.drop(columns=['rewards_learnt']).to_csv(csv_path, index=False)
         # Calculate summary statistics
         total_arms = len(results)
@@ -1536,7 +1761,7 @@ def get_bandit_simulation_results():
     import pandas as pd
     import numpy as np
     try:
-        file_path = os.path.join('data', 'bandit_simulation_results.csv')
+        file_path = get_data_path('bandit_simulation_results.csv')
         if not os.path.exists(file_path):
             return {"message": "No bandit_simulation_results.csv found", "data": []}
         df = pd.read_csv(file_path)
@@ -1561,7 +1786,7 @@ def get_bandit_simulation_results():
         import random
         
         # Load offers data
-        offers_df = pd.read_csv('data/trial_sampled_offers.csv')
+        offers_df = pd.read_csv(get_data_path('trial_sampled_offers.csv'))
         
         # Group offers by user_id and assign ranks
         user_offers = {}
@@ -1644,8 +1869,8 @@ def compute_and_save_user_market_state():
     import numpy as np
     import json
     import os
-    offers_path = os.path.join('data', 'trial_sampled_offers.csv')
-    out_path = os.path.join('data', 'user_market_state.csv')
+    offers_path = get_data_path('trial_sampled_offers.csv')
+    out_path = get_data_path('user_market_state.csv')
     if not os.path.exists(offers_path):
         print("trial_sampled_offers.csv not found")
         return
@@ -1704,22 +1929,55 @@ def compute_and_save_user_market_state():
     print(f"user_market_state.csv created with {len(user_locs)} rows.")
 
 @app.post("/user_dynamic_price_sensitivity_csv")
-def user_dynamic_price_sensitivity_csv():
-    """Create a CSV mapping each user to their destination, basic and dynamic price sensitivity, number of offers, number of users, and price info."""
-    import pandas as pd
-    import numpy as np
-    import os
-    import traceback
-    offers_path = os.path.join('data', 'trial_sampled_offers.csv')
-    users_path = os.path.join('data', 'enhanced_user_profiles.csv')
-    out_path = os.path.join('data', 'user_dynamic_price_sensitivity.csv')
-    print(f"[DEBUG] Called user_dynamic_price_sensitivity_csv. Offers path: {offers_path}, Users path: {users_path}, Output path: {out_path}")
+def user_dynamic_price_sensitivity_csv(
+    num_users: int = Query(None, ge=1, le=100),
+    num_hotels: int = Query(None, ge=1, le=20),
+    num_partners: int = Query(None, ge=1, le=10),
+    days_to_go: int = Query(None, ge=1, le=365),
+    days_var: int = Query(None, ge=1, le=30),
+    min_users_per_destination: int = Query(None, ge=1, le=20)
+):
+    """Generate user dynamic price sensitivity CSV with minimum users per destination constraint."""
     try:
+        import pandas as pd
+        import numpy as np
+        import json
+        import os
+        import traceback
+        
+        offers_path = get_data_path('trial_sampled_offers.csv')
+        users_path = get_data_path('enhanced_user_profiles.csv')
+        out_path = get_data_path('user_dynamic_price_sensitivity.csv')
+        
+        print(f"[DEBUG] Called user_dynamic_price_sensitivity_csv. Offers path: {offers_path}, Users path: {users_path}, Output path: {out_path}")
+        print(f"[DEBUG] Parameters: num_users={num_users}, num_hotels={num_hotels}, num_partners={num_partners}, days_to_go={days_to_go}, days_var={days_var}, min_users_per_destination={min_users_per_destination}")
+        
         if not os.path.exists(offers_path) or not os.path.exists(users_path):
             print(f"[ERROR] Required data files not found: {offers_path}, {users_path}")
             return {"error": "Required data files not found"}
+        
         offers_df = pd.read_csv(offers_path)
         users_df = pd.read_csv(users_path)
+        
+        # Apply minimum users per destination constraint
+        if min_users_per_destination is not None:
+            # Count users per destination
+            dest_counts = offers_df.groupby('location')['user_id'].nunique()
+            valid_destinations = dest_counts[dest_counts >= min_users_per_destination].index.tolist()
+            
+            # Filter offers to only include valid destinations
+            offers_df = offers_df[offers_df['location'].isin(valid_destinations)]
+            
+            print(f"[DEBUG] After constraint filtering: {len(valid_destinations)} destinations with >= {min_users_per_destination} users")
+            print(f"[DEBUG] Valid destinations: {valid_destinations}")
+            print(f"[DEBUG] Users per destination: {dest_counts.to_dict()}")
+        
+        # Filter offers based on parameters if provided
+        if num_users is not None:
+            # Ensure we only process the expected number of users
+            unique_users = offers_df['user_id'].unique()[:num_users]
+            offers_df = offers_df[offers_df['user_id'].isin(unique_users)]
+        
         user_rows = []
         for user_id in offers_df['user_id'].unique():
             user_offers = offers_df[offers_df['user_id'] == user_id]
@@ -1727,20 +1985,44 @@ def user_dynamic_price_sensitivity_csv():
                 continue
             location = user_offers.iloc[0]['location']
             days_to_go = user_offers['days_to_go'].mean()
-            offered_prices = offers_df[offers_df['location'] == location]['price_per_night']
-            price_mean = offered_prices.mean()
-            price_std = offered_prices.std()
-            n_offers = len(offered_prices)
-            n_users = offers_df[offers_df['location'] == location]['user_id'].nunique()
+            
+            # Get all offers for this location
+            location_offers = offers_df[offers_df['location'] == location]
+            
+            # Calculate price statistics using 24-hour price history
+            all_24h_prices = []
+            for _, offer in location_offers.iterrows():
+                try:
+                    # Parse the 24-hour price history
+                    price_history = json.loads(offer['price_history_24h'])
+                    if isinstance(price_history, list) and len(price_history) > 0:
+                        all_24h_prices.extend(price_history)
+                except (json.JSONDecodeError, KeyError, TypeError):
+                    # Fallback to current price if history is not available
+                    all_24h_prices.append(offer['price_per_night'])
+            
+            # Calculate statistics from all 24-hour prices
+            if all_24h_prices:
+                price_mean = np.mean(all_24h_prices)
+                price_std = np.std(all_24h_prices)
+            else:
+                # Fallback to current prices if no history available
+                offered_prices = location_offers['price_per_night']
+                price_mean = offered_prices.mean()
+                price_std = offered_prices.std()
+            
+            n_offers = len(location_offers)
+            n_users = location_offers['user_id'].nunique()
             user_row = users_df[users_df['user_id'] == user_id]
             if user_row.empty:
                 continue
             base_sensitivity = float(user_row.iloc[0].get('price_sensitivity', 0.5))
-            dynamic_sensitivity = (
-                0.5 * base_sensitivity +
-                0.2 * (1 - min(days_to_go, 180)/180) +
-                0.3 * (price_std/(price_mean+1) if price_mean > 0 else 0)
-            )
+            
+            # Adjust dynamic sensitivity based on parameters
+            days_factor = 0.2 * (1 - min(days_to_go, 180)/180) if days_to_go is not None else 0.1
+            price_factor = 0.3 * (price_std/(price_mean+1) if price_mean > 0 else 0)
+            dynamic_sensitivity = 0.5 * base_sensitivity + days_factor + price_factor
+            
             user_rows.append({
                 'user_id': user_id,
                 'destination': location,
@@ -1752,6 +2034,7 @@ def user_dynamic_price_sensitivity_csv():
                 'price_std': round(price_std, 2),
                 'avg_days_to_go': round(days_to_go, 1)
             })
+        
         out_df = pd.DataFrame(user_rows)
         out_df.to_csv(out_path, index=False)
         print(f"[DEBUG] user_dynamic_price_sensitivity.csv written to {out_path} with {len(out_df)} rows.")
@@ -1762,14 +2045,14 @@ def user_dynamic_price_sensitivity_csv():
         return {"error": f"Exception: {str(e)}"}
 
 def save_market_state_csv():
-    """Compute and save market state for each location in trial_sampled_offers.csv as /data/user_market_state.csv."""
+    """Compute and save market state for each location in trial_sampled_offers.csv as /data/market_state_by_location.csv."""
     import pandas as pd
     import numpy as np
     import json
     import os
-    offers_path = os.path.join('data', 'trial_sampled_offers.csv')
-    users_path = os.path.join('data', 'enhanced_user_profiles.csv')
-    out_path = os.path.join('data', 'user_market_state.csv')
+    offers_path = get_data_path('trial_sampled_offers.csv')
+    users_path = get_data_path('enhanced_user_profiles.csv')
+    out_path = get_data_path('market_state_by_location.csv')
     if not os.path.exists(offers_path) or not os.path.exists(users_path):
         return
     offers_df = pd.read_csv(offers_path)
@@ -1794,9 +2077,29 @@ def save_market_state_csv():
         offers = offers_df[offers_df['location'] == location]
         user_ids = offers['user_id'].unique().tolist()
         users = users_df[users_df['user_id'].isin(user_ids)]
-        avg_price = offers['price_per_night'].mean()
+        
+        # Calculate price statistics using 24-hour price history
+        all_24h_prices = []
+        for _, offer in offers.iterrows():
+            try:
+                # Parse the 24-hour price history
+                price_history = json.loads(offer['price_history_24h'])
+                if isinstance(price_history, list) and len(price_history) > 0:
+                    all_24h_prices.extend(price_history)
+            except (json.JSONDecodeError, KeyError, TypeError):
+                # Fallback to current price if history is not available
+                all_24h_prices.append(offer['price_per_night'])
+        
+        # Calculate statistics from all 24-hour prices
+        if all_24h_prices:
+            avg_price = np.mean(all_24h_prices)
+            price_var = np.var(all_24h_prices)  # Use variance from 24h history
+        else:
+            # Fallback to current prices if no history available
+            avg_price = offers['price_per_night'].mean()
+            price_var = offers['price_fluctuation_variance'].mean()
+        
         avg_days_to_go = offers['days_to_go'].mean()
-        price_var = offers['price_fluctuation_variance'].mean()
         unique_hotels = offers['hotel_id'].nunique()
         unique_partners = offers['partner_name'].nunique()
         competition_density = unique_hotels * unique_partners
@@ -1826,28 +2129,32 @@ def save_market_state_csv():
             'location': location,
             'avg_price': avg_price,
             'avg_days_to_go': avg_days_to_go,
-            'price_variance': price_var,
-            'competition_density': competition_density,
+            'avg_price_trend': price_var,  # Using price variance as trend
+            'user_count': user_count,
+            'offer_count': offer_count,
             'demand_index': demand_index,
             'market_state_label': market_state_label
         })
     pd.DataFrame(rows).to_csv(out_path, index=False)
 
-def run_bandit_simulation_and_save_csv():
+def run_bandit_simulation_and_save_csv(num_users: int = None, num_hotels: int = None, num_partners: int = None, days_to_go: int = None, days_var: int = None):
     """Run bandit simulation and save results to /data/bandit_simulation_results.csv."""
     # This is a refactor of the /run_bandit_simulation endpoint for direct call
     import pandas as pd
     import numpy as np
     import os
     import copy
-    offers_path = os.path.join('data', 'trial_sampled_offers.csv')
+    offers_path = get_data_path('trial_sampled_offers.csv')
     if not os.path.exists(offers_path):
         return
     offers_df = pd.read_csv(offers_path)
     if offers_df.empty:
         return
+    
+    # Use parameters to adjust simulation behavior
+    clicks_per_arm = 1000 if num_users is None else max(100, 1000 // max(1, num_users // 10))
+    
     results = []
-    clicks_per_arm = 1000
     for user_id in offers_df['user_id'].unique():
         user_offers = offers_df[offers_df['user_id'] == user_id].copy()
         n_ranks = len(user_offers)
@@ -1881,7 +2188,7 @@ def run_bandit_simulation_and_save_csv():
         results_df['probability_of_click'] = results_df['probability_of_click'].astype(float)
         results_df['true_click_prob'] = results_df['true_click_prob'].astype(float)
         results_df['preference_score'] = results_df['preference_score'].astype(float)
-    csv_path = '/data/bandit_simulation_results.csv'
+    csv_path = get_data_path('bandit_simulation_results.csv')
     results_df.drop(columns=['rewards_learnt']).to_csv(csv_path, index=False)
 
 def user_market_state_csv_function():
@@ -1889,8 +2196,8 @@ def user_market_state_csv_function():
     import pandas as pd
     import os
     import json
-    offers_path = os.path.join('data', 'trial_sampled_offers.csv')
-    out_path = os.path.join('data', 'user_market_state.csv')
+    offers_path = get_data_path('trial_sampled_offers.csv')
+    out_path = get_data_path('user_market_state.csv')
     if not os.path.exists(offers_path):
         return
     offers_df = pd.read_csv(offers_path)
@@ -1909,22 +2216,49 @@ def user_market_state_csv_function():
     user_locs.to_csv(out_path, index=False)
 
 @app.post("/conversion_probabilities_csv")
-def conversion_probabilities_csv():
+def conversion_probabilities_csv(
+    num_users: int = Query(None, ge=1, le=100),
+    num_hotels: int = Query(None, ge=1, le=20),
+    num_partners: int = Query(None, ge=1, le=10),
+    days_to_go: int = Query(None, ge=1, le=365),
+    days_var: int = Query(None, ge=1, le=30),
+    min_users_per_destination: int = Query(None, ge=1, le=20)
+):
     """Compute and save conversion probabilities for all user-offer pairs to data/conversion_probabilities.csv."""
     import pandas as pd
     import numpy as np
     import os
     import traceback
-    offers_path = os.path.join('data', 'trial_sampled_offers.csv')
-    users_path = os.path.join('data', 'enhanced_user_profiles.csv')
-    dps_path = os.path.join('data', 'user_dynamic_price_sensitivity.csv')
-    out_path = os.path.join('data', 'conversion_probabilities.csv')
+    offers_path = get_data_path('trial_sampled_offers.csv')
+    users_path = get_data_path('enhanced_user_profiles.csv')
+    dps_path = get_data_path('user_dynamic_price_sensitivity.csv')
+    out_path = get_data_path('conversion_probabilities.csv')
     try:
         if not (os.path.exists(offers_path) and os.path.exists(users_path) and os.path.exists(dps_path)):
             return {"error": "Required data files not found"}
         offers_df = pd.read_csv(offers_path)
         users_df = pd.read_csv(users_path)
         dps_df = pd.read_csv(dps_path)
+        
+        # Apply minimum users per destination constraint
+        if min_users_per_destination is not None:
+            # Count users per destination
+            dest_counts = offers_df.groupby('location')['user_id'].nunique()
+            valid_destinations = dest_counts[dest_counts >= min_users_per_destination].index.tolist()
+            
+            # Filter offers to only include valid destinations
+            offers_df = offers_df[offers_df['location'].isin(valid_destinations)]
+            
+            print(f"[DEBUG] Conversion CSV: After constraint filtering: {len(valid_destinations)} destinations with >= {min_users_per_destination} users")
+            print(f"[DEBUG] Conversion CSV: Valid destinations: {valid_destinations}")
+            print(f"[DEBUG] Conversion CSV: Users per destination: {dest_counts.to_dict()}")
+        
+        # Filter offers based on parameters if provided
+        if num_users is not None:
+            # Ensure we only process the expected number of users
+            unique_users = offers_df['user_id'].unique()[:num_users]
+            offers_df = offers_df[offers_df['user_id'].isin(unique_users)]
+        
         results = []
         for idx, offer in offers_df.iterrows():
             user_id = offer['user_id']
@@ -1975,11 +2309,12 @@ def conversion_probabilities_csv():
                 'conversion_probability': round(probability_of_conversion, 4)
             })
         out_df = pd.DataFrame(results)
-        # Use absolute path for Docker volume
-        out_path = '/data/conversion_probabilities.csv'
+        # Use relative path for data directory
+        out_path = get_data_path('conversion_probabilities.csv')
         out_df.to_csv(out_path, index=False)
         print(f"[DEBUG] conversion_probabilities.csv written to {out_path}, exists: {os.path.exists(out_path)}")
         print(f"[DEBUG] Current working directory: {os.getcwd()}")
+        print(f"[DEBUG] Parameters used: num_users={num_users}, num_hotels={num_hotels}, num_partners={num_partners}, days_to_go={days_to_go}, days_var={days_var}")
         if not os.path.exists(out_path):
             print(f"[WARNING] conversion_probabilities.csv NOT FOUND at {out_path} after writing!")
         return {"message": f"conversion_probabilities.csv created with {len(out_df)} rows.", "csv_path": out_path}
@@ -1992,7 +2327,7 @@ def get_conversion_probability(user_id: str, offer_id: str):
     """Return conversion probability for a user-offer pair from conversion_probabilities.csv."""
     import pandas as pd
     import os
-    csv_path = os.path.join('data', 'conversion_probabilities.csv')
+    csv_path = get_data_path('conversion_probabilities.csv')
     if not os.path.exists(csv_path):
         return {"error": "conversion_probabilities.csv not found. Please generate it first."}
     df = pd.read_csv(csv_path)
@@ -2006,8 +2341,8 @@ def run_deterministic_optimization():
     """Run deterministic optimization using MiniZinc and return results"""
     try:
         # Load data from CSV files
-        offers_df = pd.read_csv(os.path.join('data', 'trial_sampled_offers.csv'))
-        users_df = pd.read_csv(os.path.join('data', 'enhanced_user_profiles.csv'))
+        offers_df = pd.read_csv(get_data_path('trial_sampled_offers.csv'))
+        users_df = pd.read_csv(get_data_path('enhanced_user_profiles.csv'))
         
         if offers_df.empty or users_df.empty:
             raise HTTPException(status_code=400, detail="No data available for optimization")
@@ -2052,13 +2387,13 @@ def run_deterministic_optimization():
         results = {}
         
         # Read JSON results
-        json_path = os.path.join('deterministic_optimization_results.json')
+        json_path = get_data_path('deterministic_optimization_results.json')
         if os.path.exists(json_path):
             with open(json_path, 'r') as f:
                 results['json'] = json.load(f)
         
         # Read CSV results
-        csv_path = os.path.join('deterministic_optimization_results.csv')
+        csv_path = get_data_path('deterministic_optimization_results.csv')
         if os.path.exists(csv_path):
             csv_df = pd.read_csv(csv_path)
             results['csv'] = csv_df.to_dict(orient='records')
@@ -2079,8 +2414,8 @@ def run_stochastic_optimization():
     """Run stochastic optimization using MiniZinc and return results"""
     try:
         # Load data from CSV files
-        offers_df = pd.read_csv(os.path.join('data', 'trial_sampled_offers.csv'))
-        users_df = pd.read_csv(os.path.join('data', 'enhanced_user_profiles.csv'))
+        offers_df = pd.read_csv(get_data_path('trial_sampled_offers.csv'))
+        users_df = pd.read_csv(get_data_path('enhanced_user_profiles.csv'))
         
         if offers_df.empty or users_df.empty:
             raise HTTPException(status_code=400, detail="No data available for optimization")
@@ -2117,13 +2452,13 @@ def run_stochastic_optimization():
         results = {}
         
         # Read JSON results
-        json_path = os.path.join('stochastic_optimization_results.json')
+        json_path = get_data_path('stochastic_optimization_results.json')
         if os.path.exists(json_path):
             with open(json_path, 'r') as f:
                 results['json'] = json.load(f)
         
         # Read CSV results
-        csv_path = os.path.join('stochastic_optimization_results.csv')
+        csv_path = get_data_path('stochastic_optimization_results.csv')
         if os.path.exists(csv_path):
             csv_df = pd.read_csv(csv_path)
             results['csv'] = csv_df.to_dict(orient='records')
@@ -2144,7 +2479,7 @@ def get_optimization_results():
     """Get the latest optimization results"""
     try:
         # Check if optimization results exist
-        results_file = "/data/optimization_results.json"
+        results_file = get_data_path('optimization_results.json')
         if os.path.exists(results_file):
             with open(results_file, 'r') as f:
                 results = json.load(f)
@@ -2158,18 +2493,21 @@ def get_optimization_results():
 
 @app.post("/get_scenario_inputs")
 def get_scenario_inputs():
-    """Load enhanced_user_profiles.csv and return unique user_ids for dropdown"""
+    """Load trial_sampled_offers.csv and return unique user_ids from the generated scenario for dropdown"""
     try:
-        csv_path = os.path.join('data', 'enhanced_user_profiles.csv')
+        csv_path = get_data_path('trial_sampled_offers.csv')
         if not os.path.exists(csv_path):
-            raise HTTPException(status_code=404, detail="User profiles CSV not found")
+            raise HTTPException(status_code=404, detail="Trial sampled offers CSV not found. Please generate a scenario first.")
         
         df = pd.read_csv(csv_path)
+        if df.empty:
+            raise HTTPException(status_code=404, detail="No scenario data available. Please generate a scenario first.")
+        
         user_ids = df['user_id'].unique().tolist()
         
         return {"user_ids": user_ids}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reading user profiles: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error reading scenario data: {str(e)}")
 
 @app.post("/get_user_scenario")
 def get_user_scenario(request: dict):
@@ -2180,10 +2518,10 @@ def get_user_scenario(request: dict):
             raise HTTPException(status_code=400, detail="user_id is required")
         
         # Load all CSV files
-        user_profiles_path = os.path.join('data', 'enhanced_user_profiles.csv')
-        market_state_path = os.path.join('data', 'market_state_by_location.csv')
-        bandit_results_path = os.path.join('data', 'bandit_simulation_results.csv')
-        conversion_probs_path = os.path.join('data', 'conversion_probabilities.csv')
+        user_profiles_path = get_data_path('enhanced_user_profiles.csv')
+        market_state_path = get_data_path('market_state_by_location.csv')
+        bandit_results_path = get_data_path('bandit_simulation_results.csv')
+        conversion_probs_path = get_data_path('conversion_probabilities.csv')
         
         # Check if files exist
         for path in [user_profiles_path, market_state_path, bandit_results_path, conversion_probs_path]:
@@ -2273,12 +2611,12 @@ def rank_offers_final(request: dict):
             raise HTTPException(status_code=400, detail="user_id is required")
         
         # Load required data
-        user_profiles_path = os.path.join('data', 'enhanced_user_profiles.csv')
-        offers_path = os.path.join('data', 'enhanced_partner_offers.csv')
-        hotels_path = os.path.join('data', 'enhanced_hotels.csv')
-        bandit_results_path = os.path.join('data', 'bandit_simulation_results.csv')
-        conversion_probs_path = os.path.join('data', 'conversion_probabilities.csv')
-        market_state_path = os.path.join('data', 'market_state_by_location.csv')
+        user_profiles_path = get_data_path('enhanced_user_profiles.csv')
+        offers_path = get_data_path('enhanced_partner_offers.csv')
+        hotels_path = get_data_path('enhanced_hotels.csv')
+        bandit_results_path = get_data_path('bandit_simulation_results.csv')
+        conversion_probs_path = get_data_path('conversion_probabilities.csv')
+        market_state_path = get_data_path('market_state_by_location.csv')
         
         # Check if files exist
         for path in [user_profiles_path, offers_path, hotels_path, bandit_results_path, conversion_probs_path, market_state_path]:
@@ -2572,7 +2910,7 @@ def get_user_dynamic_price_sensitivity_data():
     import pandas as pd
     import numpy as np
     try:
-        file_path = os.path.join('data', 'user_dynamic_price_sensitivity.csv')
+        file_path = get_data_path('user_dynamic_price_sensitivity.csv')
         if not os.path.exists(file_path):
             return {"message": "No user_dynamic_price_sensitivity.csv found", "data": []}
         df = pd.read_csv(file_path)
@@ -2596,7 +2934,7 @@ def get_conversion_probabilities_data():
     import pandas as pd
     import numpy as np
     try:
-        file_path = os.path.join('data', 'conversion_probabilities.csv')
+        file_path = get_data_path('conversion_probabilities.csv')
         if not os.path.exists(file_path):
             return {"message": "No conversion_probabilities.csv found", "data": []}
         df = pd.read_csv(file_path)
@@ -2618,7 +2956,7 @@ def get_conversion_probability(user_id: str, offer_id: str):
     """Return conversion probability for a user-offer pair from conversion_probabilities.csv."""
     import pandas as pd
     import os
-    csv_path = os.path.join('data', 'conversion_probabilities.csv')
+    csv_path = get_data_path('conversion_probabilities.csv')
     if not os.path.exists(csv_path):
         return {"error": "conversion_probabilities.csv not found. Please generate it first."}
     df = pd.read_csv(csv_path)

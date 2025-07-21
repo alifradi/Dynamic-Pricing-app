@@ -34,6 +34,22 @@ print("Configuration completed")
 # Write to debug log
 write(paste("App starting at", Sys.time(), "API_URL:", API_URL), "/tmp/shiny_debug.log", append = TRUE)
 
+# --- Performance Optimization: Data Cache ---
+# Global cache for data to avoid repeated API calls
+data_cache <- reactiveValues(
+  bandit_data = NULL,
+  dps_data = NULL,
+  conversion_data = NULL,
+  market_data = NULL,
+  user_data = NULL,
+  last_bandit_update = NULL,
+  last_dps_update = NULL,
+  last_conversion_update = NULL,
+  last_market_update = NULL,
+  last_user_update = NULL,
+  cache_timeout = 300  # 5 minutes cache timeout
+)
+
 # --- Helper Functions ---
 check_api_connection <- function() {
   tryCatch({
@@ -46,6 +62,73 @@ check_api_connection <- function() {
 
 format_currency <- function(x) {
   paste0("$", format(round(x, 2), nsmall = 2))
+}
+
+# Cached data fetching function
+get_cached_data <- function(data_type, fetch_function) {
+  current_time <- Sys.time()
+  cache_key <- paste0("last_", data_type, "_update")
+  
+  # Check if cache is valid
+  if (is.null(data_cache[[data_type]]) || 
+      is.null(data_cache[[cache_key]]) ||
+      as.numeric(difftime(current_time, data_cache[[cache_key]], units = "secs")) > data_cache$cache_timeout) {
+    
+    # Fetch fresh data
+    tryCatch({
+      data_cache[[data_type]] <- fetch_function()
+      data_cache[[cache_key]] <- current_time
+      print(paste("Cache updated for:", data_type))
+    }, error = function(e) {
+      print(paste("Error fetching", data_type, ":", e$message))
+    })
+  }
+  
+  return(data_cache[[data_type]])
+}
+
+# Optimized data fetching functions
+fetch_bandit_data <- function() {
+  res <- GET(paste0(API_URL, "/bandit_simulation_results"))
+  if (res$status_code == 200) {
+    data <- fromJSON(rawToChar(res$content))
+    return(data$data)
+  }
+  return(NULL)
+}
+
+fetch_dps_data <- function() {
+  res <- GET(paste0(API_URL, "/user_dynamic_price_sensitivity_data"))
+  if (res$status_code == 200) {
+    data <- fromJSON(rawToChar(res$content))
+    return(data$data)
+  }
+  return(NULL)
+}
+
+fetch_conversion_data <- function() {
+  res <- GET(paste0(API_URL, "/conversion_probabilities_data"))
+  if (res$status_code == 200) {
+    data <- fromJSON(rawToChar(res$content))
+    return(data$data)
+  }
+  return(NULL)
+}
+
+fetch_market_data <- function() {
+  tryCatch({
+    read.csv("/data/market_state_by_location.csv")
+  }, error = function(e) {
+    NULL
+  })
+}
+
+fetch_user_data <- function() {
+  tryCatch({
+    read.csv("/data/enhanced_user_profiles.csv")
+  }, error = function(e) {
+    NULL
+  })
 }
 
 # --- UI Definition ---
@@ -107,13 +190,20 @@ ui <- dashboardPage(
       "))
     ),
     
+    # Add MathJax support for LaTeX rendering
+    tags$head(
+      tags$script(src = "https://polyfill.io/v3/polyfill.min.js?features=es6"),
+      tags$script(id = "MathJax-script", async = TRUE, src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"),
+      tags$script("MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\\\(','\\\\)']]}});")
+    ),
+
     tabItems(
       # --- TAB 1: CSV GENERATION ---
       tabItem(tabName = "csv_generation",
         fluidRow(
           box(
             title = "CSV Generation Parameters", status = "primary", solidHeader = TRUE, width = 12,
-            fluidRow(
+        fluidRow(
               column(3,
                 numericInput("num_users", "Number of Users:", value = 10, min = 1, max = 100)
               ),
@@ -125,42 +215,28 @@ ui <- dashboardPage(
               ),
               column(3,
                 numericInput("days_to_go", "Days to Go (mean):", value = 30, min = 1, max = 365)
-              )
-            ),
-            fluidRow(
-              column(3,
-                numericInput("days_var", "Days Variance:", value = 5, min = 1, max = 30)
-              ),
-              column(9,
-                actionButton("generate_scenario_btn", "Generate Scenario & Save CSV", 
-                           class = "btn-primary btn-block", icon = icon("download"))
-              )
-            )
           )
         ),
         fluidRow(
-          column(4,
-            box(
-              title = "Bandit Simulation", status = "info", solidHeader = TRUE, width = 12,
-              actionButton("run_bandit_btn", "Run Bandit Simulation", 
-                         class = "btn-info btn-block", icon = icon("random")),
-              verbatimTextOutput("bandit_status")
+              column(3,
+                numericInput("days_var", "Days Variance:", value = 5, min = 1, max = 30)
+              ),
+              column(3,
+                numericInput("min_users_per_destination", "Minimum Users per Destination:", value = 1, min = 1, max = 20)
+              ),
+              column(6,
+                # Placeholder for spacing
+              )
             )
-          ),
-          column(4,
+          )
+            ),
+            fluidRow(
+          column(12,
             box(
-              title = "User Dynamic Price Sensitivity", status = "warning", solidHeader = TRUE, width = 12,
-              actionButton("generate_dps_btn", "Generate DPS CSV", 
-                         class = "btn-warning btn-block", icon = icon("chart-line")),
-              verbatimTextOutput("dps_status")
-            )
-          ),
-          column(4,
-            box(
-              title = "Conversion Probabilities", status = "success", solidHeader = TRUE, width = 12,
-              actionButton("generate_conversion_btn", "Generate Conversion CSV", 
-                         class = "btn-success btn-block", icon = icon("percent")),
-              verbatimTextOutput("conversion_status")
+              title = "Sample Data and Run Simulation", status = "primary", solidHeader = TRUE, width = 12,
+              actionButton("run_full_simulation_btn", "Sample Data and Run Simulation", 
+                         class = "btn-primary btn-block btn-lg", icon = icon("play")),
+              verbatimTextOutput("simulation_status")
             )
           )
         ),
@@ -181,8 +257,8 @@ ui <- dashboardPage(
         fluidRow(
           box(
             title = "User Selection", status = "primary", solidHeader = TRUE, width = 12,
-            fluidRow(
-              column(6, 
+          fluidRow(
+            column(6,
                 selectInput("user_id_select", "Select User ID:", choices = NULL, width = "100%")
               ),
               column(6,
@@ -197,6 +273,54 @@ ui <- dashboardPage(
             title = "User Scenario Data (Raw Materials for Models)", status = "info", solidHeader = TRUE, width = 12,
             DT::dataTableOutput("scenario_data_table")
           )
+        ),
+        fluidRow(
+          box(
+            title = "Probability Evolution Analysis", status = "warning", solidHeader = TRUE, width = 12,
+            fluidRow(
+              column(4,
+                selectInput("prob_user_select", "Select User ID for Analysis:", choices = NULL, width = "100%")
+              ),
+              column(4,
+                selectInput("prob_offer_select", "Select Offer ID for Analysis:", choices = NULL, width = "100%")
+              ),
+              column(4,
+                actionButton("load_prob_evolution_btn", "Load Probability Evolution", 
+                           class = "btn-warning btn-block", icon = icon("chart-line"))
+              )
+            ),
+            fluidRow(
+              column(12,
+                div(style = "background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0;",
+                  h5("Mathematical Formulas:", style = "color: #495057; font-weight: bold;"),
+                  withMathJax(
+                    div(style = "font-family: 'Times New Roman', serif; font-size: 14px; line-height: 1.8;",
+                      tags$div(style = "margin-bottom: 15px;",
+                        "$$(1) \\quad P(\\text{True Click}) = \\min(0.95, \\max(0.05, \\text{preference\\_score} \\times \\frac{1}{\\text{rank}}))$$"
+                      ),
+                      tags$div(style = "margin-bottom: 15px;",
+                        "$$(2) \\quad P(\\text{Click}) = \\text{cumulative\\_avg} = \\text{cumulative\\_avg} + \\frac{\\text{click} - \\text{cumulative\\_avg}}{\\text{click\\_num}}$$"
+                      ),
+                      tags$div(style = "margin-bottom: 15px;",
+                        "$$(3) \\quad P(\\text{Conversion}) = \\frac{1}{1 + e^{-\\text{logit}}}$$"
+                      ),
+                      tags$div(style = "margin-bottom: 15px;",
+                        "$$(4) \\quad \\text{where } \\text{logit} = -0.5 \\times \\text{price\\_diff} + 1.5 \\times \\text{hotel\\_rating} + 0.8 \\times \\text{amenities} + 1.2 \\times \\text{brand} + 0.5 \\times \\text{loyalty} - \\text{price} \\times \\text{sensitivity} \\times 0.01$$"
+                      )
+                    )
+                  )
+                )
+              )
+            ),
+            fluidRow(
+              column(6,
+                plotlyOutput("click_prob_evolution_plot")
+              ),
+              column(6,
+                plotlyOutput("conversion_prob_evolution_plot")
+              )
+            )
+          )
         )
       ),
       
@@ -205,7 +329,7 @@ ui <- dashboardPage(
         fluidRow(
           box(
             title = "Strategy Selection", status = "primary", solidHeader = TRUE, width = 12,
-            fluidRow(
+                fluidRow(
               column(6,
                 selectInput("strategy_select", "Select Ranking Strategy:", 
                            choices = c("Greedy", "User-First", "Stochastic LP", "RL Policy", "all"), 
@@ -218,7 +342,7 @@ ui <- dashboardPage(
             )
           )
         ),
-        fluidRow(
+            fluidRow(
           column(3,
             div(class = "strategy-card greedy-card",
               h4("Greedy Strategy"),
@@ -305,7 +429,11 @@ server <- function(input, output, session) {
     conversion_data = NULL,
     bandit_refresh = 0,
     dps_refresh = 0,
-    conversion_refresh = 0
+    conversion_refresh = 0,
+    scenario_refresh = 0,
+    simulation_message = NULL, # Added for simulation status
+    prob_evolution_data = NULL, # New for probability evolution
+    prob_evolution_refresh = 0 # New for probability evolution
   )
   
   # Initialize app
@@ -335,7 +463,7 @@ server <- function(input, output, session) {
       return()
     }
     
-    tryCatch({
+  tryCatch({
       res <- POST(paste0(API_URL, "/get_user_scenario"), 
                  body = list(user_id = input$user_id_select), 
                  encode = "json")
@@ -344,12 +472,13 @@ server <- function(input, output, session) {
         data <- fromJSON(rawToChar(res$content))
         rv$scenario_data <- data$scenario_data
         rv$market_data <- data$market_context
+        rv$scenario_refresh <- rv$scenario_refresh + 1  # Trigger refresh
         
         showNotification("User scenario loaded successfully", type = "default")
-      } else {
+        } else {
         showNotification("Error loading user scenario", type = "error")
-      }
-    }, error = function(e) {
+        }
+      }, error = function(e) {
       showNotification(paste("Error:", e$message), type = "error")
     })
   })
@@ -379,85 +508,220 @@ server <- function(input, output, session) {
     })
   })
   
-  # Generate scenario and save CSV
-  observeEvent(input$generate_scenario_btn, {
+  # Sample data and run full simulation (consolidated)
+  observeEvent(input$run_full_simulation_btn, {
     tryCatch({
-      res <- POST(paste0(API_URL, "/sample_offers_for_users"), 
+      # Step 1: Generate scenario and save CSV
+      showNotification("Step 1/4: Generating scenario data...", type = "message")
+      res1 <- POST(paste0(API_URL, "/sample_offers_for_users"), 
                  query = list(
                    num_users = input$num_users,
                    num_hotels = input$num_hotels,
                    num_partners = input$num_partners,
                    days_to_go = input$days_to_go,
-                   days_var = input$days_var
+                   days_var = input$days_var,
+                   min_users_per_destination = input$min_users_per_destination
                  ))
       
-      if (res$status_code == 200) {
-        data <- fromJSON(rawToChar(res$content))
-        showNotification("Scenario generated and CSV saved successfully", type = "default")
+      if (res1$status_code != 200) {
+        error_data <- fromJSON(rawToChar(res1$content))
+        if (error_data$error == "constraint_violation") {
+          showNotification(paste("Constraint violation: Could not find enough destinations with at least", input$min_users_per_destination, "users. Available destinations:", paste(names(error_data$available_destinations), collapse=", ")), type = "error")
       } else {
-        showNotification("Error generating scenario", type = "error")
+          showNotification("Error generating scenario", type = "error")
+        }
+        return()
       }
-    }, error = function(e) {
-      showNotification(paste("Error:", e$message), type = "error")
-    })
-  })
-  
-  # Run bandit simulation
-  observeEvent(input$run_bandit_btn, {
-    tryCatch({
-      res <- POST(paste0(API_URL, "/run_bandit_simulation"))
       
-      if (res$status_code == 200) {
-        data <- fromJSON(rawToChar(res$content))
-        rv$bandit_data <- data
-        rv$bandit_refresh <- rv$bandit_refresh + 1  # Trigger refresh
-        showNotification("Bandit simulation completed", type = "default")
-      } else {
+      # Parse the response to get the new metrics
+      data1 <- fromJSON(rawToChar(res1$content))
+      total_offers <- data1$total_offers
+      offered_rooms_by_location <- data1$offered_rooms_by_location
+      demand_per_destination <- data1$demand_per_destination
+      offers_per_destination <- data1$offers_per_destination
+      
+      # Step 2: Run bandit simulation
+      showNotification("Step 2/4: Running bandit simulation...", type = "message")
+      res2 <- POST(paste0(API_URL, "/run_bandit_simulation"))
+      
+      if (res2$status_code != 200) {
         showNotification("Error running bandit simulation", type = "error")
+        return()
       }
-    }, error = function(e) {
-      showNotification(paste("Error:", e$message), type = "error")
-    })
-  })
-  
-  # Generate user dynamic price sensitivity CSV
-  observeEvent(input$generate_dps_btn, {
-    tryCatch({
-      res <- POST(paste0(API_URL, "/user_dynamic_price_sensitivity_csv"))
       
-      if (res$status_code == 200) {
-        data <- fromJSON(rawToChar(res$content))
-        rv$dps_data <- data
-        rv$dps_refresh <- rv$dps_refresh + 1  # Trigger refresh
-        showNotification("DPS CSV generated successfully", type = "default")
-      } else {
+      # Step 3: Generate DPS CSV
+      showNotification("Step 3/4: Generating DPS CSV...", type = "message")
+      res3 <- POST(paste0(API_URL, "/user_dynamic_price_sensitivity_csv"), 
+                 query = list(
+                   num_users = input$num_users,
+                   num_hotels = input$num_hotels,
+                   num_partners = input$num_partners,
+                   days_to_go = input$days_to_go,
+                   days_var = input$days_var,
+                   min_users_per_destination = input$min_users_per_destination
+                 ))
+      
+      if (res3$status_code != 200) {
         showNotification("Error generating DPS CSV", type = "error")
+        return()
       }
+    
+      # Step 4: Generate conversion probabilities CSV
+      showNotification("Step 4/4: Generating conversion probabilities CSV...", type = "message")
+      res4 <- POST(paste0(API_URL, "/conversion_probabilities_csv"), 
+                 query = list(
+                   num_users = input$num_users,
+                   num_hotels = input$num_hotels,
+                   num_partners = input$num_partners,
+                   days_to_go = input$days_to_go,
+                   days_var = input$days_var,
+                   min_users_per_destination = input$min_users_per_destination
+                 ))
+      
+      if (res4$status_code != 200) {
+        showNotification("Error generating conversion probabilities CSV", type = "error")
+        return()
+      }
+      
+      # Success - invalidate all caches and trigger refreshes
+      data_cache$bandit_data <- NULL
+      data_cache$dps_data <- NULL
+      data_cache$conversion_data <- NULL
+      data_cache$market_data <- NULL
+      data_cache$last_bandit_update <- NULL
+      data_cache$last_dps_update <- NULL
+      data_cache$last_conversion_update <- NULL
+      data_cache$last_market_update <- NULL
+      
+      # Trigger all refresh counters to update all tables
+      rv$scenario_refresh <- rv$scenario_refresh + 1
+      rv$bandit_refresh <- rv$bandit_refresh + 1
+      rv$dps_refresh <- rv$dps_refresh + 1
+      rv$conversion_refresh <- rv$conversion_refresh + 1
+      
+      # Update simulation message with new metrics
+      rv$simulation_message <- paste0(
+        "✅ All simulations completed successfully!\n",
+        "📊 Summary:\n",
+        "• Total offers generated: ", total_offers, "\n",
+        "• Offered rooms by location: ", offered_rooms_by_location, "\n",
+        "• Users with offers: ", data1$users_with_offers, " out of ", data1$parameters$num_users, "\n",
+        "• Hotels sampled per destination: ", data1$parameters$num_hotels, "\n",
+        "• Partners sampled: ", data1$parameters$num_partners, "\n",
+        "• Minimum users per destination constraint: ", input$min_users_per_destination, "\n\n",
+        "🏙️ Demand per destination (users per location):\n",
+        paste(sapply(names(demand_per_destination), function(dest) {
+          paste0("  • ", dest, ": ", demand_per_destination[[dest]], " users")
+        }), collapse = "\n"), "\n\n",
+        "🏨 Offers per destination (rooms × partners):\n",
+        paste(sapply(names(offers_per_destination), function(dest) {
+          paste0("  • ", dest, ": ", offers_per_destination[[dest]], " offers")
+        }), collapse = "\n"), "\n\n",
+        "✅ Constraint validation: All selected destinations have at least ", input$min_users_per_destination, " users"
+      )
+      
+      showNotification("✅ All simulations completed successfully!", type = "message")
+      
     }, error = function(e) {
       showNotification(paste("Error:", e$message), type = "error")
     })
   })
   
-  # Generate conversion probabilities CSV
-  observeEvent(input$generate_conversion_btn, {
+  # Auto-reload user scenario when CSV files are regenerated
+  observe({
+    # Watch for changes in refresh counters
+    rv$bandit_refresh
+    rv$dps_refresh
+    rv$conversion_refresh
+    
+    # If we have a selected user and scenario data was previously loaded, reload it
+    if (!is.null(input$user_id_select) && !is.null(rv$scenario_data)) {
     tryCatch({
-      res <- POST(paste0(API_URL, "/conversion_probabilities_csv"))
-      
-      if (res$status_code == 200) {
-        data <- fromJSON(rawToChar(res$content))
-        rv$conversion_data <- data
-        rv$conversion_refresh <- rv$conversion_refresh + 1  # Trigger refresh
-        showNotification("Conversion probabilities CSV generated successfully", type = "default")
-      } else {
-        showNotification("Error generating conversion probabilities CSV", type = "error")
+        res <- POST(paste0(API_URL, "/get_user_scenario"), 
+                   body = list(user_id = input$user_id_select), 
+                   encode = "json")
+        
+        if (res$status_code == 200) {
+          data <- fromJSON(rawToChar(res$content))
+          rv$scenario_data <- data$scenario_data
+          rv$market_data <- data$market_context
+          rv$scenario_refresh <- rv$scenario_refresh + 1
       }
     }, error = function(e) {
-      showNotification(paste("Error:", e$message), type = "error")
+        # Silently handle errors to avoid spam
+      })
+    }
+  })
+  
+  # Update probability analysis dropdowns when bandit data is available
+  observe({
+    rv$bandit_refresh
+    
+    tryCatch({
+      bandit_data <- get_cached_data("bandit_data", fetch_bandit_data)
+      if (!is.null(bandit_data) && length(bandit_data) > 0) {
+        df <- as.data.frame(bandit_data)
+        unique_users <- unique(df$user_id)
+        unique_offers <- unique(df$offer_id)
+        
+        updateSelectInput(session, "prob_user_select", choices = unique_users, selected = unique_users[1])
+        updateSelectInput(session, "prob_offer_select", choices = unique_offers, selected = unique_offers[1])
+      }
+    }, error = function(e) {
+      # Silently handle errors
+    })
+  })
+  
+  # Load probability evolution data
+  observeEvent(input$load_prob_evolution_btn, {
+    tryCatch({
+      if (is.null(input$prob_user_select) || is.null(input$prob_offer_select)) {
+        showNotification("Please select both user ID and offer ID", type = "warning")
+        return()
+      }
+      
+      # Get bandit simulation results
+      bandit_data <- get_cached_data("bandit_data", fetch_bandit_data)
+      if (is.null(bandit_data)) {
+        showNotification("No bandit simulation data available. Please run simulation first.", type = "warning")
+        return()
+      }
+      
+      df <- as.data.frame(bandit_data)
+      
+      # Convert numeric columns properly (handle comma decimal separators)
+      df$rank <- as.numeric(as.character(df$rank))
+      df$probability_of_click <- as.numeric(as.character(df$probability_of_click))
+      df$true_click_prob <- as.numeric(as.character(df$true_click_prob))
+      df$preference_score <- as.numeric(as.character(df$preference_score))
+      
+      # Filter data for selected user and offer
+      filtered_data <- df[df$user_id == input$prob_user_select & df$offer_id == input$prob_offer_select, ]
+      
+      if (nrow(filtered_data) == 0) {
+        showNotification("No data found for selected user and offer combination", type = "warning")
+        return()
+      }
+      
+      # Store filtered data for plotting
+      rv$prob_evolution_data <- filtered_data
+      rv$prob_evolution_refresh <- rv$prob_evolution_refresh + 1
+      
+      showNotification("Probability evolution data loaded successfully", type = "message")
+      
+    }, error = function(e) {
+      showNotification(paste("Error loading probability evolution:", e$message), type = "error")
     })
   })
   
   # Output: Scenario Data Table
   output$scenario_data_table <- DT::renderDataTable({
+    # Make reactive to refresh triggers
+    rv$scenario_refresh
+    rv$bandit_refresh
+    rv$dps_refresh
+    rv$conversion_refresh
+    
     tryCatch({
       if (is.null(rv$scenario_data)) {
         return(data.frame(Message = "No scenario data loaded. Please generate CSV files first in the CSV Generation tab, then load a user scenario."))
@@ -538,6 +802,150 @@ server <- function(input, output, session) {
       DT::formatRound(columns = c("price_per_night", "rl_score"), digits = 2)
   })
   
+  # Output: Click Probability Evolution Plot
+  output$click_prob_evolution_plot <- renderPlotly({
+    rv$prob_evolution_refresh
+    
+    tryCatch({
+      if (is.null(rv$prob_evolution_data)) {
+        return(plot_ly() %>% 
+                 add_annotations(text = "No data available. Please load probability evolution data.", 
+                               showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5))
+      }
+      
+      data <- rv$prob_evolution_data
+      
+      # Debug: Print data structure
+      print(paste("Data rows:", nrow(data)))
+      print(paste("Data columns:", paste(names(data), collapse = ", ")))
+      print(paste("Data types:", paste(sapply(data, class), collapse = ", ")))
+      
+      # Ensure rank is numeric and handle decimal conversion
+      data$rank <- as.numeric(as.character(data$rank))
+      data$probability_of_click <- as.numeric(as.character(data$probability_of_click))
+      data$true_click_prob <- as.numeric(as.character(data$true_click_prob))
+      
+      # Remove any NA values
+      data <- data[!is.na(data$rank) & !is.na(data$probability_of_click) & !is.na(data$true_click_prob), ]
+      
+      if (nrow(data) == 0) {
+        return(plot_ly() %>% 
+                 add_annotations(text = "No valid data found after conversion", 
+                               showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5))
+      }
+      
+      # Create plot showing probability by rank
+      p <- plot_ly() %>%
+        add_trace(data = data, x = ~rank, y = ~probability_of_click, 
+                 type = 'scatter', mode = 'lines+markers', name = 'Learned P(Click)', 
+                 line = list(color = '#1f77b4', width = 3),
+                 marker = list(size = 8, color = '#1f77b4')) %>%
+        add_trace(data = data, x = ~rank, y = ~true_click_prob, 
+                 type = 'scatter', mode = 'lines+markers', name = 'True P(Click)', 
+                 line = list(color = '#ff7f0e', width = 3, dash = 'dash'),
+                 marker = list(size = 8, color = '#ff7f0e', symbol = 'diamond')) %>%
+        layout(
+          title = list(
+            text = "Click Probability by Rank<br><sub>P(Click) = cumulative_avg, P(True) = min(0.95, max(0.05, preference_score × (1/rank)))</sub>",
+            font = list(size = 14)
+          ),
+          xaxis = list(title = "Rank", gridcolor = '#f0f0f0', type = 'linear'),
+          yaxis = list(title = "Probability", range = c(0, 1), gridcolor = '#f0f0f0'),
+          hovermode = 'x unified',
+          legend = list(orientation = 'h', x = 0.5, y = -0.2),
+          margin = list(l = 50, r = 50, t = 80, b = 80),
+          plot_bgcolor = 'white',
+          paper_bgcolor = 'white'
+        )
+      
+      # Add user/offer information to hover text
+      p <- p %>% add_annotations(
+        text = paste("User:", input$prob_user_select, "| Offer:", input$prob_offer_select),
+        showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 1.02,
+        font = list(size = 12, color = '#666666')
+      )
+      
+      p
+      
+    }, error = function(e) {
+      print(paste("Plot error:", e$message))
+      plot_ly() %>% 
+        add_annotations(text = paste("Error:", e$message), 
+                       showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5)
+    })
+  })
+  
+  # Output: Conversion Probability Evolution Plot
+  output$conversion_prob_evolution_plot <- renderPlotly({
+    rv$prob_evolution_refresh
+    
+    tryCatch({
+      if (is.null(rv$prob_evolution_data)) {
+        return(plot_ly() %>% 
+                 add_annotations(text = "No data available. Please load probability evolution data.", 
+                               showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5))
+      }
+      
+      data <- rv$prob_evolution_data
+      
+      # Get conversion probability data
+      conversion_data <- get_cached_data("conversion_data", fetch_conversion_data)
+      if (!is.null(conversion_data)) {
+        conv_df <- as.data.frame(conversion_data)
+        user_conv <- conv_df[conv_df$user_id == input$prob_user_select & conv_df$offer_id == input$prob_offer_select, ]
+        
+        if (nrow(user_conv) > 0) {
+          conv_prob <- user_conv$conversion_probability[1]
+          
+          # Create plot with conversion probability as horizontal line
+          p <- plot_ly() %>%
+            add_trace(x = c(min(data$rank), max(data$rank)), y = c(conv_prob, conv_prob),
+                     type = 'scatter', mode = 'lines', name = paste('P(Conversion) =', round(conv_prob, 4)),
+                     line = list(color = '#d62728', width = 3, dash = 'solid')) %>%
+            add_trace(data = data, x = ~rank, y = ~probability_of_click, 
+                     type = 'scatter', mode = 'markers+lines', name = 'P(Click) by Rank',
+                     line = list(color = '#2ca02c', width = 2),
+                     marker = list(size = 8)) %>%
+            layout(
+              title = list(
+                text = "Conversion vs Click Probability by Rank<br><sub>P(Conversion) = 1/(1 + e^(-logit)), logit = -0.5×price_diff + 1.5×hotel_rating + 0.8×amenities + 1.2×brand + 0.5×loyalty - price×sensitivity×0.01</sub>",
+                font = list(size = 12)
+              ),
+              xaxis = list(title = "Rank Position", gridcolor = '#f0f0f0'),
+              yaxis = list(title = "Probability", range = c(0, 1), gridcolor = '#f0f0f0'),
+              hovermode = 'x unified',
+              legend = list(orientation = 'h', x = 0.5, y = -0.2),
+              margin = list(l = 50, r = 50, t = 80, b = 80),
+              plot_bgcolor = 'white',
+              paper_bgcolor = 'white'
+            )
+          
+          # Add rank information to hover text
+          p <- p %>% add_annotations(
+            text = paste("User:", input$prob_user_select, "| Offer:", input$prob_offer_select),
+            showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 1.02,
+            font = list(size = 12, color = '#666666')
+          )
+          
+          p
+        } else {
+          plot_ly() %>% 
+            add_annotations(text = "No conversion data available for selected user/offer", 
+                           showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5)
+        }
+      } else {
+        plot_ly() %>% 
+          add_annotations(text = "No conversion probability data available", 
+                         showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5)
+      }
+      
+    }, error = function(e) {
+      plot_ly() %>% 
+        add_annotations(text = paste("Error:", e$message), 
+                       showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5)
+    })
+  })
+  
   # Output: Bandit Status
   output$bandit_status <- renderText({
     if (is.null(rv$bandit_data)) {
@@ -564,73 +972,50 @@ server <- function(input, output, session) {
   
   # Output: Bandit Table
   output$bandit_table <- DT::renderDataTable({
-    tryCatch({
-      res <- GET(paste0(API_URL, "/bandit_simulation_results"))
-      if (res$status_code == 200) {
-        data <- fromJSON(rawToChar(res$content))
-        if (length(data$data) > 0) {
-          df <- as.data.frame(data$data)
-          DT::datatable(df, 
-                        options = list(pageLength = 10, scrollX = TRUE),
-                        rownames = FALSE) %>%
-            DT::formatRound(columns = c("probability_of_click", "true_click_prob", "preference_score"), digits = 4)
-        } else {
-          data.frame(Message = "No bandit data available")
-        }
-      } else {
-        data.frame(Message = "Error loading bandit data")
-      }
-    }, error = function(e) {
-      data.frame(Message = paste("Error:", e$message))
-    })
+    # Use cached data instead of API call
+    bandit_data <- get_cached_data("bandit_data", fetch_bandit_data)
+    
+    if (is.null(bandit_data) || length(bandit_data) == 0) {
+      return(data.frame(Message = "No bandit data available"))
+    }
+    
+    df <- as.data.frame(bandit_data)
+    DT::datatable(df, 
+                  options = list(pageLength = 10, scrollX = TRUE),
+                  rownames = FALSE) %>%
+      DT::formatRound(columns = c("probability_of_click", "true_click_prob", "preference_score"), digits = 4)
   })
   
   # Output: DPS Table
   output$dps_table <- DT::renderDataTable({
-    tryCatch({
-      # Try to get data from backend API
-      res <- GET(paste0(API_URL, "/user_dynamic_price_sensitivity_data"))
-      if (res$status_code == 200) {
-        data <- fromJSON(rawToChar(res$content))
-        if (length(data$data) > 0) {
-          df <- as.data.frame(data$data)
-          DT::datatable(df, 
-                        options = list(pageLength = 10, scrollX = TRUE),
-                        rownames = FALSE) %>%
-            DT::formatRound(columns = intersect(c("base_price_sensitivity", "dynamic_price_sensitivity", "price_mean", "price_std", "avg_days_to_go"), names(df)), digits = 4)
-        } else {
-          data.frame(Message = "No DPS data available. Please click 'Generate DPS CSV' button first.")
-        }
-      } else {
-        data.frame(Message = "Error loading DPS data from backend")
-      }
-    }, error = function(e) {
-      data.frame(Message = paste("DPS CSV not found or error loading data:", e$message))
-    })
+    # Use cached data instead of API call
+    dps_data <- get_cached_data("dps_data", fetch_dps_data)
+    
+    if (is.null(dps_data) || length(dps_data) == 0) {
+      return(data.frame(Message = "No DPS data available. Please click 'Generate DPS CSV' button first."))
+    }
+    
+    df <- as.data.frame(dps_data)
+    DT::datatable(df, 
+                  options = list(pageLength = 10, scrollX = TRUE),
+                  rownames = FALSE) %>%
+      DT::formatRound(columns = intersect(c("base_price_sensitivity", "dynamic_price_sensitivity", "price_mean", "price_std", "avg_days_to_go"), names(df)), digits = 4)
   })
   
   # Output: Conversion Table
   output$conversion_table <- DT::renderDataTable({
-    tryCatch({
-      # Try to get data from backend API
-      res <- GET(paste0(API_URL, "/conversion_probabilities_data"))
-      if (res$status_code == 200) {
-        data <- fromJSON(rawToChar(res$content))
-        if (length(data$data) > 0) {
-          df <- as.data.frame(data$data)
-          DT::datatable(df, 
-                        options = list(pageLength = 10, scrollX = TRUE),
-                        rownames = FALSE) %>%
-            DT::formatRound(columns = intersect(c("conversion_probability"), names(df)), digits = 4)
-        } else {
-          data.frame(Message = "No conversion data available. Please click 'Generate Conversion CSV' button first.")
-        }
-      } else {
-        data.frame(Message = "Error loading conversion data from backend")
-      }
-    }, error = function(e) {
-      data.frame(Message = paste("Conversion probabilities CSV not found or error loading data:", e$message))
-    })
+    # Use cached data instead of API call
+    conversion_data <- get_cached_data("conversion_data", fetch_conversion_data)
+    
+    if (is.null(conversion_data) || length(conversion_data) == 0) {
+      return(data.frame(Message = "No conversion data available. Please click 'Generate Conversion CSV' button first."))
+    }
+    
+    df <- as.data.frame(conversion_data)
+    DT::datatable(df, 
+                  options = list(pageLength = 10, scrollX = TRUE),
+                  rownames = FALSE) %>%
+      DT::formatRound(columns = intersect(c("conversion_probability"), names(df)), digits = 4)
   })
   
   # Output: Strategy Summary Table
@@ -679,61 +1064,70 @@ server <- function(input, output, session) {
   
   # Output: Market Demand Distribution Plot
   output$market_demand_plot <- renderPlot({
-    # Load market state data
-    tryCatch({
-      market_data <- read.csv("data/market_state_by_location.csv")
-      
-      ggplot(market_data, aes(x = market_state_label)) +
-        geom_bar(fill = "steelblue", alpha = 0.7) +
-        labs(title = "Market Demand Distribution",
-             x = "Market State",
-             y = "Number of Locations") +
-        theme_minimal() +
-        theme(axis.text.x = element_text(angle = 45, hjust = 1))
-    }, error = function(e) {
-      ggplot() + 
-        annotate("text", x = 0.5, y = 0.5, label = "Market data not available") +
-        theme_void()
-    })
+    # Use cached market data
+    market_data <- get_cached_data("market_data", fetch_market_data)
+    
+    if (is.null(market_data)) {
+      return(ggplot() + 
+               annotate("text", x = 0.5, y = 0.5, label = "Market data not available") +
+               theme_void())
+    }
+    
+    ggplot(market_data, aes(x = market_state_label)) +
+      geom_bar(fill = "steelblue", alpha = 0.7) +
+      labs(title = "Market Demand Distribution",
+           x = "Market State",
+           y = "Number of Locations") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
   })
   
   # Output: Price Sensitivity Distribution Plot
   output$price_sensitivity_plot <- renderPlot({
-    # Load user profiles data
-    tryCatch({
-      user_data <- read.csv("data/enhanced_user_profiles.csv")
-      
-      ggplot(user_data, aes(x = price_sensitivity)) +
-        geom_histogram(bins = 20, fill = "orange", alpha = 0.7) +
-        labs(title = "User Price Sensitivity Distribution",
-             x = "Price Sensitivity",
-             y = "Frequency") +
-        theme_minimal()
-    }, error = function(e) {
-      ggplot() + 
-        annotate("text", x = 0.5, y = 0.5, label = "User data not available") +
-        theme_void()
-    })
+    # Use cached user data
+    user_data <- get_cached_data("user_data", fetch_user_data)
+    
+    if (is.null(user_data)) {
+      return(ggplot() + 
+               annotate("text", x = 0.5, y = 0.5, label = "User data not available") +
+               theme_void())
+    }
+    
+    ggplot(user_data, aes(x = price_sensitivity)) +
+      geom_histogram(bins = 20, fill = "orange", alpha = 0.7) +
+      labs(title = "User Price Sensitivity Distribution",
+           x = "Price Sensitivity",
+           y = "Frequency") +
+      theme_minimal()
   })
   
   # Output: Click Probability vs Rank Plot
   output$click_probability_plot <- renderPlot({
-    # Load bandit simulation data
-    tryCatch({
-      bandit_data <- read.csv("data/bandit_simulation_results.csv")
-      
-      ggplot(bandit_data, aes(x = rank, y = probability_of_click)) +
-        geom_point(alpha = 0.6, color = "purple") +
-        geom_smooth(method = "loess", se = TRUE, color = "red") +
-        labs(title = "Click Probability vs. Rank",
-             x = "Rank",
-             y = "Click Probability") +
-        theme_minimal()
-    }, error = function(e) {
-      ggplot() + 
-        annotate("text", x = 0.5, y = 0.5, label = "Bandit data not available") +
-        theme_void()
-    })
+    # Use cached bandit data
+    bandit_data <- get_cached_data("bandit_data", fetch_bandit_data)
+    
+    if (is.null(bandit_data) || length(bandit_data) == 0) {
+      return(ggplot() + 
+               annotate("text", x = 0.5, y = 0.5, label = "Bandit data not available") +
+               theme_void())
+    }
+    
+    df <- as.data.frame(bandit_data)
+    ggplot(df, aes(x = rank, y = probability_of_click)) +
+      geom_point(alpha = 0.6, color = "purple") +
+      geom_smooth(method = "loess", se = TRUE, color = "red") +
+      labs(title = "Click Probability vs. Rank",
+           x = "Rank",
+           y = "Click Probability") +
+      theme_minimal()
+  })
+
+  # Simulation status output
+  output$simulation_status <- renderText({
+    if (is.null(rv$simulation_message)) {
+      return("Click 'Sample Data and Run Simulation' to start...")
+    }
+    rv$simulation_message
   })
 }
 
