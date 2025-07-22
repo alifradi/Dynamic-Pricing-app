@@ -187,6 +187,39 @@ ui <- dashboardPage(
         .user-first-card { border-left-color: #27ae60; }
         .stochastic-card { border-left-color: #f39c12; }
         .rl-card { border-left-color: #9b59b6; }
+        
+        /* MathJax improvements for better equation rendering */
+        .MathJax_Display {
+          overflow-x: auto;
+          overflow-y: hidden;
+          padding: 5px 0;
+        }
+        
+        /* Responsive design for mathematical formulas */
+        @media (max-width: 768px) {
+          .math-container { 
+            font-size: 12px !important; 
+          }
+          .MathJax_Display {
+            font-size: 12px !important;
+          }
+        }
+        
+        /* Better spacing for mathematical content */
+        .math-formula-container {
+          margin-bottom: 20px;
+          padding: 10px;
+          background-color: #f8f9fa;
+          border-radius: 5px;
+        }
+        
+        /* Improved equation labels */
+        .equation-label {
+          font-weight: bold;
+          color: #495057;
+          margin-bottom: 8px;
+          font-size: 13px;
+        }
       "))
     ),
     
@@ -292,32 +325,57 @@ ui <- dashboardPage(
             fluidRow(
               column(12,
                 div(style = "background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0;",
-                  h5("Mathematical Formulas:", style = "color: #495057; font-weight: bold;"),
-                  withMathJax(
-                    div(style = "font-family: 'Times New Roman', serif; font-size: 14px; line-height: 1.8;",
-                      tags$div(style = "margin-bottom: 15px;",
-                        "$$(1) \\quad P(\\text{True Click}) = \\min(0.95, \\max(0.05, \\text{preference\\_score} \\times \\frac{1}{\\text{rank}}))$$"
-                      ),
-                      tags$div(style = "margin-bottom: 15px;",
-                        "$$(2) \\quad P(\\text{Click}) = \\text{cumulative\\_avg} = \\text{cumulative\\_avg} + \\frac{\\text{click} - \\text{cumulative\\_avg}}{\\text{click\\_num}}$$"
-                      ),
-                      tags$div(style = "margin-bottom: 15px;",
-                        "$$(3) \\quad P(\\text{Conversion}) = \\frac{1}{1 + e^{-\\text{logit}}}$$"
-                      ),
-                      tags$div(style = "margin-bottom: 15px;",
-                        "$$(4) \\quad \\text{where } \\text{logit} = -0.5 \\times \\text{price\\_diff} + 1.5 \\times \\text{hotel\\_rating} + 0.8 \\times \\text{amenities} + 1.2 \\times \\text{brand} + 0.5 \\times \\text{loyalty} - \\text{price} \\times \\text{sensitivity} \\times 0.01$$"
-                      )
+                  # Initialize MathJax first
+                  withMathJax(),
+                  
+                  h5("Mathematical Formulas:", style = "color: #495057; font-weight: bold; margin-bottom: 20px;"),
+                  
+                  div(style = "font-family: 'Times New Roman', serif; font-size: 14px; line-height: 1.8;",
+                    # Equation 1: Improved wrapping
+                    div(style = "margin-bottom: 20px; overflow-x: auto;",
+                      helpText("(1) Click Probability (Theoretical)"),
+                      "$$P(\\text{True Click}) = \\min\\left(0.95, \\max\\left(0.05, \\frac{\\text{preference_score}}{\\text{rank}}\\right)\\right)$$"
+                    ),
+                    
+                    # Equation 2: Simplified notation
+                    div(style = "margin-bottom: 20px;",
+                      helpText("(2) Click Probability (Empirical)"),
+                      "$$P(\\text{Click}) = \\bar{x}_{n} = \\bar{x}_{n-1} + \\frac{x_n - \\bar{x}_{n-1}}{n}$$"
+                    ),
+                    
+                    # Equation 3: Standard logistic
+                    div(style = "margin-bottom: 20px;",
+                      helpText("(3) Conversion Probability"),
+                      "$$P(\\text{Conversion}) = \\sigma(\\text{logit}) = \\frac{1}{1 + e^{-\\text{logit}}}$$"
+                    ),
+                    
+                    # Equation 4: Multi-line format
+                    div(style = "margin-bottom: 20px; overflow-x: auto;", 
+                      helpText("(4) Logit Components"),
+                      "$$\\begin{aligned}
+                      \\text{logit} = & -0.5 \\times \\text{price\\_diff} \\\\
+                      & + 1.5 \\times \\text{hotel\\_rating} \\\\
+                      & + 0.8 \\times \\text{amenities} \\\\
+                      & + 1.2 \\times \\text{brand} \\\\
+                      & + 0.5 \\times \\text{loyalty} \\\\
+                      & - 0.01 \\times \\text{price} \\times \\text{sensitivity}
+                      \\end{aligned}$$"
+                    ),
+                    
+                    # Explanation box with improved spacing
+                    div(style = "margin-top: 25px; padding: 15px; background-color: #e9ecef; border-left: 4px solid #007bff; border-radius: 3px;",
+                      h6("Theoretical Difference:", style = "color: #495057; font-weight: bold; margin-bottom: 12px;"),
+                      p(HTML("&bull;"), tags$strong("P(True Click):"), "Theoretical probability based on preference score and rank position", style = "margin-bottom: 10px;"),
+                      p(HTML("&bull;"), tags$strong("P(Click):"), "Empirical probability learned from user behavior data", style = "margin-bottom: 10px;"),
+                      p(HTML("&bull;"), tags$strong("P(Conversion):"), "Booking probability given click, depends on offer characteristics")
                     )
                   )
                 )
               )
             ),
             fluidRow(
-              column(6,
-                plotlyOutput("click_prob_evolution_plot")
-              ),
-              column(6,
-                plotlyOutput("conversion_prob_evolution_plot")
+              column(12,
+                plotlyOutput("comprehensive_prob_evolution_plot")
               )
             )
           )
@@ -802,150 +860,6 @@ server <- function(input, output, session) {
       DT::formatRound(columns = c("price_per_night", "rl_score"), digits = 2)
   })
   
-  # Output: Click Probability Evolution Plot
-  output$click_prob_evolution_plot <- renderPlotly({
-    rv$prob_evolution_refresh
-    
-    tryCatch({
-      if (is.null(rv$prob_evolution_data)) {
-        return(plot_ly() %>% 
-                 add_annotations(text = "No data available. Please load probability evolution data.", 
-                               showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5))
-      }
-      
-      data <- rv$prob_evolution_data
-      
-      # Debug: Print data structure
-      print(paste("Data rows:", nrow(data)))
-      print(paste("Data columns:", paste(names(data), collapse = ", ")))
-      print(paste("Data types:", paste(sapply(data, class), collapse = ", ")))
-      
-      # Ensure rank is numeric and handle decimal conversion
-      data$rank <- as.numeric(as.character(data$rank))
-      data$probability_of_click <- as.numeric(as.character(data$probability_of_click))
-      data$true_click_prob <- as.numeric(as.character(data$true_click_prob))
-      
-      # Remove any NA values
-      data <- data[!is.na(data$rank) & !is.na(data$probability_of_click) & !is.na(data$true_click_prob), ]
-      
-      if (nrow(data) == 0) {
-        return(plot_ly() %>% 
-                 add_annotations(text = "No valid data found after conversion", 
-                               showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5))
-      }
-      
-      # Create plot showing probability by rank
-      p <- plot_ly() %>%
-        add_trace(data = data, x = ~rank, y = ~probability_of_click, 
-                 type = 'scatter', mode = 'lines+markers', name = 'Learned P(Click)', 
-                 line = list(color = '#1f77b4', width = 3),
-                 marker = list(size = 8, color = '#1f77b4')) %>%
-        add_trace(data = data, x = ~rank, y = ~true_click_prob, 
-                 type = 'scatter', mode = 'lines+markers', name = 'True P(Click)', 
-                 line = list(color = '#ff7f0e', width = 3, dash = 'dash'),
-                 marker = list(size = 8, color = '#ff7f0e', symbol = 'diamond')) %>%
-        layout(
-          title = list(
-            text = "Click Probability by Rank<br><sub>P(Click) = cumulative_avg, P(True) = min(0.95, max(0.05, preference_score × (1/rank)))</sub>",
-            font = list(size = 14)
-          ),
-          xaxis = list(title = "Rank", gridcolor = '#f0f0f0', type = 'linear'),
-          yaxis = list(title = "Probability", range = c(0, 1), gridcolor = '#f0f0f0'),
-          hovermode = 'x unified',
-          legend = list(orientation = 'h', x = 0.5, y = -0.2),
-          margin = list(l = 50, r = 50, t = 80, b = 80),
-          plot_bgcolor = 'white',
-          paper_bgcolor = 'white'
-        )
-      
-      # Add user/offer information to hover text
-      p <- p %>% add_annotations(
-        text = paste("User:", input$prob_user_select, "| Offer:", input$prob_offer_select),
-        showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 1.02,
-        font = list(size = 12, color = '#666666')
-      )
-      
-      p
-      
-    }, error = function(e) {
-      print(paste("Plot error:", e$message))
-      plot_ly() %>% 
-        add_annotations(text = paste("Error:", e$message), 
-                       showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5)
-    })
-  })
-  
-  # Output: Conversion Probability Evolution Plot
-  output$conversion_prob_evolution_plot <- renderPlotly({
-    rv$prob_evolution_refresh
-    
-    tryCatch({
-      if (is.null(rv$prob_evolution_data)) {
-        return(plot_ly() %>% 
-                 add_annotations(text = "No data available. Please load probability evolution data.", 
-                               showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5))
-      }
-      
-      data <- rv$prob_evolution_data
-      
-      # Get conversion probability data
-      conversion_data <- get_cached_data("conversion_data", fetch_conversion_data)
-      if (!is.null(conversion_data)) {
-        conv_df <- as.data.frame(conversion_data)
-        user_conv <- conv_df[conv_df$user_id == input$prob_user_select & conv_df$offer_id == input$prob_offer_select, ]
-        
-        if (nrow(user_conv) > 0) {
-          conv_prob <- user_conv$conversion_probability[1]
-          
-          # Create plot with conversion probability as horizontal line
-          p <- plot_ly() %>%
-            add_trace(x = c(min(data$rank), max(data$rank)), y = c(conv_prob, conv_prob),
-                     type = 'scatter', mode = 'lines', name = paste('P(Conversion) =', round(conv_prob, 4)),
-                     line = list(color = '#d62728', width = 3, dash = 'solid')) %>%
-            add_trace(data = data, x = ~rank, y = ~probability_of_click, 
-                     type = 'scatter', mode = 'markers+lines', name = 'P(Click) by Rank',
-                     line = list(color = '#2ca02c', width = 2),
-                     marker = list(size = 8)) %>%
-            layout(
-              title = list(
-                text = "Conversion vs Click Probability by Rank<br><sub>P(Conversion) = 1/(1 + e^(-logit)), logit = -0.5×price_diff + 1.5×hotel_rating + 0.8×amenities + 1.2×brand + 0.5×loyalty - price×sensitivity×0.01</sub>",
-                font = list(size = 12)
-              ),
-              xaxis = list(title = "Rank Position", gridcolor = '#f0f0f0'),
-              yaxis = list(title = "Probability", range = c(0, 1), gridcolor = '#f0f0f0'),
-              hovermode = 'x unified',
-              legend = list(orientation = 'h', x = 0.5, y = -0.2),
-              margin = list(l = 50, r = 50, t = 80, b = 80),
-              plot_bgcolor = 'white',
-              paper_bgcolor = 'white'
-            )
-          
-          # Add rank information to hover text
-          p <- p %>% add_annotations(
-            text = paste("User:", input$prob_user_select, "| Offer:", input$prob_offer_select),
-            showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 1.02,
-            font = list(size = 12, color = '#666666')
-          )
-          
-          p
-        } else {
-          plot_ly() %>% 
-            add_annotations(text = "No conversion data available for selected user/offer", 
-                           showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5)
-        }
-      } else {
-        plot_ly() %>% 
-          add_annotations(text = "No conversion probability data available", 
-                         showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5)
-      }
-      
-    }, error = function(e) {
-      plot_ly() %>% 
-        add_annotations(text = paste("Error:", e$message), 
-                       showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5)
-    })
-  })
-  
   # Output: Bandit Status
   output$bandit_status <- renderText({
     if (is.null(rv$bandit_data)) {
@@ -1120,6 +1034,104 @@ server <- function(input, output, session) {
            x = "Rank",
            y = "Click Probability") +
       theme_minimal()
+  })
+
+  # Output: Comprehensive Probability Evolution Plot
+  output$comprehensive_prob_evolution_plot <- renderPlotly({
+    rv$prob_evolution_refresh
+    
+    tryCatch({
+      if (is.null(rv$prob_evolution_data)) {
+        return(plot_ly() %>% 
+                 add_annotations(text = "No data available. Please load probability evolution data.", 
+                               showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5))
+      }
+      
+      data <- rv$prob_evolution_data
+      
+      # Debug: Print data structure
+      print(paste("Data rows:", nrow(data)))
+      print(paste("Data columns:", paste(names(data), collapse = ", ")))
+      print(paste("Data types:", paste(sapply(data, class), collapse = ", ")))
+      
+      # Ensure rank is numeric and handle decimal conversion
+      data$rank <- as.numeric(as.character(data$rank))
+      data$probability_of_click <- as.numeric(as.character(data$probability_of_click))
+      data$true_click_prob <- as.numeric(as.character(data$true_click_prob))
+      
+      # Remove any NA values
+      data <- data[!is.na(data$rank) & !is.na(data$probability_of_click) & !is.na(data$true_click_prob), ]
+      
+      if (nrow(data) == 0) {
+        return(plot_ly() %>% 
+                 add_annotations(text = "No valid data found after conversion", 
+                               showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5))
+      }
+      
+      # Get conversion probability data
+      conversion_data <- get_cached_data("conversion_data", fetch_conversion_data)
+      conv_prob <- NULL
+      if (!is.null(conversion_data)) {
+        conv_df <- as.data.frame(conversion_data)
+        user_conv <- conv_df[conv_df$user_id == input$prob_user_select & conv_df$offer_id == input$prob_offer_select, ]
+        
+        if (nrow(user_conv) > 0) {
+          conv_prob <- user_conv$conversion_probability[1]
+        }
+      }
+      
+      # Create comprehensive plot showing all probabilities
+      p <- plot_ly() %>%
+        add_trace(data = data, x = ~rank, y = ~probability_of_click, 
+                 type = 'scatter', mode = 'lines+markers', name = 'Learned P(Click)', 
+                 line = list(color = '#1f77b4', width = 3),
+                 marker = list(size = 8, color = '#1f77b4')) %>%
+        add_trace(data = data, x = ~rank, y = ~true_click_prob, 
+                 type = 'scatter', mode = 'lines+markers', name = 'True P(Click)', 
+                 line = list(color = '#ff7f0e', width = 3, dash = 'dash'),
+                 marker = list(size = 8, color = '#ff7f0e', symbol = 'diamond'))
+      
+      # Add conversion probability as horizontal line if available
+      if (!is.null(conv_prob)) {
+        p <- p %>% add_trace(
+          x = c(min(data$rank), max(data$rank)), 
+          y = c(conv_prob, conv_prob),
+          type = 'scatter', 
+          mode = 'lines', 
+          name = paste('P(Conversion) =', round(conv_prob, 4)),
+          line = list(color = '#d62728', width = 3, dash = 'solid')
+        )
+      }
+      
+      p <- p %>% layout(
+        title = list(
+          text = "Comprehensive Probability Analysis by Rank<br><sub>Shows Click Probabilities (Learned vs True) and Conversion Probability</sub>",
+          font = list(size = 14)
+        ),
+        xaxis = list(title = "Rank Position", gridcolor = '#f0f0f0', type = 'linear'),
+        yaxis = list(title = "Probability", range = c(0, 1), gridcolor = '#f0f0f0'),
+        hovermode = 'x unified',
+        legend = list(orientation = 'h', x = 0.5, y = -0.2),
+        margin = list(l = 50, r = 50, t = 80, b = 80),
+        plot_bgcolor = 'white',
+        paper_bgcolor = 'white'
+      )
+      
+      # Add user/offer information to hover text
+      p <- p %>% add_annotations(
+        text = paste("User:", input$prob_user_select, "| Offer:", input$prob_offer_select),
+        showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 1.02,
+        font = list(size = 12, color = '#666666')
+      )
+      
+      p
+      
+    }, error = function(e) {
+      print(paste("Plot error:", e$message))
+      plot_ly() %>% 
+        add_annotations(text = paste("Error:", e$message), 
+                       showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5)
+    })
   })
 
   # Simulation status output

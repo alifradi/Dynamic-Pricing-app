@@ -1032,32 +1032,68 @@ def sample_offers_for_users(
         if len(users_df) < num_users:
             num_users = len(users_df)
         
-        # Try up to 10 times to get a valid sample
-        for attempt in range(10):
-            sampled_users = users_df.sample(n=num_users, replace=False)
-            # Count users per destination
-            dest_counts = sampled_users['location'].value_counts()
-            valid_destinations = dest_counts[dest_counts >= min_users_per_destination].index.tolist()
-            # Filter users to only those in valid destinations
-            filtered_users = sampled_users[sampled_users['location'].isin(valid_destinations)]
-            if filtered_users['location'].nunique() > 0:
-                print(f"Attempt {attempt + 1}: Found {len(valid_destinations)} destinations with at least {min_users_per_destination} users")
-                print(f"Destination breakdown: {dest_counts.to_dict()}")
-                print(f"Valid destinations: {valid_destinations}")
-                break
-        else:
+        print(f"[DEBUG] Requested {num_users} users with minimum {min_users_per_destination} users per destination")
+        print(f"[DEBUG] Total users available: {len(users_df)}")
+        
+        # Count users per destination in the full dataset
+        dest_counts_full = users_df['location'].value_counts()
+        print(f"[DEBUG] Users per destination in full dataset: {dest_counts_full.to_dict()}")
+        
+        # Find destinations that have enough users to satisfy the constraint
+        valid_destinations = dest_counts_full[dest_counts_full >= min_users_per_destination].index.tolist()
+        print(f"[DEBUG] Valid destinations (>= {min_users_per_destination} users): {valid_destinations}")
+        
+        if not valid_destinations:
             return {
-                "message": f"Could not find enough destinations with at least {min_users_per_destination} users after 10 attempts. Available destinations and their user counts: {dest_counts.to_dict()}",
+                "message": f"No destinations have at least {min_users_per_destination} users. Available destinations and their user counts: {dest_counts_full.to_dict()}",
                 "num_records": 0,
                 "error": "constraint_violation",
-                "available_destinations": dest_counts.to_dict()
+                "available_destinations": dest_counts_full.to_dict()
             }
         
-        sampled_users = filtered_users
+        # Calculate how many users to sample per destination
+        # Try to distribute users evenly across valid destinations
+        users_per_dest = max(min_users_per_destination, num_users // len(valid_destinations))
+        print(f"[DEBUG] Target users per destination: {users_per_dest}")
+        
+        # Sample users destination by destination
+        sampled_users_list = []
+        total_sampled = 0
+        
+        for destination in valid_destinations:
+            if total_sampled >= num_users:
+                break
+                
+            # Get users for this destination
+            dest_users = users_df[users_df['location'] == destination]
+            
+            # Calculate how many users to sample from this destination
+            remaining_users_needed = num_users - total_sampled
+            users_to_sample = min(users_per_dest, len(dest_users), remaining_users_needed)
+            
+            if users_to_sample >= min_users_per_destination:
+                # Sample users from this destination
+                dest_sampled = dest_users.sample(n=users_to_sample, replace=False)
+                sampled_users_list.append(dest_sampled)
+                total_sampled += users_to_sample
+                print(f"[DEBUG] Sampled {users_to_sample} users from {destination}")
+            else:
+                print(f"[DEBUG] Skipping {destination} - not enough users to satisfy constraint")
+        
+        if not sampled_users_list:
+            return {
+                "message": f"Could not sample enough users to satisfy the constraint. Requested: {num_users}, minimum per destination: {min_users_per_destination}",
+                "num_records": 0,
+                "error": "constraint_violation",
+                "available_destinations": dest_counts_full.to_dict()
+            }
+        
+        # Combine all sampled users
+        sampled_users = pd.concat(sampled_users_list, ignore_index=True)
         final_destinations = sampled_users['location'].unique()
         final_dest_counts = sampled_users['location'].value_counts()
         
-        print(f"Final sampling result:")
+        print(f"[DEBUG] Final sampling result:")
         print(f"- Total users sampled: {len(sampled_users)}")
         print(f"- Destinations selected: {final_destinations}")
         print(f"- Users per destination: {final_dest_counts.to_dict()}")

@@ -1,21 +1,1001 @@
 user_id,user_type,age_group,location,group_size,loyalty_status,price_sensitivity,budget_min,budget_max,previous_bookings,room_type_preference,preferred_amenities,travel_date_start,travel_date_end,booking_date,lead_time_days,stay_duration
-U000001,Leisure,36-45,Sydney,3,Platinum,0.718,52,188,21,Deluxe,"Spa,WiFi,Restaurant,Business Center,Pool,Beach Access",2025-08-08,2025-08-12,2025-08-03,5,4
-U000002,Leisure,36-45,Miami,2,None,0.486,56,207,2,Double,"Pool,Spa",2025-12-28,2025-12-31,2025-11-14,44,3
-U000003,Business,46-55,London,1,Gold,0.068,127,572,12,Single,"Bar,Parking,Gym,WiFi",2025-10-23,2025-10-26,2025-10-12,11,3
-U000004,Luxury,18-25,Sydney,1,Platinum,0.252,129,770,41,Single,"Restaurant,Breakfast,Bar",2025-11-16,2025-11-23,2025-11-15,1,7
-U000005,Leisure,36-45,Miami,1,Silver,0.545,55,203,3,Single,"WiFi,Bar",2025-10-07,2025-10-08,2025-09-24,13,1
-U000006,Luxury,18-25,Sydney,2,Gold,0.221,131,778,12,Deluxe,"Bar,Concierge",2025-09-12,2025-09-21,2025-08-27,16,9
-U000007,Leisure,46-55,Mumbai,1,None,0.544,65,239,2,Single,"WiFi,Room Service,Beach Access,Concierge,Spa",2025-07-26,2025-08-04,2025-07-22,4,9
-U000008,Budget,18-25,São Paulo,1,None,0.881,15,59,2,Single,"Kitchen,Breakfast,Parking,Laundry,Pool",2025-12-01,2025-12-03,2025-11-24,7,2
-U000009,Business,56-65,Amsterdam,1,Gold,0.112,116,520,17,Single,"Kitchen,Air Conditioning",2025-09-29,2025-09-30,2025-09-20,9,1
-U000010,Budget,46-55,Istanbul,2,None,0.811,30,114,2,Double,"Room Service,Conference Rooms,Parking",2025-08-31,2025-09-06,2025-08-28,3,6
-U000011,Luxury,65+,Istanbul,2,Gold,0.257,166,988,15,Suite,"Bar,Concierge,Restaurant,Laundry,Room Service",2025-10-14,2025-10-16,2025-09-21,23,2
-U000012,Luxury,65+,New York,1,None,0.333,162,960,1,Single,"Air Conditioning,Concierge,Restaurant,Spa",2025-10-14,2025-10-17,2025-09-29,15,3
-U000013,Business,46-55,Berlin,1,None,0.258,120,535,1,Single,"Room Service,Parking",2025-09-03,2025-09-07,2025-08-31,3,4
-U000014,Luxury,18-25,London,2,Gold,0.338,126,745,13,Suite,"Restaurant,Kitchen,Room Service",2026-01-02,2026-01-07,2025-12-12,21,5
-U000015,Luxury,65+,Amsterdam,2,Gold,0.277,165,980,10,Deluxe,"Bar,Room Service",2025-09-28,2025-10-02,2025-08-12,47,4
-U000016,Business,65+,Tokyo,1,Gold,0.485,77,340,12,Single,"Business Center,Room Service,Gym,WiFi",2025-08-08,2025-08-09,2025-07-04,35,1
-U000017,Leisure,65+,São Paulo,1,Platinum,0.788,41,149,47,Single,"Balcony,WiFi",2025-11-30,2025-12-04,2025-10-21,40,4
-U000018,Business,46-55,London,1,Silver,0.281,119,530,7,Single,"Room Service,Business Center",2025-09-29,2025-09-30,2025-09-19,10,1
-U000019,Family,36-45,Barcelona,4,Gold,0.71,69,252,18,Family,"Restaurant,Gym",2025-11-02,2025-11-06,2025-10-12,21,4
-U000020,Luxury,26-35,Barcelona,3,Platinum,0.312,163,968,40,Suite,"Concierge,Kitchen,Bar,Breakfast,Room Service",2026-01-11,2026-01-20,2025-12-21,21,9
+U000001,Business,65+,Miami,1,Gold,0.236,84,373,17,Single,"Room Service,Parking,Gym,Concierge,WiFi,Business Center",2026-01-11,2026-01-12,2025-11-05,67,1
+U000002,Budget,46-55,Amsterdam,1,Gold,0.823,29,113,18,Single,"Parking,Concierge,WiFi,Air Conditioning",2025-09-29,2025-10-01,2025-08-01,59,2
+U000003,Budget,56-65,Madrid,3,None,0.514,30,119,0,Suite,"Concierge,Parking,Restaurant,WiFi,Breakfast",2025-09-26,2025-09-29,2025-09-01,25,3
+U000004,Family,36-45,Berlin,6,Silver,0.427,77,283,3,Suite,"WiFi,Laundry,Pool,Restaurant,Parking",2025-08-26,2025-08-28,2025-06-28,59,2
+U000005,Luxury,56-65,Amsterdam,1,Platinum,0.206,225,1341,25,Single,"Bar,Spa,Concierge,Pet Friendly",2025-09-24,2025-09-26,2025-07-01,85,2
+U000006,Luxury,56-65,Istanbul,1,Gold,0.005,240,1437,12,Single,"Restaurant,Laundry,Concierge,Spa,Room Service",2025-10-12,2025-10-14,2025-10-06,6,2
+U000007,Budget,36-45,Tokyo,1,None,0.843,25,95,0,Single,"Breakfast,WiFi",2026-01-14,2026-01-15,2025-10-30,76,1
+U000008,Leisure,18-25,Rome,1,Silver,0.734,33,119,8,Single,"Pool,Airport Shuttle,Bar,WiFi,Parking",2025-07-31,2025-08-03,2025-07-13,18,3
+U000009,Luxury,26-35,Singapore,4,Platinum,0.18,170,1015,44,Suite,"Restaurant,Concierge,Bar",2025-09-04,2025-09-06,2025-08-15,20,2
+U000010,Family,65+,Amsterdam,4,Silver,0.565,60,219,5,Family,"Spa,Breakfast",2025-09-03,2025-09-06,2025-05-10,116,3
+U000011,Luxury,46-55,Vienna,2,Platinum,0.149,248,1483,22,Suite,"Room Service,Concierge",2025-08-06,2025-08-13,2025-07-12,25,7
+U000012,Business,36-45,Miami,1,Silver,0.438,96,423,6,Single,"Business Center,24h Front Desk,Parking,Gym",2025-11-11,2025-11-19,2025-08-11,92,8
+U000013,Luxury,36-45,Mumbai,2,None,0.393,194,1147,0,Double,"Concierge,Balcony",2025-07-21,2025-07-22,2025-07-14,7,1
+U000014,Business,36-45,Paris,1,Gold,0.184,104,465,13,Single,"Kitchen,Parking,Room Service",2025-09-02,2025-09-04,2025-06-19,75,2
+U000015,Luxury,65+,New York,2,Gold,0.215,168,1003,15,Deluxe,"Bar,Room Service,Spa,Restaurant,Concierge",2025-10-08,2025-10-12,2025-09-08,30,4
+U000016,Luxury,65+,Madrid,2,Gold,0.095,175,1046,19,Deluxe,"Concierge,Bar,Pet Friendly,Breakfast,Restaurant,Spa",2025-12-12,2025-12-13,2025-12-08,4,1
+U000017,Leisure,18-25,Paris,3,None,0.753,33,118,1,Deluxe,"Bar,WiFi,Beach Access",2025-12-13,2025-12-20,2025-11-03,40,7
+U000018,Budget,26-35,São Paulo,2,Silver,0.963,19,73,3,Double,"Breakfast,Parking,Conference Rooms,Bar,WiFi",2026-01-08,2026-01-09,2025-11-11,58,1
+U000019,Budget,65+,Madrid,1,None,0.812,20,79,2,Single,"Concierge,Parking,WiFi,Bar",2025-12-23,2025-12-26,2025-12-12,11,3
+U000020,Luxury,56-65,Dubai,3,None,0.028,238,1426,0,Suite,"Bar,Laundry,Concierge,Parking",2025-12-21,2025-12-25,2025-12-18,3,4
+U000021,Business,65+,Paris,1,Silver,0.276,83,368,7,Single,"Room Service,WiFi",2025-11-01,2025-11-03,2025-10-31,1,2
+U000022,Family,65+,Amsterdam,6,None,0.76,56,202,2,Suite,"Pool,Parking,Restaurant,WiFi,Breakfast",2025-11-07,2025-11-08,2025-05-14,177,1
+U000023,Family,56-65,Singapore,4,Gold,0.625,78,285,14,Family,"Restaurant,WiFi,Breakfast",2025-07-28,2025-08-02,2025-07-21,7,5
+U000024,Budget,26-35,Sydney,3,None,0.929,19,75,0,Suite,"Concierge,Conference Rooms,Laundry,Breakfast,Parking",2025-12-22,2025-12-23,2025-12-21,1,1
+U000025,Family,65+,Paris,4,Silver,0.744,56,203,4,Family,"Concierge,WiFi,Beach Access,Restaurant,Breakfast,Gym",2025-07-22,2025-07-26,2025-06-23,29,4
+U000026,Leisure,65+,Vienna,1,Silver,0.64,44,159,5,Single,"WiFi,Beach Access,Pool,Spa,Kitchen",2026-01-05,2026-01-09,2025-12-21,15,4
+U000027,Budget,18-25,Madrid,1,None,0.83,16,61,2,Single,"Parking,WiFi,24h Front Desk",2025-12-06,2025-12-07,2025-10-08,59,1
+U000028,Leisure,46-55,São Paulo,1,None,0.471,67,247,0,Single,"Bar,Parking,WiFi",2025-09-06,2025-09-09,2025-08-30,7,3
+U000029,Business,36-45,Berlin,1,None,0.256,102,453,0,Single,"Room Service,Restaurant,Gym,Business Center,Parking",2025-12-24,2025-12-26,2025-09-29,86,2
+U000030,Budget,36-45,Vienna,2,None,0.925,24,91,1,Double,"Air Conditioning,WiFi,Balcony",2025-07-31,2025-08-01,2025-07-30,1,1
+U000031,Budget,26-35,São Paulo,2,Silver,0.887,20,76,6,Double,"Room Service,Balcony,Breakfast,Parking",2025-08-03,2025-08-08,2025-07-20,14,5
+U000032,Leisure,65+,Bangkok,2,Silver,0.651,43,159,6,Double,"Concierge,Pool",2025-07-31,2025-08-01,2025-07-25,6,1
+U000033,Budget,46-55,Rome,1,Silver,0.536,33,128,6,Single,"Parking,Breakfast,Business Center",2025-08-13,2025-08-16,2025-05-16,89,3
+U000034,Leisure,36-45,Barcelona,1,Platinum,0.56,55,201,42,Single,"Bar,WiFi,Pool,Parking,Beach Access,Kitchen",2025-10-13,2025-10-19,2025-08-26,48,6
+U000035,Luxury,18-25,Rome,1,Platinum,0.508,119,698,50,Single,"Concierge,Breakfast,Spa",2025-08-24,2025-08-30,2025-07-26,29,6
+U000036,Budget,46-55,Berlin,1,None,0.78,30,115,2,Single,"Kitchen,WiFi,Parking,Restaurant,Spa",2025-09-12,2025-09-15,2025-07-10,64,3
+U000037,Budget,18-25,Los Angeles,1,None,0.84,16,60,2,Single,"Kitchen,WiFi,Parking",2025-07-28,2025-07-30,2025-06-25,33,2
+U000038,Leisure,26-35,Singapore,1,Silver,0.762,42,151,4,Single,"Kitchen,Beach Access,Bar,WiFi,Spa",2025-09-18,2025-09-20,2025-09-12,6,2
+U000039,Luxury,46-55,Mumbai,1,Gold,0.132,250,1491,19,Single,"Bar,Gym,Parking,Room Service",2025-09-25,2025-09-30,2025-03-30,179,5
+U000040,Family,65+,Amsterdam,4,None,0.804,55,198,0,Family,"Breakfast,Parking,Restaurant,Pool,Balcony,Pet Friendly",2025-11-13,2025-11-14,2025-11-08,5,1
+U000041,Leisure,46-55,Dubai,2,Silver,0.492,66,244,4,Double,"Spa,Pool,Bar",2025-11-24,2025-11-26,2025-11-15,9,2
+U000042,Family,56-65,London,4,Gold,0.52,81,298,9,Family,"Parking,WiFi,Restaurant,Breakfast,Pool",2026-01-08,2026-01-10,2026-01-06,2,2
+U000043,Luxury,46-55,Barcelona,1,Silver,0.187,245,1463,3,Single,"Conference Rooms,Bar,Restaurant",2025-09-05,2025-09-12,2025-08-06,30,7
+U000044,Business,46-55,Dubai,1,Gold,0.199,122,546,19,Single,"Room Service,Parking,Gym,Business Center,Beach Access,WiFi",2025-09-14,2025-09-15,2025-08-23,22,1
+U000045,Leisure,46-55,São Paulo,2,Silver,0.639,63,230,5,Double,"Spa,WiFi,24h Front Desk",2025-08-14,2025-08-15,2025-08-03,11,1
+U000046,Budget,56-65,Vienna,1,None,0.71,28,110,2,Single,"Beach Access,Bar",2025-11-14,2025-11-15,2025-10-27,18,1
+U000047,Leisure,56-65,Dubai,3,None,0.381,64,236,2,Suite,"Spa,Pool,Parking,Bar,WiFi",2025-10-05,2025-10-07,2025-10-02,3,2
+U000048,Business,18-25,Mumbai,1,Silver,0.389,62,274,8,Single,"24h Front Desk,Room Service",2025-10-20,2025-10-25,2025-10-06,14,5
+U000049,Business,46-55,Sydney,1,Gold,0.212,122,544,11,Single,"Parking,Laundry,Beach Access,Gym,WiFi,Kitchen",2025-11-24,2025-12-01,2025-06-03,174,7
+U000050,Leisure,56-65,Singapore,4,None,0.429,63,231,1,Deluxe,"Gym,Bar,Kitchen",2025-08-12,2025-08-22,2025-07-17,26,10
+U000051,Business,18-25,Prague,1,Gold,0.437,61,269,11,Single,"WiFi,Parking",2025-11-24,2025-11-26,2025-10-22,33,2
+U000052,Luxury,56-65,Barcelona,2,Platinum,0.085,234,1399,49,Deluxe,"Spa,Restaurant,Bar,Room Service,Concierge,Air Conditioning",2025-08-03,2025-08-04,2025-06-08,56,1
+U000053,Budget,56-65,Prague,1,Silver,0.639,29,113,3,Single,"Parking,24h Front Desk",2025-08-03,2025-08-04,2025-07-19,15,1
+U000054,Leisure,36-45,Vienna,1,Silver,0.459,57,210,6,Single,"Restaurant,Bar,Pool,Kitchen",2025-09-06,2025-09-09,2025-09-01,5,3
+U000055,Budget,26-35,Miami,1,Silver,0.863,20,77,6,Single,"Breakfast,WiFi,Pool,Parking",2025-11-02,2025-11-04,2025-10-13,20,2
+U000056,Business,46-55,Rome,1,Silver,0.186,123,549,7,Single,"Business Center,Parking,Conference Rooms,Gym,WiFi",2025-08-28,2025-09-01,2025-08-16,12,4
+U000057,Leisure,26-35,Madrid,1,None,0.594,44,162,0,Single,"Airport Shuttle,Pet Friendly,Beach Access,Pool",2025-10-24,2025-10-29,2025-10-07,17,5
+U000058,Family,65+,Prague,6,Silver,0.724,56,205,5,Suite,"Business Center,Parking,Breakfast",2025-12-03,2025-12-06,2025-12-02,1,3
+U000059,Budget,18-25,Berlin,1,Gold,0.911,15,59,12,Single,"WiFi,Pet Friendly,Breakfast",2025-12-09,2025-12-10,2025-12-08,1,1
+U000060,Family,56-65,Los Angeles,5,Silver,0.646,77,283,5,Suite,"Breakfast,Kitchen,Restaurant,Pet Friendly",2025-12-24,2025-12-27,2025-12-16,8,3
+U000061,Budget,65+,Singapore,3,Silver,0.858,20,77,7,Suite,"WiFi,Parking,Pool",2025-09-27,2025-09-29,2025-09-08,19,2
+U000062,Budget,46-55,Istanbul,2,Silver,0.859,29,111,6,Double,"Breakfast,Concierge,Restaurant,Beach Access,Parking",2026-01-10,2026-01-12,2025-10-22,80,2
+U000063,Budget,65+,Paris,3,Silver,0.871,20,77,3,Deluxe,"Laundry,Beach Access,Breakfast",2026-01-13,2026-01-15,2025-12-11,33,2
+U000064,Family,46-55,Mumbai,4,Silver,0.514,88,323,6,Family,"Balcony,Spa,Restaurant",2026-01-02,2026-01-16,2025-12-22,11,14
+U000065,Business,46-55,Los Angeles,1,Gold,0.285,119,529,17,Single,"Pool,Parking",2025-08-31,2025-09-01,2025-08-03,28,1
+U000066,Budget,46-55,Istanbul,1,Gold,0.749,30,117,15,Single,"Parking,Kitchen,Breakfast",2025-10-14,2025-10-16,2025-09-18,26,2
+U000067,Business,56-65,Prague,1,Silver,0.018,119,537,7,Single,"Parking,Kitchen,WiFi,Conference Rooms,Gym,Room Service",2025-12-05,2025-12-13,2025-09-27,69,8
+U000068,Budget,56-65,Los Angeles,4,None,0.589,30,116,1,Suite,"Parking,WiFi,Kitchen,Breakfast",2025-09-16,2025-09-21,2025-07-13,65,5
+U000069,Business,56-65,New York,1,Platinum,0.17,114,509,46,Single,"Room Service,Pool,WiFi,Business Center",2025-09-29,2025-10-02,2025-09-16,13,3
+U000070,Family,18-25,Miami,3,Silver,0.874,41,149,5,Family,"Breakfast,Laundry,Business Center,WiFi,Restaurant",2025-12-18,2025-12-21,2025-11-15,33,3
+U000071,Leisure,46-55,Rome,2,None,0.576,65,236,1,Double,"Beach Access,Room Service",2025-11-04,2025-11-06,2025-10-25,10,2
+U000072,Leisure,18-25,São Paulo,1,None,0.725,33,119,2,Single,"WiFi,Bar,Pool,Spa,Beach Access,Pet Friendly",2025-09-14,2025-09-17,2025-08-19,26,3
+U000073,Business,46-55,Singapore,1,Gold,0.166,124,553,20,Single,"WiFi,Parking",2026-01-04,2026-01-11,2025-12-16,19,7
+U000074,Leisure,46-55,Miami,1,Silver,0.416,68,252,3,Single,"Spa,WiFi,Bar",2025-11-23,2025-11-29,2025-11-21,2,6
+U000075,Business,26-35,Dubai,1,None,0.425,79,348,1,Single,"Gym,Pet Friendly,Parking,Breakfast,Business Center,Room Service",2025-09-05,2025-09-10,2025-08-21,15,5
+U000076,Leisure,46-55,Mumbai,1,None,0.648,63,229,2,Single,"Kitchen,WiFi,Beach Access,Spa",2025-10-30,2025-11-02,2025-10-28,2,3
+U000077,Budget,46-55,Prague,3,Gold,0.652,31,122,18,Suite,"WiFi,Breakfast,Parking",2026-01-09,2026-01-13,2025-09-25,106,4
+U000078,Leisure,26-35,Berlin,1,None,0.621,44,161,2,Single,"Breakfast,Pet Friendly,WiFi,Bar,Pool",2025-09-09,2025-09-10,2025-06-21,80,1
+U000079,Luxury,26-35,Mumbai,3,Silver,0.211,169,1004,6,Suite,"Spa,Room Service,Conference Rooms",2025-09-19,2025-09-21,2025-09-18,1,2
+U000080,Leisure,36-45,Berlin,2,None,0.699,52,190,1,Double,"24h Front Desk,Beach Access,WiFi,Pool,Spa,Bar",2025-12-02,2025-12-11,2025-11-11,21,9
+U000081,Leisure,46-55,Miami,2,Silver,0.586,64,235,3,Double,"Beach Access,WiFi,Bar,Restaurant",2025-11-02,2025-11-05,2025-09-26,37,3
+U000082,Business,18-25,Miami,1,Platinum,0.349,63,278,34,Single,"Parking,Air Conditioning,WiFi",2025-10-25,2025-10-26,2025-10-21,4,1
+U000083,Business,26-35,São Paulo,1,Gold,0.511,76,336,9,Single,"Parking,Room Service,Business Center,Bar",2025-08-09,2025-08-12,2025-07-27,13,3
+U000084,Budget,65+,Berlin,1,Silver,0.827,20,78,4,Single,"WiFi,Restaurant",2025-07-30,2025-08-03,2025-07-23,7,4
+U000085,Luxury,36-45,Bangkok,1,Silver,0.107,213,1273,8,Single,"Kitchen,Restaurant,Air Conditioning",2025-09-25,2025-09-26,2025-06-18,99,1
+U000086,Budget,56-65,London,2,None,0.565,30,117,0,Double,"Air Conditioning,Breakfast,WiFi,Parking",2026-01-10,2026-01-15,2025-11-30,41,5
+U000087,Business,56-65,Berlin,1,Silver,0.169,114,510,6,Single,"Gym,Concierge,Parking,WiFi,Business Center,Balcony",2025-10-07,2025-10-15,2025-09-05,32,8
+U000088,Leisure,36-45,Mumbai,2,None,0.578,55,200,2,Double,"Bar,Beach Access,Pool",2025-12-03,2025-12-07,2025-10-06,58,4
+U000089,Family,46-55,Prague,4,None,0.551,87,318,1,Family,"Pool,Restaurant",2025-11-17,2025-11-25,2025-11-05,12,8
+U000090,Budget,46-55,Istanbul,2,None,0.728,30,118,1,Double,"Room Service,Parking",2025-10-22,2025-10-25,2025-09-29,23,3
+U000091,Business,56-65,Los Angeles,1,None,0.12,116,518,2,Single,"WiFi,Breakfast,Parking,Gym",2025-09-12,2025-09-13,2025-08-13,30,1
+U000092,Leisure,18-25,Bangkok,2,Gold,0.616,34,125,16,Double,"Pool,Bar,Restaurant,WiFi,Spa",2025-08-04,2025-08-05,2025-08-01,3,1
+U000093,Leisure,46-55,Paris,2,None,0.599,64,234,2,Double,"Conference Rooms,Beach Access",2025-08-28,2025-08-31,2025-08-08,20,3
+U000094,Luxury,56-65,Los Angeles,1,Platinum,0.0,240,1440,40,Single,"24h Front Desk,Gym,Spa,Bar",2026-01-13,2026-01-15,2025-11-30,44,2
+U000095,Leisure,36-45,Barcelona,4,Silver,0.477,57,208,8,Suite,"Bar,WiFi,Pool,Beach Access",2025-08-15,2025-08-16,2025-07-04,42,1
+U000096,Business,26-35,Vienna,1,Gold,0.543,75,332,18,Single,"Room Service,Gym,Business Center,WiFi",2025-12-30,2026-01-05,2025-12-29,1,6
+U000097,Luxury,18-25,Sydney,1,Gold,0.408,123,726,16,Single,"Room Service,Restaurant,Concierge",2025-10-29,2025-11-01,2025-10-03,26,3
+U000098,Budget,46-55,Vienna,1,Silver,0.842,29,112,8,Single,"WiFi,Breakfast",2025-09-02,2025-09-04,2025-08-04,29,2
+U000099,Budget,46-55,Barcelona,1,None,0.765,30,116,1,Single,"Restaurant,WiFi,Concierge,Parking,Pool",2025-09-17,2025-09-21,2025-09-06,11,4
+U000100,Budget,65+,São Paulo,2,Gold,0.765,21,80,11,Double,"24h Front Desk,Kitchen,WiFi,Parking,Restaurant",2025-12-11,2025-12-13,2025-11-01,40,2
+U000101,Family,65+,Miami,3,None,0.75,56,202,1,Family,"Pool,Parking,Gym",2025-11-04,2025-11-05,2025-10-30,5,1
+U000102,Luxury,56-65,Paris,1,Silver,0.201,226,1344,3,Single,"Room Service,Spa,Concierge,Balcony,Restaurant,Breakfast",2025-08-29,2025-08-31,2025-07-26,34,2
+U000103,Leisure,65+,Tokyo,2,None,0.657,43,158,1,Double,"Spa,WiFi,24h Front Desk",2025-08-12,2025-08-14,2025-08-11,1,2
+U000104,Budget,46-55,New York,2,Platinum,0.998,27,104,44,Double,"Parking,Balcony,Breakfast,Kitchen",2025-09-30,2025-10-02,2025-09-29,1,2
+U000105,Family,56-65,Berlin,3,None,0.58,79,290,0,Family,"Kitchen,Beach Access,Spa,WiFi",2025-12-07,2025-12-09,2025-11-20,17,2
+U000106,Family,18-25,Madrid,4,None,0.922,41,145,0,Family,"Pool,Restaurant,Air Conditioning,WiFi,Parking,Breakfast",2025-12-25,2025-12-26,2025-12-21,4,1
+U000107,Budget,46-55,Sydney,1,None,0.937,28,107,1,Single,"Breakfast,Parking,Airport Shuttle,Air Conditioning",2025-12-20,2025-12-23,2025-12-01,19,3
+U000108,Family,26-35,Barcelona,3,Gold,0.512,61,224,20,Family,"Restaurant,WiFi,Conference Rooms,Parking,Bar",2025-08-16,2025-08-23,2025-07-06,41,7
+U000109,Budget,56-65,Madrid,1,Silver,0.745,28,108,8,Single,"Airport Shuttle,Breakfast,Beach Access",2025-07-26,2025-07-31,2025-07-20,6,5
+U000110,Leisure,26-35,Bangkok,1,None,0.71,42,155,2,Single,"WiFi,Bar",2025-09-03,2025-09-05,2025-09-02,1,2
+U000111,Budget,46-55,Prague,1,Gold,0.971,28,106,17,Single,"Parking,24h Front Desk,Restaurant",2025-12-02,2025-12-03,2025-11-23,9,1
+U000112,Business,46-55,Prague,1,Silver,0.191,123,548,7,Single,"Parking,Balcony,Gym",2025-10-13,2025-10-14,2025-10-10,3,1
+U000113,Business,56-65,São Paulo,1,Silver,0.194,113,505,4,Single,"Parking,Gym,Balcony,Room Service,Business Center,24h Front Desk",2025-11-23,2025-11-27,2025-11-13,10,4
+U000114,Luxury,36-45,Berlin,3,Gold,0.149,210,1254,13,Deluxe,"WiFi,Room Service,Restaurant,Concierge",2025-12-15,2025-12-19,2025-12-11,4,4
+U000115,Business,36-45,London,1,Silver,0.112,106,476,6,Single,"Airport Shuttle,WiFi,Laundry",2025-10-16,2025-10-19,2025-10-09,7,3
+U000116,Luxury,56-65,Berlin,1,Silver,0.135,230,1375,4,Single,"Bar,Spa",2025-08-11,2025-08-17,2025-05-07,96,6
+U000117,Business,46-55,Singapore,1,Silver,0.222,121,542,4,Single,"Parking,WiFi,Business Center,Airport Shuttle",2025-07-24,2025-07-26,2025-07-20,4,2
+U000118,Business,65+,Miami,1,Gold,0.438,78,346,17,Single,"Air Conditioning,Business Center,WiFi,Gym",2025-10-24,2025-10-27,2025-10-22,2,3
+U000119,Business,65+,Mumbai,1,None,0.309,82,363,1,Single,"WiFi,Conference Rooms,Room Service,Business Center",2025-12-29,2025-12-31,2025-11-19,40,2
+U000120,Luxury,46-55,São Paulo,1,Gold,0.187,245,1463,19,Single,"Bar,Spa,Room Service",2025-07-26,2025-07-30,2025-07-12,14,4
+U000121,Luxury,18-25,Sydney,1,None,0.338,126,745,2,Single,"Bar,Room Service,WiFi,Spa,Breakfast,Restaurant",2025-09-10,2025-09-13,2025-08-27,14,3
+U000122,Luxury,36-45,Barcelona,2,Gold,0.425,192,1133,14,Suite,"Conference Rooms,24h Front Desk,Concierge,Restaurant",2025-09-11,2025-09-14,2025-08-16,26,3
+U000123,Business,18-25,Berlin,1,Platinum,0.293,64,284,44,Single,"Airport Shuttle,Beach Access",2025-11-11,2025-11-21,2025-11-09,2,10
+U000124,Family,36-45,Dubai,5,None,0.683,70,255,0,Suite,"Beach Access,Parking,Gym,WiFi,24h Front Desk,Restaurant",2025-10-02,2025-10-05,2025-08-31,32,3
+U000125,Budget,18-25,Barcelona,2,Gold,0.91,15,59,17,Double,"WiFi,Pool,Parking,Room Service",2025-09-16,2025-09-20,2025-08-17,30,4
+U000126,Luxury,36-45,Dubai,2,None,0.171,209,1245,0,Deluxe,"Bar,Restaurant",2025-12-27,2025-12-28,2025-12-24,3,1
+U000127,Business,56-65,Sydney,1,Silver,0.215,112,501,8,Single,"Gym,Business Center",2025-08-05,2025-08-06,2025-07-31,5,1
+U000128,Business,26-35,Vienna,1,Silver,0.244,83,372,5,Single,"Parking,Breakfast,Room Service",2025-07-31,2025-08-06,2025-06-26,35,6
+U000129,Luxury,18-25,Rome,1,Silver,0.316,127,752,5,Single,"Restaurant,Concierge,Pool",2025-09-12,2025-09-18,2025-09-11,1,6
+U000130,Family,26-35,Berlin,5,Silver,0.687,57,208,3,Suite,"Breakfast,Room Service",2026-01-01,2026-01-08,2025-11-12,50,7
+U000131,Budget,18-25,Los Angeles,2,None,0.892,15,59,2,Double,"WiFi,Airport Shuttle,Room Service,24h Front Desk",2025-11-15,2025-11-17,2025-10-26,20,2
+U000132,Business,56-65,Los Angeles,1,Silver,0.02,119,536,4,Single,"WiFi,Conference Rooms,Pool,Business Center",2025-10-02,2025-10-03,2025-09-16,16,1
+U000133,Budget,56-65,Miami,3,Silver,0.633,29,114,7,Suite,"Breakfast,Airport Shuttle",2025-10-24,2025-10-26,2025-10-15,9,2
+U000134,Luxury,65+,Bangkok,1,None,0.491,153,903,1,Single,"Restaurant,Bar,Laundry,Room Service",2025-07-23,2025-07-26,2025-03-23,122,3
+U000135,Budget,65+,Amsterdam,2,None,0.731,21,82,1,Double,"Spa,Balcony,WiFi",2026-01-03,2026-01-04,2025-10-16,79,1
+U000136,Family,26-35,Berlin,5,None,0.873,53,191,0,Suite,"Parking,Spa,Breakfast",2025-10-02,2025-10-03,2025-10-01,1,1
+U000137,Luxury,18-25,São Paulo,1,Gold,0.451,121,714,18,Single,"Pool,Restaurant,Concierge",2025-10-02,2025-10-08,2025-08-16,47,6
+U000138,Business,36-45,Singapore,1,None,0.148,105,471,2,Single,"WiFi,Parking,Business Center,Gym",2025-10-14,2025-10-15,2025-08-29,46,1
+U000139,Business,65+,Singapore,1,Silver,0.505,76,337,6,Single,"Gym,Parking,Room Service,Business Center",2025-07-28,2025-07-31,2025-07-25,3,3
+U000140,Family,36-45,New York,5,None,0.828,66,239,2,Suite,"Pool,Room Service,Restaurant,Parking,WiFi",2025-09-01,2025-09-05,2025-08-31,1,4
+U000141,Family,46-55,Paris,4,Silver,0.59,86,313,6,Family,"Gym,Parking,24h Front Desk,Business Center,Pool",2025-08-28,2025-08-31,2025-08-03,25,3
+U000142,Business,26-35,Los Angeles,1,Silver,0.555,75,330,5,Single,"Airport Shuttle,Parking,Gym",2025-10-01,2025-10-05,2025-09-20,11,4
+U000143,Business,65+,Sydney,1,None,0.218,84,376,1,Single,"Gym,Breakfast,Parking,Business Center,Room Service",2025-08-24,2025-08-25,2025-06-10,75,1
+U000144,Business,18-25,Prague,1,Gold,0.432,61,270,9,Single,"Room Service,24h Front Desk",2025-11-25,2025-11-28,2025-09-07,79,3
+U000145,Business,26-35,Bangkok,1,None,0.288,82,366,2,Single,"Room Service,Business Center,WiFi",2025-10-11,2025-10-18,2025-09-10,31,7
+U000146,Business,26-35,New York,1,Platinum,0.44,78,346,29,Single,"Business Center,Parking",2025-10-31,2025-11-04,2025-09-09,52,4
+U000147,Luxury,26-35,Los Angeles,1,None,0.229,168,998,1,Single,"Restaurant,Kitchen,Spa,Bar,Room Service",2025-07-30,2025-08-02,2025-07-15,15,3
+U000148,Leisure,18-25,Berlin,1,Silver,0.731,33,119,7,Single,"Concierge,Spa,Pool,Bar,Beach Access",2025-11-25,2025-11-26,2025-10-04,52,1
+U000149,Luxury,56-65,Vienna,2,Silver,0.0,240,1440,8,Double,"Room Service,Restaurant,Parking,Concierge,Bar,Spa",2025-09-17,2025-09-24,2025-05-04,136,7
+U000150,Business,18-25,Berlin,1,Gold,0.386,62,274,9,Single,"Gym,Pet Friendly,Room Service,Business Center,24h Front Desk,Parking",2025-07-26,2025-07-28,2025-06-21,35,2
+U000151,Family,18-25,Bangkok,4,None,0.594,46,168,0,Family,"Pet Friendly,Restaurant",2025-11-02,2025-11-03,2025-10-25,8,1
+U000152,Leisure,36-45,New York,2,None,0.732,51,187,2,Double,"WiFi,Beach Access,Spa,Kitchen",2025-12-15,2025-12-18,2025-12-14,1,3
+U000153,Business,18-25,Prague,1,Silver,0.402,62,273,3,Single,"Room Service,Parking,Business Center,Concierge,Gym",2025-09-25,2025-10-04,2025-07-30,57,9
+U000154,Leisure,18-25,Prague,1,Platinum,0.683,33,122,43,Single,"Laundry,Beach Access,Pool,WiFi,Bar",2025-07-25,2025-07-27,2025-07-17,8,2
+U000155,Luxury,36-45,Mumbai,1,Gold,0.215,206,1225,17,Single,"Bar,Restaurant",2026-01-12,2026-01-21,2025-10-22,82,9
+U000156,Leisure,46-55,Tokyo,3,Silver,0.615,64,233,5,Suite,"Beach Access,Spa,Concierge,Bar",2025-11-15,2025-11-17,2025-10-26,20,2
+U000157,Budget,36-45,Miami,1,None,0.966,23,89,2,Single,"Laundry,Room Service,WiFi",2025-12-13,2025-12-20,2025-09-16,88,7
+U000158,Leisure,18-25,New York,2,Silver,0.751,33,118,7,Double,"Pool,WiFi",2026-01-09,2026-01-11,2025-11-03,67,2
+U000159,Business,65+,Miami,1,Platinum,0.303,82,364,36,Single,"Room Service,WiFi,Business Center",2025-09-23,2025-09-27,2025-07-07,78,4
+U000160,Budget,26-35,London,2,None,0.83,20,78,1,Double,"24h Front Desk,Parking",2025-12-27,2025-12-29,2025-12-17,10,2
+U000161,Business,46-55,Los Angeles,1,None,0.275,119,531,2,Single,"Bar,Gym,Balcony,Spa",2026-01-12,2026-01-18,2025-11-13,60,6
+U000162,Luxury,65+,Vienna,1,Platinum,0.102,174,1043,45,Single,"Concierge,Spa,Restaurant,Bar",2025-09-08,2025-09-09,2025-08-31,8,1
+U000163,Luxury,36-45,Istanbul,1,Platinum,0.122,212,1266,40,Single,"Kitchen,Airport Shuttle,Spa,Restaurant,Room Service,Concierge",2025-12-24,2025-12-27,2025-12-22,2,3
+U000164,Business,18-25,Vienna,1,Silver,0.515,59,261,8,Single,"Conference Rooms,WiFi,Business Center",2025-12-13,2025-12-14,2025-08-28,107,1
+U000165,Budget,65+,Los Angeles,1,Silver,0.834,20,78,8,Single,"Parking,Pet Friendly",2025-11-11,2025-11-14,2025-11-03,8,3
+U000166,Business,36-45,Paris,1,None,0.409,97,428,1,Single,"Spa,Room Service,WiFi,Business Center,Gym,Parking",2025-08-31,2025-09-02,2025-08-22,9,2
+U000167,Luxury,18-25,Miami,1,Gold,0.32,127,751,20,Single,"Concierge,Room Service,Spa",2025-12-14,2025-12-15,2025-11-11,33,1
+U000168,Leisure,65+,Vienna,3,Silver,0.646,44,159,6,Suite,"Bar,Beach Access,Airport Shuttle,Balcony,Pool",2025-07-25,2025-08-02,2025-06-24,31,8
+U000169,Family,36-45,Mumbai,4,None,0.562,73,268,0,Family,"Pool,Restaurant,Spa,WiFi",2025-09-24,2025-09-26,2025-09-04,20,2
+U000170,Family,36-45,Istanbul,4,None,0.578,73,266,2,Family,"Spa,Restaurant,Pool,Gym,WiFi,24h Front Desk",2025-12-07,2025-12-09,2025-11-26,11,2
+U000171,Luxury,46-55,Vienna,3,Silver,0.222,243,1444,4,Suite,"Spa,Restaurant,Concierge,Room Service",2025-12-28,2026-01-05,2025-12-11,17,8
+U000172,Family,56-65,Amsterdam,4,Gold,0.624,78,285,18,Family,"Pool,Concierge,Restaurant,Parking,Breakfast",2025-11-17,2025-11-20,2025-11-06,11,3
+U000173,Budget,18-25,Barcelona,1,None,0.815,16,61,1,Single,"Parking,Restaurant",2025-10-12,2025-10-14,2025-09-30,12,2
+U000174,Leisure,65+,London,1,None,0.617,44,161,0,Single,"Business Center,Spa,WiFi,Beach Access,Bar,Pool",2026-01-04,2026-01-14,2025-11-20,45,10
+U000175,Business,26-35,Istanbul,1,Silver,0.436,78,346,6,Single,"Room Service,WiFi,Gym,Parking,Business Center,Kitchen",2025-10-11,2025-10-13,2025-09-03,38,2
+U000176,Business,36-45,Miami,1,None,0.44,95,422,0,Single,"Business Center,Gym,Parking",2025-12-18,2025-12-22,2025-12-03,15,4
+U000177,Leisure,26-35,Barcelona,2,Silver,0.7,43,155,5,Double,"Bar,WiFi,Breakfast,Pool,Beach Access",2025-12-08,2025-12-14,2025-11-03,35,6
+U000178,Business,56-65,Barcelona,1,Silver,0.177,114,508,7,Single,"Room Service,Restaurant,Bar",2025-12-09,2025-12-11,2025-11-02,37,2
+U000179,Business,18-25,Bangkok,1,Gold,0.448,61,268,16,Single,"Pool,Gym,Bar,Room Service,Parking",2025-12-13,2025-12-15,2025-12-12,1,2
+U000180,Luxury,36-45,Amsterdam,1,Gold,0.07,215,1289,10,Single,"Airport Shuttle,Pool,Kitchen,Room Service",2025-07-31,2025-08-02,2025-07-19,12,2
+U000181,Budget,65+,Amsterdam,2,Gold,0.89,20,76,11,Double,"24h Front Desk,Balcony,Kitchen,Parking",2025-12-23,2025-12-29,2025-12-22,1,6
+U000182,Luxury,18-25,Sydney,3,Silver,0.231,130,775,6,Deluxe,"Spa,Breakfast,Bar,Restaurant,Beach Access",2025-08-10,2025-08-15,2025-06-25,46,5
+U000183,Family,26-35,New York,4,None,0.66,58,211,2,Family,"WiFi,Restaurant,Breakfast,Pool,Beach Access,Room Service",2025-11-04,2025-11-09,2025-10-26,9,5
+U000184,Business,26-35,Prague,1,None,0.466,77,342,2,Single,"Pet Friendly,WiFi",2025-10-03,2025-10-10,2025-09-05,28,7
+U000185,Luxury,65+,Vienna,1,Silver,0.302,164,971,7,Single,"Restaurant,Bar,Concierge",2025-12-07,2025-12-09,2025-11-21,16,2
+U000186,Budget,65+,Paris,2,Silver,0.815,20,79,3,Double,"Bar,Concierge,Spa,Parking,Breakfast",2025-11-28,2025-11-29,2025-11-19,9,1
+U000187,Budget,26-35,Miami,3,Silver,0.897,20,76,5,Deluxe,"Parking,Breakfast,Conference Rooms",2025-09-13,2025-09-14,2025-08-17,27,1
+U000188,Luxury,18-25,Mumbai,2,Silver,0.2,132,784,6,Suite,"Restaurant,Spa,Gym",2026-01-02,2026-01-07,2025-07-07,179,5
+U000189,Leisure,65+,Miami,1,None,0.642,44,159,0,Single,"Beach Access,Pool,WiFi",2025-10-31,2025-11-02,2025-10-20,11,2
+U000190,Leisure,46-55,Sydney,2,None,0.507,66,243,2,Double,"Bar,WiFi",2025-10-18,2025-10-19,2025-09-18,30,1
+U000191,Leisure,56-65,Prague,2,None,0.559,60,220,0,Double,"Pool,WiFi,Bar,Concierge",2025-10-10,2025-10-15,2025-10-01,9,5
+U000192,Luxury,36-45,Istanbul,4,Platinum,0.206,206,1229,41,Suite,"Restaurant,Concierge,Bar",2025-11-08,2025-11-12,2025-09-14,55,4
+U000193,Budget,26-35,São Paulo,2,None,0.624,22,86,0,Double,"Balcony,Concierge,Breakfast",2025-12-06,2025-12-08,2025-10-27,40,2
+U000194,Family,46-55,Miami,4,None,0.708,82,298,1,Family,"Pool,Restaurant",2025-11-07,2025-11-10,2025-10-22,16,3
+U000195,Family,56-65,Mumbai,4,Gold,0.703,76,276,19,Family,"Breakfast,WiFi,Parking,Room Service,Restaurant",2025-12-16,2025-12-18,2025-12-13,3,2
+U000196,Business,26-35,Berlin,1,Platinum,0.492,77,339,42,Single,"Concierge,Parking,Gym,Room Service,Business Center",2025-10-28,2025-10-29,2025-10-22,6,1
+U000197,Luxury,46-55,Madrid,1,Silver,0.073,254,1522,6,Single,"Room Service,Bar",2025-09-08,2025-09-10,2025-07-09,61,2
+U000198,Business,56-65,Tokyo,1,None,0.257,111,494,1,Single,"WiFi,Room Service,Gym",2025-08-20,2025-08-28,2025-08-16,4,8
+U000199,Luxury,26-35,Sydney,1,Gold,0.34,162,958,9,Single,"Spa,Concierge",2025-10-02,2025-10-06,2025-07-30,64,4
+U000200,Business,18-25,Mumbai,1,None,0.414,61,272,1,Single,"Gym,Room Service,Concierge",2025-10-18,2025-10-21,2025-10-06,12,3
+U000201,Luxury,18-25,Bangkok,3,Platinum,0.371,124,736,34,Deluxe,"Gym,Restaurant,Room Service,Spa,Pet Friendly",2025-12-11,2025-12-14,2025-12-08,3,3
+U000202,Luxury,18-25,São Paulo,2,Gold,0.411,123,725,9,Double,"Spa,Room Service,Bar,Restaurant,WiFi,Concierge",2025-09-04,2025-09-06,2025-08-16,19,2
+U000203,Budget,56-65,London,1,None,0.619,29,114,1,Single,"Gym,Parking,Breakfast,Bar",2025-08-14,2025-08-15,2025-06-13,62,1
+U000204,Budget,46-55,Madrid,1,None,0.668,31,121,2,Single,"Breakfast,WiFi,Room Service",2026-01-12,2026-01-13,2025-12-09,34,1
+U000205,Family,56-65,Bangkok,5,None,0.618,78,286,1,Suite,"Restaurant,Kitchen,Breakfast,Pool,WiFi,Parking",2025-07-22,2025-07-26,2025-06-29,23,4
+U000206,Budget,26-35,Rome,3,Silver,0.712,21,82,6,Deluxe,"Balcony,Breakfast,Room Service,Restaurant",2025-09-12,2025-09-15,2025-08-25,18,3
+U000207,Family,36-45,Madrid,3,Silver,0.636,71,260,3,Family,"Airport Shuttle,Breakfast,Pool,Parking,Restaurant",2025-12-22,2025-12-28,2025-12-14,8,6
+U000208,Business,36-45,Amsterdam,1,Gold,0.396,97,430,12,Single,"Parking,Airport Shuttle,Balcony,WiFi,Room Service",2025-11-29,2025-12-03,2025-11-18,11,4
+U000209,Leisure,65+,Amsterdam,1,None,0.807,41,148,0,Single,"WiFi,Pool",2025-09-11,2025-09-13,2025-07-17,56,2
+U000210,Family,26-35,Sydney,3,None,0.632,58,213,0,Family,"Room Service,Pool,WiFi,Bar,Breakfast,Spa",2025-08-05,2025-08-13,2025-06-28,38,8
+U000211,Family,26-35,Rome,4,Silver,0.783,55,200,7,Family,"Breakfast,Parking,Gym,Pool",2025-09-06,2025-09-16,2025-07-22,46,10
+U000212,Family,65+,Barcelona,4,None,0.814,54,197,0,Family,"Breakfast,Restaurant",2025-12-16,2025-12-21,2025-11-17,29,5
+U000213,Luxury,18-25,Bangkok,1,Gold,0.326,126,749,9,Single,"Airport Shuttle,Business Center,Room Service,Spa,Concierge,Balcony",2025-11-02,2025-11-09,2025-08-28,66,7
+U000214,Leisure,36-45,Istanbul,2,None,0.651,53,194,2,Double,"WiFi,Bar",2025-09-15,2025-09-18,2025-09-14,1,3
+U000215,Business,65+,Paris,1,Gold,0.423,79,348,12,Single,"Room Service,WiFi,24h Front Desk,Gym,Pet Friendly",2025-09-23,2025-09-26,2025-09-01,22,3
+U000216,Budget,26-35,London,4,Silver,0.934,19,74,6,Suite,"Breakfast,Gym,Pool,Beach Access",2025-11-07,2025-11-09,2025-10-18,20,2
+U000217,Leisure,56-65,Bangkok,3,None,0.411,63,233,2,Deluxe,"Business Center,Bar,Gym,Spa",2025-10-04,2025-10-06,2025-09-09,25,2
+U000218,Business,46-55,Bangkok,1,Platinum,0.181,123,550,26,Single,"Gym,Conference Rooms,Breakfast,WiFi,Room Service,Parking",2025-07-27,2025-08-01,2025-07-20,7,5
+U000219,Family,46-55,Berlin,4,None,0.832,78,282,2,Family,"WiFi,Restaurant,Balcony,Pool,Breakfast,Pet Friendly",2025-11-16,2025-11-19,2025-10-29,18,3
+U000220,Business,56-65,Prague,1,Silver,0.239,111,497,8,Single,"Room Service,Parking,WiFi,Kitchen",2025-09-11,2025-09-14,2025-08-07,35,3
+U000221,Budget,46-55,New York,2,None,0.778,30,116,1,Double,"Breakfast,Parking,Pool,Spa,WiFi",2025-09-28,2025-09-30,2025-09-02,26,2
+U000222,Business,46-55,Prague,1,Gold,0.295,119,528,20,Single,"Balcony,WiFi,Gym",2025-09-10,2025-09-12,2025-08-22,19,2
+U000223,Business,46-55,Prague,1,Platinum,0.077,127,570,31,Single,"Laundry,Parking,WiFi,Gym,Restaurant,Room Service",2025-11-25,2025-11-27,2025-10-13,43,2
+U000224,Budget,36-45,Prague,1,Silver,0.844,25,95,8,Single,"Breakfast,Parking,Pet Friendly",2025-09-06,2025-09-08,2025-08-24,13,2
+U000225,Budget,65+,São Paulo,2,None,0.753,21,81,0,Double,"Business Center,WiFi,Laundry,Pool,Breakfast",2025-12-18,2025-12-20,2025-12-03,15,2
+U000226,Family,36-45,Los Angeles,4,Gold,0.735,69,249,11,Family,"Gym,Restaurant,Parking",2025-11-23,2025-11-27,2025-10-24,30,4
+U000227,Family,56-65,Singapore,4,None,0.538,81,295,1,Family,"WiFi,Restaurant,Breakfast",2025-12-24,2025-12-29,2025-12-10,14,5
+U000228,Business,26-35,Madrid,1,Gold,0.472,77,341,20,Single,"WiFi,Business Center,Gym,Restaurant",2025-12-16,2025-12-19,2025-12-13,3,3
+U000229,Leisure,65+,Madrid,1,None,0.624,44,160,2,Single,"Concierge,Bar,Pool,Beach Access,Spa",2025-11-15,2025-11-20,2025-11-07,8,5
+U000230,Budget,18-25,Dubai,3,Platinum,0.841,16,60,37,Deluxe,"Pet Friendly,WiFi,Parking",2025-07-22,2025-07-27,2025-07-05,17,5
+U000231,Luxury,36-45,Istanbul,1,Gold,0.3,200,1188,10,Single,"Restaurant,Concierge,Conference Rooms,Gym,Room Service,Bar",2025-08-13,2025-08-21,2025-07-25,19,8
+U000232,Budget,26-35,Madrid,1,None,0.846,20,78,2,Single,"Pool,WiFi,Room Service",2025-09-17,2025-09-19,2025-09-16,1,2
+U000233,Business,36-45,Barcelona,1,None,0.179,104,465,2,Single,"WiFi,Pet Friendly",2025-11-07,2025-11-10,2025-11-06,1,3
+U000234,Leisure,46-55,Rome,2,Silver,0.683,62,226,8,Double,"Beach Access,Bar",2025-11-25,2025-11-27,2025-11-10,15,2
+U000235,Leisure,18-25,London,3,Silver,0.705,33,120,8,Deluxe,"WiFi,Airport Shuttle",2025-09-20,2025-09-26,2025-09-09,11,6
+U000236,Leisure,26-35,Istanbul,4,None,0.685,43,156,0,Deluxe,"Pool,Pet Friendly",2025-12-29,2025-12-30,2025-11-30,29,1
+U000237,Leisure,26-35,Rome,1,None,0.611,44,161,1,Single,"Beach Access,WiFi",2025-09-09,2025-09-11,2025-08-29,11,2
+U000238,Luxury,26-35,Rome,1,None,0.429,157,925,1,Single,"Conference Rooms,Restaurant,Spa,Pet Friendly,Concierge",2025-12-31,2026-01-01,2025-12-21,10,1
+U000239,Family,65+,Dubai,4,None,0.796,55,198,1,Family,"Parking,Pool,Breakfast",2025-08-23,2025-08-24,2025-07-31,23,1
+U000240,Budget,56-65,Bangkok,2,None,0.81,27,105,0,Double,"Parking,24h Front Desk",2025-10-14,2025-10-16,2025-09-29,15,2
+U000241,Family,46-55,Singapore,3,None,0.595,85,313,2,Family,"Breakfast,WiFi,Kitchen,24h Front Desk,Pool",2025-10-17,2025-10-23,2025-10-15,2,6
+U000242,Budget,18-25,New York,2,Gold,0.824,16,61,12,Double,"Business Center,Breakfast,Concierge,Parking,Conference Rooms",2025-07-23,2025-07-27,2025-05-30,54,4
+U000243,Business,65+,Rome,1,Gold,0.294,82,365,9,Single,"Airport Shuttle,WiFi,Room Service,Business Center",2025-10-13,2025-10-16,2025-09-22,21,3
+U000244,Family,65+,Dubai,3,Silver,0.851,54,193,4,Family,"Beach Access,Restaurant,Parking,WiFi,Pool,Spa",2025-07-21,2025-07-26,2025-07-03,18,5
+U000245,Leisure,36-45,Tokyo,1,Silver,0.555,55,202,3,Single,"WiFi,Spa,Bar,Pool,Conference Rooms,Beach Access",2025-10-18,2025-10-23,2025-10-07,11,5
+U000246,Budget,46-55,Barcelona,2,None,0.63,32,123,2,Double,"Parking,WiFi,Breakfast",2025-07-27,2025-07-31,2025-07-24,3,4
+U000247,Family,56-65,London,5,Platinum,0.479,82,302,25,Suite,"Breakfast,Air Conditioning,Restaurant,Parking",2025-09-27,2025-10-03,2025-09-26,1,6
+U000248,Luxury,36-45,São Paulo,2,Gold,0.15,210,1254,18,Deluxe,"Concierge,Parking,Restaurant,Room Service,Bar,Spa",2025-10-21,2025-10-23,2025-10-17,4,2
+U000249,Leisure,56-65,Amsterdam,1,Platinum,0.414,63,233,45,Single,"Kitchen,Pet Friendly",2025-11-20,2025-11-22,2025-10-16,35,2
+U000250,Leisure,36-45,Barcelona,3,Silver,0.721,52,188,3,Suite,"WiFi,Bar,Spa,Conference Rooms",2025-12-30,2025-12-31,2025-12-23,7,1
+U000251,Leisure,56-65,Rome,3,None,0.38,64,236,2,Suite,"Conference Rooms,Pool,Bar,Breakfast",2025-11-05,2025-11-08,2025-09-24,42,3
+U000252,Leisure,46-55,Mumbai,2,None,0.52,66,242,0,Double,"Spa,Beach Access",2025-08-31,2025-09-02,2025-07-23,39,2
+U000253,Luxury,65+,Vienna,1,None,0.332,162,960,2,Single,"Room Service,Spa,Concierge,Bar",2025-10-07,2025-10-14,2025-09-25,12,7
+U000254,Family,26-35,Dubai,4,None,0.527,61,223,2,Family,"Beach Access,Airport Shuttle,Breakfast,Room Service",2025-07-31,2025-08-01,2025-07-01,30,1
+U000255,Budget,56-65,Vienna,1,Silver,0.809,27,105,7,Single,"Concierge,Breakfast",2025-11-09,2025-11-11,2025-10-29,11,2
+U000256,Luxury,18-25,Barcelona,4,Silver,0.28,128,762,7,Suite,"Business Center,Parking,Concierge,Bar,Restaurant",2025-08-04,2025-08-06,2025-07-23,12,2
+U000257,Luxury,46-55,Bangkok,3,Platinum,0.132,250,1491,43,Deluxe,"Room Service,Conference Rooms,Spa,Concierge",2025-09-11,2025-09-15,2025-09-04,7,4
+U000258,Luxury,18-25,Miami,1,Platinum,0.064,137,822,23,Single,"Parking,Spa,Bar,Room Service,Concierge",2026-01-10,2026-01-11,2025-12-05,36,1
+U000259,Business,36-45,Mumbai,1,None,0.362,98,435,1,Single,"Bar,Gym,Parking,Airport Shuttle,Business Center",2025-11-15,2025-11-24,2025-11-08,7,9
+U000260,Leisure,56-65,Dubai,1,None,0.444,62,230,0,Single,"Bar,Beach Access",2025-11-04,2025-11-06,2025-09-22,43,2
+U000261,Luxury,65+,Mumbai,1,Gold,0.257,166,988,12,Single,"Restaurant,Spa",2025-09-18,2025-09-21,2025-08-18,31,3
+U000262,Leisure,46-55,Miami,1,Silver,0.515,66,242,4,Single,"WiFi,Pool,Restaurant",2025-08-01,2025-08-03,2025-07-07,25,2
+U000263,Luxury,46-55,Bangkok,2,Silver,0.126,250,1494,8,Deluxe,"Conference Rooms,Spa,Business Center",2025-10-13,2025-10-18,2025-09-08,35,5
+U000264,Budget,65+,Paris,1,None,0.771,21,80,2,Single,"Breakfast,Pool,Parking",2025-08-23,2025-08-26,2025-07-09,45,3
+U000265,Leisure,36-45,Sydney,1,Gold,0.681,53,191,10,Single,"Spa,Balcony,Bar,Pool,Beach Access",2025-09-08,2025-09-10,2025-09-02,6,2
+U000266,Business,56-65,São Paulo,1,Platinum,0.336,108,480,43,Single,"WiFi,Room Service",2025-12-15,2025-12-19,2025-08-22,115,4
+U000267,Luxury,46-55,Amsterdam,3,None,0.193,245,1459,1,Deluxe,"Bar,Balcony,Room Service,Concierge,Spa",2025-12-19,2025-12-20,2025-12-06,13,1
+U000268,Leisure,65+,Berlin,2,None,0.45,47,172,1,Double,"Beach Access,Pool,WiFi,Pet Friendly,Bar,Spa",2025-09-11,2025-09-13,2025-06-23,80,2
+U000269,Budget,26-35,São Paulo,1,None,0.863,20,77,0,Single,"Breakfast,Conference Rooms",2025-09-08,2025-09-15,2025-08-16,23,7
+U000270,Budget,18-25,Los Angeles,4,Gold,0.737,16,63,19,Suite,"Bar,Breakfast,Parking,WiFi",2026-01-04,2026-01-11,2026-01-03,1,7
+U000271,Family,36-45,Barcelona,6,Platinum,0.988,62,221,24,Suite,"WiFi,Pet Friendly",2025-10-24,2025-10-26,2025-09-26,28,2
+U000272,Budget,18-25,São Paulo,2,Platinum,0.885,15,59,45,Double,"Business Center,24h Front Desk,Air Conditioning",2025-08-13,2025-08-15,2025-07-06,38,2
+U000273,Family,56-65,Dubai,3,Silver,0.688,76,277,3,Family,"WiFi,Gym,Parking",2025-09-02,2025-09-05,2025-08-23,10,3
+U000274,Leisure,56-65,Mumbai,2,None,0.394,63,235,0,Double,"Beach Access,Spa,Pool,WiFi,Bar,Kitchen",2025-11-19,2025-11-25,2025-11-18,1,6
+U000275,Leisure,18-25,Los Angeles,1,None,0.725,33,119,1,Single,"Laundry,WiFi,Beach Access,Spa,Pool",2025-08-22,2025-08-26,2025-08-02,20,4
+U000276,Luxury,26-35,Amsterdam,1,Gold,0.281,165,979,18,Single,"Spa,Restaurant,24h Front Desk",2025-08-17,2025-08-18,2025-07-29,19,1
+U000277,Leisure,46-55,Miami,3,None,0.477,67,246,1,Deluxe,"Balcony,WiFi,Bar",2026-01-05,2026-01-08,2025-12-02,34,3
+U000278,Leisure,18-25,Mumbai,2,Silver,0.672,34,122,7,Double,"Spa,WiFi,Bar,Pool,Beach Access,Conference Rooms",2025-11-16,2025-11-18,2025-10-12,35,2
+U000279,Leisure,18-25,Rome,4,None,0.718,33,120,1,Deluxe,"Beach Access,Pool,Room Service,Spa,WiFi,Bar",2025-11-24,2025-11-27,2025-11-17,7,3
+U000280,Luxury,56-65,Miami,1,Gold,0.14,230,1373,17,Single,"Spa,Laundry,Room Service,Concierge,Bar,WiFi",2025-07-29,2025-08-03,2025-07-19,10,5
+U000281,Business,46-55,Amsterdam,1,Gold,0.234,121,539,11,Single,"Gym,Room Service,Pet Friendly",2025-09-03,2025-09-06,2025-07-25,40,3
+U000282,Business,56-65,Istanbul,1,None,0.06,118,529,2,Single,"Business Center,Parking,Room Service",2025-08-11,2025-08-15,2025-08-06,5,4
+U000283,Business,18-25,London,1,Gold,0.625,57,249,10,Single,"Beach Access,Parking,Kitchen,Room Service",2025-11-24,2025-11-25,2025-11-17,7,1
+U000284,Family,46-55,Madrid,4,None,0.561,87,317,0,Family,"Parking,Pool,WiFi,Laundry,Restaurant,Conference Rooms",2025-07-27,2025-07-31,2025-07-01,26,4
+U000285,Business,65+,Istanbul,1,Silver,0.412,79,349,5,Single,"Room Service,Gym,Parking",2025-08-24,2025-08-26,2025-08-10,14,2
+U000286,Luxury,65+,Berlin,3,Platinum,0.292,164,975,36,Deluxe,"Pool,Bar,Concierge,Spa",2025-11-29,2025-12-01,2025-11-18,11,2
+U000287,Business,26-35,Singapore,1,Silver,0.398,79,351,8,Single,"Business Center,WiFi,Gym",2025-10-26,2025-11-01,2025-09-24,32,6
+U000288,Business,46-55,Barcelona,1,Silver,0.338,117,519,4,Single,"Parking,WiFi,Room Service",2026-01-03,2026-01-06,2025-12-14,20,3
+U000289,Business,56-65,Prague,1,Gold,0.09,117,524,11,Single,"Business Center,Parking,Room Service",2025-10-13,2025-10-16,2025-09-13,30,3
+U000290,Business,36-45,Rome,1,Gold,0.211,103,460,20,Single,"Parking,Business Center,Beach Access",2025-11-09,2025-11-10,2025-10-09,31,1
+U000291,Luxury,56-65,Amsterdam,2,None,0.263,221,1314,0,Double,"Spa,Concierge,Air Conditioning,Kitchen,Room Service",2025-09-19,2025-09-20,2025-08-14,36,1
+U000292,Family,65+,Los Angeles,3,Silver,0.79,55,199,5,Family,"Business Center,Breakfast",2025-07-28,2025-07-30,2025-05-28,61,2
+U000293,Budget,65+,Singapore,1,None,0.849,20,77,2,Single,"Business Center,Breakfast",2025-11-04,2025-11-11,2025-10-19,16,7
+U000294,Budget,56-65,Rome,1,Gold,0.643,29,113,15,Single,"Restaurant,Beach Access,Parking,Breakfast,WiFi",2025-12-06,2025-12-08,2025-11-09,27,2
+U000295,Leisure,18-25,Sydney,1,Gold,0.571,35,128,10,Single,"Concierge,Spa,Balcony",2025-09-02,2025-09-05,2025-07-31,33,3
+U000296,Leisure,46-55,Madrid,2,None,0.378,69,256,1,Double,"Pool,24h Front Desk,WiFi,Bar,Spa,Gym",2025-07-31,2025-08-03,2025-04-29,93,3
+U000297,Budget,36-45,Miami,1,Gold,0.987,23,89,14,Single,"Spa,Pet Friendly,WiFi,Breakfast",2025-12-05,2025-12-08,2025-10-30,36,3
+U000298,Business,65+,São Paulo,1,Gold,0.423,79,348,9,Single,"Parking,Beach Access,Room Service,WiFi,Business Center,Airport Shuttle",2025-09-08,2025-09-11,2025-08-04,35,3
+U000299,Leisure,56-65,Prague,1,None,0.523,61,223,2,Single,"Bar,Pool,WiFi,Spa,Kitchen,Beach Access",2025-09-07,2025-09-12,2025-07-12,57,5
+U000300,Leisure,65+,São Paulo,2,Silver,0.752,42,152,5,Double,"Gym,Pool,Business Center,Bar,WiFi,Conference Rooms",2025-07-23,2025-07-25,2025-07-17,6,2
+U000301,Leisure,65+,Rome,1,None,0.629,44,160,0,Single,"Breakfast,Air Conditioning,Bar,WiFi",2025-11-28,2025-11-29,2025-11-19,9,1
+U000302,Leisure,36-45,Bangkok,1,None,0.718,52,188,2,Single,"Pool,Beach Access,Bar",2025-12-31,2026-01-05,2025-12-23,8,5
+U000303,Luxury,65+,Los Angeles,2,Platinum,0.179,170,1015,43,Suite,"Room Service,Concierge,Balcony,Bar",2026-01-02,2026-01-07,2025-12-27,6,5
+U000304,Luxury,56-65,São Paulo,1,Gold,0.258,221,1316,9,Single,"Room Service,Gym,Kitchen,Concierge,Breakfast,Bar",2025-12-31,2026-01-02,2025-11-27,34,2
+U000305,Leisure,65+,Rome,3,Silver,0.81,41,148,3,Deluxe,"Beach Access,Bar,Pet Friendly,Breakfast,Spa,Pool",2025-09-26,2025-09-30,2025-09-21,5,4
+U000306,Family,36-45,Bangkok,3,Gold,0.727,69,250,10,Family,"WiFi,Gym,Parking,Breakfast",2025-11-01,2025-11-04,2025-10-30,2,3
+U000307,Budget,26-35,New York,1,Gold,0.782,21,80,18,Single,"Breakfast,Parking,Kitchen",2025-12-06,2025-12-09,2025-11-07,29,3
+U000308,Luxury,26-35,Los Angeles,1,Gold,0.006,180,1078,18,Single,"Concierge,Room Service,Restaurant,Spa,24h Front Desk,Balcony",2025-07-28,2025-07-30,2025-06-28,30,2
+U000309,Family,56-65,Rome,5,None,0.691,76,277,1,Suite,"Business Center,WiFi,Parking,24h Front Desk,Pool",2025-11-13,2025-11-17,2025-10-31,13,4
+U000310,Leisure,26-35,Barcelona,2,Gold,0.581,45,163,9,Double,"Spa,Beach Access",2025-09-03,2025-09-05,2025-08-17,17,2
+U000311,Luxury,18-25,Miami,2,None,0.187,132,788,1,Suite,"Room Service,WiFi",2025-09-25,2025-09-29,2025-09-06,19,4
+U000312,Luxury,56-65,Miami,3,Platinum,0.071,235,1406,44,Suite,"Concierge,WiFi,Restaurant,Bar",2025-08-10,2025-08-11,2025-08-02,8,1
+U000313,Family,56-65,Singapore,5,Gold,0.533,81,296,12,Suite,"Pool,Restaurant",2025-08-04,2025-08-09,2025-07-16,19,5
+U000314,Family,18-25,Berlin,3,None,0.799,43,154,1,Family,"Restaurant,Breakfast",2025-10-26,2025-10-29,2025-09-11,45,3
+U000315,Leisure,46-55,Dubai,1,Silver,0.483,67,245,4,Single,"Pool,Beach Access,Airport Shuttle,WiFi,Spa",2025-10-14,2025-10-16,2025-10-08,6,2
+U000316,Luxury,18-25,Barcelona,1,Gold,0.249,130,770,17,Single,"Kitchen,Air Conditioning,Concierge,Spa,Room Service",2025-08-10,2025-08-13,2025-07-20,21,3
+U000317,Family,65+,Los Angeles,4,None,0.671,58,210,0,Family,"Breakfast,Balcony,WiFi,Pool,Beach Access,Parking",2025-10-27,2025-10-28,2025-08-04,84,1
+U000318,Business,46-55,Miami,1,None,0.202,122,546,0,Single,"Parking,WiFi,Gym,Business Center",2025-08-04,2025-08-07,2025-05-24,72,3
+U000319,Luxury,65+,New York,2,Gold,0.247,167,991,15,Double,"Room Service,Bar,Restaurant,Concierge,Spa",2025-09-04,2025-09-06,2025-08-16,19,2
+U000320,Business,46-55,London,1,None,0.352,116,516,0,Single,"Restaurant,WiFi,Room Service",2025-08-28,2025-08-29,2025-07-20,39,1
+U000321,Luxury,56-65,Paris,1,Platinum,0.101,233,1392,32,Single,"Room Service,WiFi,Restaurant,24h Front Desk,Spa",2025-09-21,2025-09-25,2025-09-20,1,4
+U000322,Leisure,56-65,Prague,1,Gold,0.588,59,217,15,Single,"Spa,Balcony,Pool,Beach Access,Pet Friendly,WiFi",2025-11-07,2025-11-21,2025-11-03,4,14
+U000323,Family,36-45,São Paulo,4,None,0.752,68,247,2,Family,"Business Center,Room Service",2025-09-30,2025-10-01,2025-09-15,15,1
+U000324,Budget,26-35,Prague,1,None,0.821,20,78,0,Single,"Laundry,Parking",2025-12-28,2025-12-29,2025-12-13,15,1
+U000325,Family,56-65,New York,4,Silver,0.598,79,288,3,Family,"Parking,Spa,Breakfast,WiFi,Restaurant",2025-12-26,2025-12-27,2025-12-25,1,1
+U000326,Family,26-35,São Paulo,6,Gold,0.889,53,190,19,Suite,"Airport Shuttle,Room Service,WiFi,Breakfast",2025-11-29,2025-12-02,2025-11-25,4,3
+U000327,Luxury,46-55,Sydney,2,Gold,0.221,243,1445,17,Deluxe,"Restaurant,Room Service,Pool,Laundry,Bar",2025-10-08,2025-10-10,2025-09-21,17,2
+U000328,Family,46-55,Barcelona,6,None,0.491,89,326,2,Suite,"Restaurant,Pool",2025-08-02,2025-08-03,2025-07-07,26,1
+U000329,Leisure,56-65,New York,2,Gold,0.393,64,235,16,Double,"Pool,Beach Access,Spa,Concierge,24h Front Desk,WiFi",2025-11-21,2025-11-27,2025-11-20,1,6
+U000330,Leisure,26-35,Los Angeles,2,None,0.678,43,157,2,Double,"WiFi,Pool,Bar,Gym,Beach Access",2025-10-10,2025-10-13,2025-09-05,35,3
+U000331,Budget,46-55,Rome,2,None,0.774,30,116,1,Double,"Breakfast,24h Front Desk,WiFi,Bar",2026-01-06,2026-01-08,2025-12-07,30,2
+U000332,Luxury,26-35,Prague,1,Gold,0.326,162,963,16,Single,"Room Service,Spa,Restaurant,Pet Friendly",2025-09-12,2025-09-13,2025-08-14,29,1
+U000333,Business,65+,Los Angeles,1,None,0.263,83,369,0,Single,"Air Conditioning,Parking,WiFi,Room Service,Business Center,Gym",2025-08-16,2025-08-22,2025-08-11,5,6
+U000334,Business,46-55,Dubai,1,Platinum,0.304,118,526,38,Single,"WiFi,Business Center",2025-07-24,2025-07-26,2025-07-08,16,2
+U000335,Business,46-55,Prague,1,Gold,0.154,124,555,15,Single,"Parking,Conference Rooms,Airport Shuttle,Gym,Room Service,WiFi",2025-09-21,2025-09-22,2025-08-25,27,1
+U000336,Family,65+,Los Angeles,4,None,0.789,55,199,2,Family,"Airport Shuttle,Parking",2025-11-14,2025-11-15,2025-09-24,51,1
+U000337,Family,26-35,Berlin,4,None,0.909,52,188,2,Family,"Gym,Parking",2025-12-20,2025-12-23,2025-12-07,13,3
+U000338,Luxury,18-25,Amsterdam,2,Platinum,0.441,121,716,34,Deluxe,"Restaurant,Bar,Room Service,Spa,Pet Friendly,Concierge",2025-09-27,2025-09-29,2025-09-03,24,2
+U000339,Luxury,18-25,Tokyo,1,Silver,0.145,134,799,5,Single,"Gym,Bar,Spa,Room Service,Concierge",2025-09-23,2025-09-30,2025-09-10,13,7
+U000340,Luxury,26-35,Berlin,1,Silver,0.306,163,970,6,Single,"Spa,Laundry,Room Service,Restaurant",2025-10-07,2025-10-08,2025-09-29,8,1
+U000341,Budget,36-45,Istanbul,2,None,0.676,26,102,0,Double,"Balcony,Parking,WiFi,Beach Access",2026-01-10,2026-01-12,2025-11-17,54,2
+U000342,Luxury,65+,Bangkok,1,Platinum,0.048,177,1063,49,Single,"Airport Shuttle,Breakfast,Room Service,Beach Access,Restaurant,Spa",2025-11-23,2025-11-25,2025-10-26,28,2
+U000343,Budget,26-35,São Paulo,1,None,0.79,21,80,2,Single,"Breakfast,WiFi,Parking,Laundry,Spa",2025-09-30,2025-10-03,2025-09-05,25,3
+U000344,Family,36-45,Singapore,3,None,0.735,69,249,0,Family,"Room Service,Laundry,Conference Rooms,WiFi,Restaurant,Parking",2025-10-19,2025-10-21,2025-10-01,18,2
+U000345,Family,36-45,Tokyo,3,Silver,0.735,69,249,8,Family,"Breakfast,Restaurant,Laundry,Parking,Airport Shuttle,WiFi",2025-09-15,2025-09-19,2025-08-19,27,4
+U000346,Leisure,56-65,New York,2,Silver,0.243,67,248,4,Double,"Bar,WiFi,Kitchen,Beach Access,Conference Rooms",2025-11-17,2025-11-19,2025-11-12,5,2
+U000347,Budget,26-35,Los Angeles,3,Platinum,0.835,20,78,49,Suite,"WiFi,24h Front Desk,Parking,Breakfast,Pool",2025-07-26,2025-08-03,2025-07-19,7,8
+U000348,Budget,56-65,Los Angeles,2,None,0.831,27,104,1,Double,"Parking,Room Service,Spa,Breakfast",2025-08-20,2025-08-23,2025-07-11,40,3
+U000349,Leisure,26-35,Istanbul,2,Silver,0.667,43,157,3,Double,"Bar,Airport Shuttle,Laundry,WiFi,Spa,Beach Access",2025-09-29,2025-10-01,2025-09-20,9,2
+U000350,Family,65+,Dubai,3,Silver,0.741,56,203,7,Family,"WiFi,Restaurant,Balcony",2025-07-28,2025-07-30,2025-07-19,9,2
+U000351,Business,56-65,London,1,Silver,0.132,115,516,4,Single,"Gym,Kitchen,Business Center,Room Service",2025-09-14,2025-09-15,2025-09-13,1,1
+U000352,Budget,46-55,Mumbai,2,None,0.79,30,115,2,Double,"Air Conditioning,Parking,WiFi,Kitchen",2025-08-18,2025-08-25,2025-07-31,18,7
+U000353,Business,18-25,Singapore,1,None,0.145,67,300,2,Single,"Parking,Gym,Room Service,Pool,Business Center",2026-01-13,2026-01-14,2025-12-27,17,1
+U000354,Business,56-65,New York,1,Platinum,0.259,111,493,35,Single,"Conference Rooms,Room Service,WiFi",2025-11-11,2025-11-13,2025-11-01,10,2
+U000355,Family,36-45,London,3,Silver,0.714,69,251,8,Family,"Breakfast,Pool,Business Center,Parking,Kitchen",2025-07-24,2025-07-28,2025-07-09,15,4
+U000356,Budget,46-55,Istanbul,3,Silver,0.599,32,125,3,Deluxe,"Parking,WiFi,Conference Rooms",2025-08-09,2025-08-16,2025-07-29,11,7
+U000357,Family,18-25,Singapore,3,None,0.707,44,161,2,Family,"Pool,WiFi,Restaurant,Business Center",2025-11-15,2025-11-19,2025-10-26,20,4
+U000358,Business,46-55,Rome,1,Silver,0.32,118,523,6,Single,"Gym,Room Service,Business Center",2025-08-30,2025-08-31,2025-08-15,15,1
+U000359,Luxury,36-45,Miami,1,Gold,0.13,211,1263,12,Single,"Conference Rooms,Spa,Bar,Concierge,Restaurant",2025-12-23,2025-12-26,2025-11-06,47,3
+U000360,Luxury,56-65,Los Angeles,1,None,0.14,230,1373,0,Single,"Spa,Concierge,Restaurant,Room Service,Bar",2025-09-18,2025-09-19,2025-08-01,48,1
+U000361,Luxury,18-25,São Paulo,1,Silver,0.357,125,740,4,Single,"Gym,Room Service",2025-10-27,2025-11-03,2025-09-13,44,7
+U000362,Budget,36-45,Barcelona,3,None,0.812,25,96,0,Deluxe,"WiFi,Parking,24h Front Desk,Concierge",2025-12-05,2025-12-15,2025-11-28,7,10
+U000363,Luxury,46-55,New York,1,Silver,0.244,241,1433,5,Single,"Bar,Concierge,Pool,Room Service,Restaurant,Beach Access",2025-12-18,2025-12-19,2025-08-25,115,1
+U000364,Family,26-35,New York,6,None,0.802,55,198,1,Suite,"Restaurant,Kitchen,WiFi,Pool",2025-12-11,2025-12-12,2025-11-05,36,1
+U000365,Family,56-65,London,4,Silver,0.626,78,285,3,Family,"Pet Friendly,Pool,Breakfast,Parking,Kitchen",2025-10-26,2025-11-04,2025-10-02,24,9
+U000366,Family,56-65,Istanbul,6,None,0.672,77,279,1,Suite,"WiFi,Room Service,Parking,Breakfast,Pool",2025-12-19,2025-12-20,2025-11-05,44,1
+U000367,Leisure,46-55,Vienna,2,None,0.57,65,237,0,Double,"WiFi,Pool,Restaurant,Spa,Room Service,Balcony",2025-11-09,2025-11-11,2025-10-04,36,2
+U000368,Luxury,18-25,New York,1,Silver,0.378,124,734,4,Single,"Bar,Balcony",2025-12-05,2025-12-08,2025-08-01,126,3
+U000369,Family,26-35,Dubai,6,Platinum,0.637,58,213,44,Suite,"WiFi,Bar,Restaurant,Pool",2025-09-24,2025-10-01,2025-09-04,20,7
+U000370,Budget,26-35,Dubai,3,Silver,0.925,20,75,6,Deluxe,"Parking,Conference Rooms,Breakfast,Kitchen,Pet Friendly",2025-08-30,2025-09-02,2025-08-20,10,3
+U000371,Luxury,65+,Barcelona,1,Silver,0.121,173,1036,4,Single,"Bar,Room Service,Concierge,Beach Access",2025-10-01,2025-10-04,2025-06-26,97,3
+U000372,Budget,46-55,Mumbai,2,Silver,0.801,30,114,6,Double,"24h Front Desk,Pool,Breakfast",2025-12-28,2025-12-31,2025-11-20,38,3
+U000373,Business,46-55,Sydney,1,Silver,0.249,120,536,8,Single,"Spa,Gym,WiFi",2025-11-10,2025-11-16,2025-09-22,49,6
+U000374,Luxury,65+,New York,1,Gold,0.203,169,1007,18,Single,"Beach Access,Restaurant,Spa,Laundry,Bar,Room Service",2025-07-26,2025-07-27,2025-06-12,44,1
+U000375,Luxury,65+,Madrid,1,Silver,0.265,166,985,5,Single,"Parking,Spa,Airport Shuttle",2025-11-24,2025-11-26,2025-07-27,120,2
+U000376,Leisure,36-45,Rome,1,None,0.503,56,206,1,Single,"Room Service,Beach Access,Pool,Conference Rooms,Bar,WiFi",2025-12-08,2025-12-09,2025-12-07,1,1
+U000377,Budget,26-35,Dubai,2,None,0.753,21,81,1,Double,"Parking,WiFi",2025-08-18,2025-08-23,2025-05-31,79,5
+U000378,Family,18-25,Tokyo,4,None,0.794,43,154,0,Family,"Kitchen,Room Service",2025-10-02,2025-10-07,2025-09-26,6,5
+U000379,Leisure,36-45,Amsterdam,1,Silver,0.631,54,195,6,Single,"Beach Access,Pool,Balcony,Spa,WiFi",2025-12-15,2025-12-16,2025-12-06,9,1
+U000380,Budget,65+,Istanbul,3,Silver,0.873,20,77,8,Deluxe,"Gym,Spa",2025-11-23,2025-11-28,2025-11-22,1,5
+U000381,Family,65+,Mumbai,5,None,0.642,58,212,1,Suite,"Parking,Breakfast",2025-08-04,2025-08-05,2025-07-04,31,1
+U000382,Family,65+,Madrid,4,Platinum,0.66,58,211,49,Family,"Gym,Breakfast,Parking,Business Center,WiFi",2025-08-04,2025-08-06,2025-06-16,49,2
+U000383,Family,56-65,Amsterdam,5,Silver,0.563,80,292,6,Suite,"Breakfast,Beach Access,Pool,Business Center,Restaurant,WiFi",2025-09-01,2025-09-05,2025-08-28,4,4
+U000384,Luxury,26-35,Madrid,2,Gold,0.17,171,1019,9,Deluxe,"Kitchen,Bar,Business Center",2025-11-06,2025-11-09,2025-10-14,23,3
+U000385,Luxury,36-45,Dubai,2,Gold,0.101,213,1276,11,Suite,"Balcony,Bar",2025-10-25,2025-10-30,2025-07-29,88,5
+U000386,Budget,26-35,Istanbul,1,None,0.856,20,77,2,Single,"Parking,Breakfast,24h Front Desk,WiFi,Balcony",2025-11-08,2025-11-09,2025-10-30,9,1
+U000387,Luxury,26-35,São Paulo,1,Gold,0.307,163,969,13,Single,"Spa,Airport Shuttle,Room Service,Bar",2025-11-19,2025-11-20,2025-10-30,20,1
+U000388,Leisure,18-25,Miami,1,None,0.717,33,120,0,Single,"Airport Shuttle,Bar,Restaurant,Spa,WiFi",2025-11-03,2025-11-12,2025-09-21,43,9
+U000389,Luxury,26-35,Prague,1,None,0.247,167,991,2,Single,"Breakfast,Concierge,Room Service,Bar,Beach Access",2025-12-09,2025-12-18,2025-11-19,20,9
+U000390,Budget,18-25,Tokyo,2,Silver,0.82,16,61,3,Double,"Room Service,WiFi",2025-10-09,2025-10-11,2025-09-12,27,2
+U000391,Budget,18-25,Miami,1,Silver,0.95,15,57,6,Single,"Parking,WiFi,Breakfast,Pet Friendly",2025-11-01,2025-11-07,2025-10-03,29,6
+U000392,Luxury,56-65,Paris,4,Gold,0.048,237,1417,16,Deluxe,"Bar,Concierge,Room Service,Restaurant,Beach Access,Spa",2025-12-09,2025-12-11,2025-08-25,106,2
+U000393,Budget,36-45,Madrid,2,Platinum,0.994,23,88,26,Double,"Breakfast,WiFi,Parking,Airport Shuttle,Bar",2025-08-12,2025-08-15,2025-07-22,21,3
+U000394,Budget,26-35,São Paulo,3,None,0.925,20,75,1,Deluxe,"Breakfast,Pool",2025-12-31,2026-01-01,2025-12-15,16,1
+U000395,Budget,65+,Rome,2,None,0.817,20,79,0,Double,"Pool,Spa,Parking",2026-01-06,2026-01-12,2025-12-25,12,6
+U000396,Family,18-25,São Paulo,4,None,0.935,40,145,0,Family,"WiFi,Parking",2025-10-30,2025-11-01,2025-10-08,22,2
+U000397,Budget,36-45,Mumbai,3,None,0.875,24,94,2,Suite,"WiFi,Parking,Kitchen,Conference Rooms",2025-12-21,2025-12-24,2025-10-16,66,3
+U000398,Family,65+,Sydney,5,Silver,0.771,55,201,5,Suite,"Spa,WiFi,Breakfast",2025-07-29,2025-08-01,2025-06-04,55,3
+U000399,Luxury,26-35,Tokyo,3,None,0.23,168,997,0,Suite,"Spa,Room Service,Parking,Bar",2025-11-14,2025-11-17,2025-10-17,28,3
+U000400,Family,56-65,Amsterdam,4,None,0.529,81,296,0,Family,"Business Center,Parking,Breakfast,WiFi",2025-10-19,2025-10-21,2025-09-29,20,2
+U000401,Business,46-55,Tokyo,1,Silver,0.381,115,511,4,Single,"Business Center,Restaurant,Room Service",2025-11-25,2025-11-27,2025-10-28,28,2
+U000402,Family,46-55,Bangkok,5,Gold,0.679,83,302,14,Suite,"Parking,Pet Friendly,Pool,Breakfast,WiFi",2025-10-29,2025-10-31,2025-10-18,11,2
+U000403,Leisure,18-25,Prague,1,Gold,0.716,33,120,20,Single,"Balcony,Parking,Bar,Air Conditioning",2025-10-29,2025-10-30,2025-10-13,16,1
+U000404,Leisure,36-45,São Paulo,1,None,0.694,52,190,1,Single,"WiFi,24h Front Desk,Bar,Spa",2025-10-13,2025-10-15,2025-09-30,13,2
+U000405,Family,26-35,Vienna,5,Silver,0.649,58,212,7,Suite,"Breakfast,Spa,Parking,Restaurant",2025-09-19,2025-09-22,2025-09-13,6,3
+U000406,Family,56-65,São Paulo,4,None,0.285,88,326,1,Family,"WiFi,Pool",2025-09-10,2025-09-18,2025-08-30,11,8
+U000407,Family,26-35,Miami,3,None,0.65,58,211,2,Family,"Parking,Breakfast,Room Service",2025-08-26,2025-08-30,2025-08-18,8,4
+U000408,Business,26-35,São Paulo,1,Silver,0.308,82,363,8,Single,"Business Center,Restaurant,Room Service,Bar,Parking",2025-12-29,2025-12-30,2025-12-18,11,1
+U000409,Luxury,18-25,Amsterdam,1,Gold,0.351,125,742,15,Single,"Pool,Concierge",2025-11-08,2025-11-17,2025-11-05,3,9
+U000410,Business,46-55,Madrid,1,Gold,0.354,116,516,14,Single,"WiFi,Room Service",2025-09-14,2025-09-19,2025-08-19,26,5
+U000411,Family,18-25,Los Angeles,4,None,0.767,43,156,0,Family,"Business Center,Pool,Balcony,Breakfast",2026-01-12,2026-01-19,2025-10-06,98,7
+U000412,Leisure,65+,Berlin,1,Silver,0.625,44,160,3,Single,"Bar,Conference Rooms,Beach Access,WiFi,Spa,Pool",2025-09-05,2025-09-07,2025-08-16,20,2
+U000413,Luxury,46-55,Miami,2,Gold,0.19,245,1461,16,Double,"Concierge,WiFi",2025-09-21,2025-09-23,2025-08-03,49,2
+U000414,Luxury,56-65,Vienna,3,Gold,0.0,240,1440,20,Deluxe,"Business Center,Room Service",2025-09-05,2025-09-06,2025-08-26,10,1
+U000415,Leisure,65+,Istanbul,2,Gold,0.736,42,153,13,Double,"Pool,Airport Shuttle,Spa,Bar,WiFi,Beach Access",2025-12-22,2025-12-23,2025-11-29,23,1
+U000416,Luxury,46-55,Los Angeles,2,Silver,0.021,258,1549,7,Suite,"Bar,Restaurant",2025-12-16,2025-12-19,2025-11-14,32,3
+U000417,Family,18-25,São Paulo,4,Silver,0.834,42,152,7,Family,"Beach Access,Pool,WiFi,Restaurant",2025-09-28,2025-09-30,2025-09-04,24,2
+U000418,Leisure,36-45,Barcelona,2,Gold,0.446,57,211,10,Double,"Bar,Beach Access,24h Front Desk",2025-09-02,2025-09-06,2025-07-16,48,4
+U000419,Family,26-35,Amsterdam,4,None,0.747,56,203,0,Family,"Beach Access,24h Front Desk,Restaurant",2025-10-16,2025-10-17,2025-06-25,113,1
+U000420,Luxury,65+,Bangkok,1,Platinum,0.132,173,1033,38,Single,"Air Conditioning,Bar,Concierge,Room Service,Airport Shuttle,Breakfast",2025-09-19,2025-09-22,2025-09-02,17,3
+U000421,Luxury,46-55,London,3,Gold,0.201,244,1456,19,Deluxe,"Room Service,Bar,WiFi,Conference Rooms,Concierge",2025-12-12,2025-12-15,2025-10-05,68,3
+U000422,Family,46-55,Los Angeles,4,None,0.836,78,281,2,Family,"Pool,24h Front Desk,Parking,Breakfast,Restaurant,WiFi",2025-08-11,2025-08-17,2025-08-10,1,6
+U000423,Family,18-25,Dubai,5,Silver,0.736,44,158,6,Suite,"WiFi,Pool,Parking",2025-12-01,2025-12-02,2025-11-07,24,1
+U000424,Family,65+,Los Angeles,4,None,0.739,56,203,1,Family,"Pool,24h Front Desk,Laundry",2025-09-04,2025-09-08,2025-08-20,15,4
+U000425,Budget,46-55,Rome,1,None,0.706,31,119,2,Single,"WiFi,Breakfast,24h Front Desk,Gym",2025-10-14,2025-10-17,2025-07-20,86,3
+U000426,Family,18-25,Mumbai,6,Silver,0.799,43,154,7,Suite,"Restaurant,Gym,Parking",2025-12-09,2025-12-11,2025-09-25,75,2
+U000427,Family,36-45,Mumbai,3,None,0.786,67,243,2,Family,"Parking,Pool,Breakfast,WiFi,Pet Friendly",2026-01-06,2026-01-13,2025-11-15,52,7
+U000428,Leisure,56-65,Amsterdam,4,Silver,0.449,62,230,3,Suite,"Gym,WiFi,Beach Access,Spa,Bar",2025-10-07,2025-10-08,2025-09-08,29,1
+U000429,Budget,36-45,Istanbul,1,Silver,0.788,25,97,4,Single,"Air Conditioning,WiFi,Conference Rooms",2025-09-28,2025-10-01,2025-08-21,38,3
+U000430,Business,46-55,Barcelona,1,Gold,0.129,125,560,16,Single,"Business Center,Gym,Room Service",2025-08-04,2025-08-05,2025-07-09,26,1
+U000431,Luxury,56-65,Berlin,1,Gold,0.116,232,1384,18,Single,"Bar,Pool,Concierge,Room Service,Restaurant",2025-09-26,2025-10-01,2025-09-07,19,5
+U000432,Business,18-25,Singapore,1,Gold,0.196,66,294,16,Single,"Room Service,Business Center,Gym,Parking,Kitchen,WiFi",2025-11-05,2025-11-07,2025-11-02,3,2
+U000433,Family,46-55,Sydney,3,None,0.76,80,291,1,Family,"Pool,Airport Shuttle,WiFi",2025-10-26,2025-10-28,2025-10-12,14,2
+U000434,Budget,18-25,Tokyo,2,Gold,1.0,15,56,19,Double,"Bar,Business Center,Parking,WiFi,Breakfast",2025-08-03,2025-08-04,2025-07-30,4,1
+U000435,Family,36-45,Vienna,5,None,0.599,72,264,2,Suite,"Breakfast,Spa,Parking,Bar,WiFi,Pet Friendly",2026-01-13,2026-01-22,2025-10-22,83,9
+U000436,Business,26-35,Madrid,1,Gold,0.369,80,355,9,Single,"Room Service,Gym,Business Center",2025-09-28,2025-09-29,2025-09-19,9,1
+U000437,Budget,65+,Sydney,2,None,0.893,20,76,1,Double,"Air Conditioning,Parking,Breakfast,WiFi",2025-11-23,2025-11-25,2025-10-15,39,2
+U000438,Family,36-45,Los Angeles,3,Silver,0.694,70,254,4,Family,"Pool,Restaurant,WiFi,Concierge,Spa,Breakfast",2025-10-22,2025-10-25,2025-10-21,1,3
+U000439,Family,36-45,New York,4,None,0.613,72,263,2,Family,"Restaurant,Spa,Parking,Pool",2025-11-14,2025-11-16,2025-11-06,8,2
+U000440,Budget,36-45,Prague,4,None,0.914,24,92,0,Suite,"WiFi,Breakfast,24h Front Desk,Air Conditioning,Parking",2025-09-02,2025-09-08,2025-08-19,14,6
+U000441,Business,18-25,Rome,1,None,0.203,66,294,0,Single,"Business Center,Gym,Parking,WiFi,Airport Shuttle,Room Service",2025-10-15,2025-10-20,2025-10-14,1,5
+U000442,Business,26-35,Berlin,1,Gold,0.315,81,362,19,Single,"Beach Access,WiFi,Parking,Airport Shuttle,Business Center",2025-12-19,2025-12-22,2025-12-18,1,3
+U000443,Family,65+,Rome,5,Gold,0.804,55,198,11,Suite,"WiFi,Breakfast",2025-10-09,2025-10-11,2025-10-06,3,2
+U000444,Luxury,65+,London,1,Platinum,0.255,166,988,39,Single,"Bar,Concierge,Balcony",2025-09-02,2025-09-03,2025-05-23,102,1
+U000445,Family,46-55,Barcelona,4,Silver,0.764,80,291,6,Family,"Restaurant,Parking",2025-11-07,2025-11-08,2025-10-02,36,1
+U000446,Family,26-35,Rome,4,Silver,0.852,54,193,3,Family,"Airport Shuttle,Parking",2025-12-27,2025-12-31,2025-12-09,18,4
+U000447,Budget,65+,Mumbai,1,Silver,0.832,20,78,3,Single,"Airport Shuttle,WiFi",2025-12-27,2025-12-28,2025-12-05,22,1
+U000448,Family,56-65,New York,4,Gold,0.525,81,297,11,Family,"Kitchen,Pool,WiFi",2025-08-13,2025-08-27,2025-08-08,5,14
+U000449,Budget,26-35,Istanbul,2,None,0.978,19,73,2,Double,"Balcony,Breakfast,WiFi,Bar",2025-11-01,2025-11-04,2025-09-01,61,3
+U000450,Luxury,18-25,Dubai,2,Gold,0.497,119,701,10,Suite,"Restaurant,Room Service,Business Center,Pet Friendly,Bar,Spa",2025-09-05,2025-09-10,2025-08-20,16,5
+U000451,Luxury,36-45,Paris,2,Silver,0.163,209,1248,3,Suite,"Concierge,Room Service,Gym,Airport Shuttle",2025-12-17,2025-12-18,2025-12-09,8,1
+U000452,Budget,46-55,Barcelona,2,None,0.766,30,116,2,Double,"Laundry,WiFi,Bar,Spa",2026-01-12,2026-01-15,2025-12-01,42,3
+U000453,Business,65+,São Paulo,1,Silver,0.27,83,368,4,Single,"Beach Access,Room Service,Parking,WiFi,Gym,Business Center",2025-10-07,2025-10-08,2025-09-24,13,1
+U000454,Leisure,18-25,Miami,1,Gold,0.681,33,122,15,Single,"Pool,Spa,WiFi,Bar",2025-11-27,2025-11-28,2025-09-15,73,1
+U000455,Leisure,18-25,Paris,2,Silver,0.625,34,125,5,Double,"WiFi,Spa,Business Center,Pool,Beach Access",2025-11-10,2025-11-13,2025-10-27,14,3
+U000456,Luxury,65+,Paris,1,Gold,0.409,158,933,18,Single,"Bar,Concierge,WiFi,Room Service",2025-11-26,2025-11-27,2025-11-05,21,1
+U000457,Luxury,46-55,Istanbul,2,Gold,0.134,250,1490,18,Deluxe,"Gym,Airport Shuttle,Concierge,Restaurant,Bar,Pool",2025-08-15,2025-08-17,2025-08-04,11,2
+U000458,Business,26-35,Tokyo,1,Platinum,0.317,81,362,41,Single,"Business Center,WiFi,Parking",2025-11-14,2025-11-16,2025-11-04,10,2
+U000459,Leisure,65+,Tokyo,2,None,0.631,44,160,1,Double,"WiFi,Beach Access,Parking,Pool,Balcony",2025-09-08,2025-09-11,2025-08-28,11,3
+U000460,Budget,18-25,Barcelona,2,None,0.833,16,61,1,Double,"Parking,WiFi",2025-12-21,2025-12-26,2025-12-20,1,5
+U000461,Luxury,56-65,São Paulo,2,None,0.121,231,1382,1,Deluxe,"Concierge,Kitchen,Restaurant",2025-09-13,2025-09-15,2025-09-12,1,2
+U000462,Leisure,26-35,Barcelona,1,Silver,0.638,44,159,5,Single,"WiFi,24h Front Desk",2025-09-24,2025-09-27,2025-09-02,22,3
+U000463,Luxury,56-65,Singapore,1,Silver,0.04,237,1421,8,Single,"Bar,Spa",2025-09-18,2025-09-21,2025-08-07,42,3
+U000464,Business,65+,Istanbul,1,Platinum,0.43,78,347,34,Single,"Parking,WiFi",2025-08-11,2025-08-17,2025-08-10,1,6
+U000465,Leisure,26-35,London,3,None,0.628,44,160,2,Deluxe,"Bar,Air Conditioning,Pool,Beach Access,WiFi,Balcony",2025-08-04,2025-08-05,2025-06-08,57,1
+U000466,Budget,46-55,Mumbai,3,Silver,0.696,31,120,5,Deluxe,"Gym,Parking,Beach Access,WiFi",2025-10-07,2025-10-08,2025-09-16,21,1
+U000467,Luxury,65+,Vienna,4,Gold,0.221,168,1000,13,Suite,"Concierge,Room Service,Restaurant,Bar",2025-10-09,2025-10-19,2025-10-06,3,10
+U000468,Family,65+,Barcelona,4,None,0.923,52,187,0,Family,"Breakfast,Restaurant",2025-10-26,2025-10-28,2025-10-25,1,2
+U000469,Family,65+,Los Angeles,3,None,0.766,55,201,1,Family,"Spa,Pet Friendly,Laundry,Parking",2025-08-17,2025-08-20,2025-07-31,17,3
+U000470,Budget,46-55,Barcelona,1,Silver,0.774,30,116,3,Single,"Concierge,Parking,WiFi,Breakfast",2025-11-08,2025-11-12,2025-10-13,26,4
+U000471,Luxury,65+,New York,3,Gold,0.108,174,1041,10,Deluxe,"Parking,Kitchen,Spa,Restaurant,Bar",2025-10-23,2025-10-27,2025-10-12,11,4
+U000472,Leisure,56-65,Berlin,4,None,0.5,61,225,2,Deluxe,"Beach Access,Spa",2025-11-19,2025-11-23,2025-10-02,48,4
+U000473,Business,18-25,Madrid,1,None,0.434,61,269,2,Single,"WiFi,Conference Rooms,Gym",2026-01-07,2026-01-12,2025-12-26,12,5
+U000474,Business,56-65,London,1,None,0.0,120,540,1,Single,"Business Center,Room Service,Beach Access,WiFi,Parking,Gym",2025-12-17,2025-12-20,2025-11-08,39,3
+U000475,Family,56-65,Madrid,5,None,0.74,75,271,2,Suite,"Breakfast,Restaurant,Pool,Parking,WiFi",2025-08-27,2025-09-03,2025-07-25,33,7
+U000476,Family,26-35,Tokyo,4,Silver,0.622,59,214,5,Family,"WiFi,Concierge,Air Conditioning,Parking",2026-01-10,2026-01-16,2025-12-21,20,6
+U000477,Family,26-35,Madrid,4,Silver,0.648,58,212,8,Family,"Breakfast,Pool,WiFi,Restaurant,Spa,Parking",2025-08-23,2025-08-27,2025-06-29,55,4
+U000478,Family,65+,London,4,Gold,0.792,55,199,20,Family,"Parking,Restaurant",2026-01-06,2026-01-09,2025-10-28,70,3
+U000479,Business,18-25,New York,1,Gold,0.364,62,277,14,Single,"Bar,Gym,Business Center,WiFi,Beach Access",2025-10-16,2025-10-25,2025-10-10,6,9
+U000480,Business,36-45,Tokyo,1,Gold,0.22,103,459,19,Single,"Gym,Parking,Room Service,Beach Access,WiFi",2025-07-23,2025-07-25,2025-04-23,91,2
+U000481,Business,18-25,Prague,1,Silver,0.453,60,267,5,Single,"Laundry,Pet Friendly",2025-08-21,2025-08-24,2025-08-16,5,3
+U000482,Family,56-65,Vienna,4,Silver,0.578,79,291,3,Family,"Spa,Parking,Airport Shuttle",2025-08-12,2025-08-17,2025-07-21,22,5
+U000483,Family,65+,Mumbai,4,Silver,0.783,55,200,8,Family,"Breakfast,Pool,Airport Shuttle,Air Conditioning,Parking",2025-10-09,2025-10-14,2025-08-12,58,5
+U000484,Leisure,26-35,Amsterdam,1,Silver,0.759,42,151,8,Single,"Bar,Pool,Balcony",2025-09-09,2025-09-10,2025-08-06,34,1
+U000485,Luxury,46-55,Sydney,1,Platinum,0.01,259,1555,38,Single,"Room Service,Bar,Kitchen,Concierge,Conference Rooms,Spa",2025-12-15,2025-12-17,2025-11-28,17,2
+U000486,Luxury,26-35,Paris,3,Silver,0.566,149,876,3,Suite,"Concierge,Beach Access",2025-11-04,2025-11-07,2025-09-30,35,3
+U000487,Leisure,65+,Prague,1,Gold,0.644,44,159,20,Single,"Beach Access,Balcony,Pool",2025-12-05,2025-12-08,2025-11-08,27,3
+U000488,Business,65+,Dubai,1,Platinum,0.234,84,373,33,Single,"WiFi,Gym,Parking,Business Center,Room Service",2025-10-19,2025-10-21,2025-07-28,83,2
+U000489,Leisure,46-55,Dubai,1,None,0.519,66,242,0,Single,"Breakfast,Balcony,WiFi,Beach Access,Spa",2025-12-11,2025-12-17,2025-11-01,40,6
+U000490,Business,26-35,Amsterdam,1,Platinum,0.125,87,388,48,Single,"Balcony,Laundry,Parking,WiFi,Gym",2025-08-08,2025-08-13,2025-07-09,30,5
+U000491,Business,18-25,Bangkok,1,None,0.434,61,269,0,Single,"WiFi,Business Center,Gym,Room Service",2025-08-13,2025-08-15,2025-07-04,40,2
+U000492,Family,36-45,Paris,4,Silver,0.697,70,253,8,Family,"Restaurant,Parking,Kitchen,WiFi,Pool,Conference Rooms",2026-01-04,2026-01-05,2025-12-05,30,1
+U000493,Business,65+,Los Angeles,1,None,0.21,84,377,1,Single,"Business Center,Parking",2025-07-26,2025-07-30,2025-06-18,38,4
+U000494,Luxury,65+,Istanbul,1,Platinum,0.202,169,1007,38,Single,"Bar,Spa,Business Center,Concierge",2025-12-28,2025-12-30,2025-12-25,3,2
+U000495,Budget,18-25,Bangkok,2,Platinum,0.969,15,57,36,Double,"WiFi,Business Center",2025-10-11,2025-10-21,2025-09-19,22,10
+U000496,Business,56-65,Vienna,1,Silver,0.0,120,540,8,Single,"Bar,Business Center",2025-07-24,2025-07-26,2025-07-12,12,2
+U000497,Family,18-25,Madrid,4,None,0.883,41,148,2,Family,"Pool,WiFi,Parking",2025-11-30,2025-12-02,2025-10-26,35,2
+U000498,Luxury,46-55,Singapore,1,Gold,0.14,249,1487,10,Single,"Spa,Concierge,Balcony,Room Service",2025-08-21,2025-08-25,2025-06-05,77,4
+U000499,Budget,46-55,Dubai,3,None,0.814,29,114,1,Deluxe,"Balcony,Parking",2025-08-03,2025-08-06,2025-05-30,65,3
+U000500,Luxury,36-45,Istanbul,2,Silver,0.215,206,1225,6,Double,"WiFi,Restaurant,Bar,Pet Friendly",2025-08-14,2025-08-16,2025-06-13,62,2
+U000501,Business,65+,Dubai,1,Silver,0.404,79,350,3,Single,"Business Center,Parking,Bar,Room Service,WiFi",2025-10-27,2025-10-30,2025-10-26,1,3
+U000502,Luxury,36-45,São Paulo,2,Silver,0.129,212,1263,4,Deluxe,"Restaurant,Bar,Room Service,Air Conditioning,Concierge,Spa",2026-01-04,2026-01-09,2025-11-17,48,5
+U000503,Business,18-25,Mumbai,1,None,0.299,64,284,2,Single,"Room Service,Beach Access,Parking",2025-10-30,2025-11-03,2025-10-11,19,4
+U000504,Budget,46-55,Prague,1,Silver,0.733,30,118,7,Single,"Parking,Breakfast",2026-01-14,2026-01-23,2025-12-27,18,9
+U000505,Budget,46-55,London,1,Gold,0.76,30,116,10,Single,"Breakfast,WiFi,Pet Friendly",2025-10-03,2025-10-05,2025-09-17,16,2
+U000506,Family,65+,Barcelona,6,Silver,0.68,57,209,6,Suite,"Restaurant,Pool,Laundry",2026-01-11,2026-01-12,2025-10-17,86,1
+U000507,Leisure,36-45,New York,1,Silver,0.659,53,193,8,Single,"Concierge,Spa,Beach Access,Pet Friendly",2025-10-10,2025-10-16,2025-10-04,6,6
+U000508,Leisure,56-65,Mumbai,2,Silver,0.454,62,229,7,Double,"WiFi,Bar,Pool,Spa,Beach Access,Balcony",2025-09-26,2025-10-01,2025-09-16,10,5
+U000509,Leisure,46-55,Los Angeles,2,None,0.627,63,231,0,Double,"Spa,Pool",2025-08-13,2025-08-16,2025-07-16,28,3
+U000510,Leisure,36-45,London,1,None,0.45,57,210,0,Single,"Laundry,Spa,Room Service,Pool",2025-10-06,2025-10-08,2025-09-27,9,2
+U000511,Business,56-65,Mumbai,1,Gold,0.186,113,507,16,Single,"Spa,Parking",2025-12-02,2025-12-10,2025-11-08,24,8
+U000512,Leisure,26-35,London,1,None,0.668,43,157,1,Single,"Pool,Beach Access,Bar,Parking,Breakfast,Spa",2025-11-05,2025-11-13,2025-10-07,29,8
+U000513,Business,65+,Paris,1,Gold,0.162,86,383,10,Single,"Business Center,WiFi,Conference Rooms,Gym,24h Front Desk,Parking",2025-09-04,2025-09-13,2025-07-30,36,9
+U000514,Luxury,26-35,Istanbul,1,Silver,0.263,166,985,8,Single,"Spa,Restaurant,Room Service,Concierge,Bar,Beach Access",2025-12-05,2025-12-06,2025-10-29,37,1
+U000515,Luxury,36-45,Mumbai,2,Gold,0.097,214,1277,20,Double,"Concierge,Restaurant",2025-09-14,2025-09-16,2025-08-19,26,2
+U000516,Leisure,46-55,Prague,4,Silver,0.329,70,260,3,Suite,"WiFi,Bar,Air Conditioning,Spa,Beach Access",2025-08-12,2025-08-14,2025-07-08,35,2
+U000517,Business,26-35,Vienna,1,Platinum,0.427,78,347,35,Single,"WiFi,Pet Friendly",2025-09-23,2025-09-28,2025-08-22,32,5
+U000518,Luxury,56-65,London,2,Platinum,0.25,222,1320,45,Deluxe,"Restaurant,Balcony,Spa,Bar",2026-01-10,2026-01-12,2025-12-03,38,2
+U000519,Leisure,18-25,New York,2,None,0.884,31,111,0,Double,"Bar,Pool,Spa,Room Service",2025-12-27,2025-12-28,2025-12-13,14,1
+U000520,Business,26-35,Sydney,1,Platinum,0.296,82,365,36,Single,"WiFi,Business Center,Spa,Room Service,Parking,Balcony",2026-01-10,2026-01-15,2025-12-11,30,5
+U000521,Luxury,26-35,Bangkok,2,Platinum,0.267,166,984,40,Double,"Pet Friendly,Restaurant",2025-09-23,2025-09-24,2025-08-05,49,1
+U000522,Business,56-65,Bangkok,1,Silver,0.059,118,529,6,Single,"Pool,Room Service",2025-11-11,2025-11-17,2025-11-09,2,6
+U000523,Business,65+,Miami,1,Silver,0.328,81,361,7,Single,"Business Center,WiFi,Beach Access,Room Service,Bar,Gym",2025-11-15,2025-11-25,2025-09-15,61,10
+U000524,Budget,26-35,São Paulo,1,Silver,0.898,20,76,7,Single,"Breakfast,Pool,Kitchen",2025-11-16,2025-11-18,2025-09-18,59,2
+U000525,Luxury,26-35,Paris,2,Platinum,0.323,163,964,32,Deluxe,"Pool,Spa,Air Conditioning,Concierge",2025-08-09,2025-08-12,2025-07-28,12,3
+U000526,Budget,56-65,Sydney,2,Silver,0.776,28,107,8,Double,"Breakfast,Business Center",2025-12-07,2025-12-09,2025-09-22,76,2
+U000527,Business,46-55,Tokyo,1,Platinum,0.148,124,556,41,Single,"Business Center,WiFi",2025-07-28,2025-07-29,2025-06-25,33,1
+U000528,Budget,65+,Amsterdam,2,None,0.906,20,75,1,Double,"Kitchen,Parking,WiFi,Restaurant,Breakfast",2025-08-03,2025-08-05,2025-07-27,7,2
+U000529,Luxury,56-65,Los Angeles,2,Gold,0.153,229,1367,10,Deluxe,"Business Center,24h Front Desk,Spa,Laundry",2025-12-10,2025-12-16,2025-11-13,27,6
+U000530,Budget,65+,Paris,3,None,1.0,19,72,2,Suite,"Parking,24h Front Desk,Restaurant",2026-01-14,2026-01-15,2025-10-12,94,1
+U000531,Luxury,56-65,Madrid,1,Platinum,0.0,240,1440,46,Single,"Bar,Concierge,Room Service,Pet Friendly,Spa",2025-09-26,2025-09-28,2025-09-20,6,2
+U000532,Leisure,46-55,Istanbul,3,None,0.391,69,254,1,Suite,"Business Center,Spa",2025-10-15,2025-10-16,2025-07-23,84,1
+U000533,Business,36-45,New York,1,None,0.305,100,445,1,Single,"Room Service,Business Center",2026-01-12,2026-01-14,2025-12-15,28,2
+U000534,Leisure,65+,Dubai,3,None,0.583,45,163,1,Suite,"Concierge,Spa,Balcony,Beach Access,WiFi",2025-10-07,2025-10-10,2025-10-06,1,3
+U000535,Family,26-35,São Paulo,4,None,0.609,59,215,0,Family,"Restaurant,Parking,WiFi",2025-11-19,2025-11-22,2025-08-10,101,3
+U000536,Luxury,36-45,Los Angeles,3,Gold,0.073,215,1288,10,Suite,"Room Service,Restaurant,Bar,Spa,Business Center",2025-10-15,2025-10-18,2025-10-09,6,3
+U000537,Family,36-45,Singapore,4,Silver,0.74,68,249,8,Family,"Balcony,Bar,WiFi",2025-12-10,2025-12-20,2025-10-06,65,10
+U000538,Luxury,26-35,Dubai,1,Platinum,0.074,176,1053,30,Single,"Spa,Beach Access",2025-12-29,2026-01-01,2025-09-17,103,3
+U000539,Family,18-25,Paris,5,Silver,0.583,46,169,4,Suite,"Balcony,Pool,Pet Friendly",2025-10-12,2025-10-14,2025-10-07,5,2
+U000540,Budget,26-35,Sydney,1,Gold,0.76,21,81,20,Single,"Breakfast,Bar,Parking,WiFi,Balcony",2025-09-14,2025-09-17,2025-09-10,4,3
+U000541,Luxury,46-55,Dubai,2,Platinum,0.112,251,1502,33,Deluxe,"Spa,Restaurant",2025-12-14,2025-12-15,2025-11-13,31,1
+U000542,Leisure,65+,Rome,1,None,0.718,42,154,2,Single,"Pet Friendly,Breakfast,Bar,Pool",2025-10-20,2025-10-22,2025-10-13,7,2
+U000543,Family,56-65,Vienna,6,None,0.656,77,281,1,Suite,"Pool,Beach Access",2025-12-02,2025-12-04,2025-10-07,56,2
+U000544,Leisure,36-45,New York,2,None,0.608,54,197,1,Double,"WiFi,Conference Rooms,Bar,Pool",2025-08-15,2025-08-16,2025-08-10,5,1
+U000545,Family,36-45,Prague,4,None,0.729,69,250,0,Family,"Spa,WiFi,Breakfast,Restaurant,Pool",2025-12-09,2025-12-16,2025-11-21,18,7
+U000546,Family,18-25,Mumbai,3,None,0.674,45,163,0,Family,"WiFi,Restaurant",2025-08-24,2025-08-25,2025-06-10,75,1
+U000547,Leisure,46-55,Vienna,2,None,0.57,65,237,0,Double,"Bar,Beach Access,Spa,Pool,Balcony",2025-12-07,2025-12-09,2025-11-10,27,2
+U000548,Luxury,56-65,Miami,2,Silver,0.247,222,1321,5,Deluxe,"Conference Rooms,Spa",2025-12-15,2025-12-18,2025-11-18,27,3
+U000549,Luxury,18-25,Vienna,4,None,0.374,124,735,2,Deluxe,"Conference Rooms,Concierge,Spa,Parking",2025-11-11,2025-11-12,2025-10-23,19,1
+U000550,Luxury,36-45,Barcelona,2,Silver,0.489,188,1105,6,Suite,"Spa,Pet Friendly,Concierge,Bar",2026-01-13,2026-01-15,2025-12-14,30,2
+U000551,Leisure,56-65,São Paulo,1,None,0.553,60,220,2,Single,"Bar,WiFi,Beach Access,Parking,Pool",2025-12-26,2026-01-03,2025-12-08,18,8
+U000552,Business,56-65,Tokyo,1,Gold,0.222,112,500,10,Single,"Bar,Laundry",2025-10-26,2025-10-30,2025-09-05,51,4
+U000553,Family,65+,Paris,4,Silver,0.644,58,212,3,Family,"Restaurant,Beach Access,Parking,24h Front Desk",2025-08-05,2025-08-07,2025-07-08,28,2
+U000554,Leisure,56-65,Singapore,1,None,0.433,63,231,2,Single,"Beach Access,Bar",2025-08-18,2025-08-19,2025-07-22,27,1
+U000555,Family,46-55,Vienna,4,None,0.549,87,319,0,Family,"Parking,Beach Access,Pool,Restaurant,Breakfast",2026-01-09,2026-01-11,2025-12-25,15,2
+U000556,Family,18-25,Barcelona,3,None,0.631,45,166,0,Family,"Air Conditioning,Restaurant",2025-07-21,2025-07-22,2025-07-19,2,1
+U000557,Budget,65+,Mumbai,2,Silver,1.0,19,72,5,Double,"Parking,Breakfast,Bar,WiFi",2025-11-12,2025-11-15,2025-10-27,16,3
+U000558,Luxury,56-65,New York,1,Silver,0.189,226,1349,5,Single,"Bar,Room Service,Restaurant,Concierge",2025-11-12,2025-11-17,2025-08-30,74,5
+U000559,Luxury,56-65,Paris,1,Gold,0.17,228,1358,16,Single,"Restaurant,Kitchen,Spa,Bar",2025-09-29,2025-10-01,2025-07-21,70,2
+U000560,Budget,46-55,Amsterdam,1,None,0.733,30,118,2,Single,"Parking,Gym,WiFi,Concierge,Restaurant",2025-11-27,2025-11-28,2025-11-20,7,1
+U000561,Business,56-65,Vienna,1,None,0.272,110,491,0,Single,"Restaurant,WiFi",2025-11-23,2025-11-25,2025-11-02,21,2
+U000562,Family,56-65,Barcelona,4,Platinum,0.573,80,291,36,Family,"Conference Rooms,Laundry,WiFi,Breakfast,Parking",2025-10-16,2025-10-19,2025-06-07,131,3
+U000563,Leisure,36-45,New York,1,None,0.642,53,195,0,Single,"Conference Rooms,Beach Access,Laundry,Bar",2025-10-01,2025-10-02,2025-09-10,21,1
+U000564,Family,56-65,Istanbul,4,Gold,0.584,79,290,18,Family,"Room Service,Restaurant,Spa,Parking,WiFi,Breakfast",2025-09-20,2025-09-25,2025-08-16,35,5
+U000565,Luxury,65+,Istanbul,2,Gold,0.076,176,1053,16,Suite,"Balcony,WiFi,Room Service",2025-10-13,2025-10-18,2025-10-04,9,5
+U000566,Budget,26-35,Barcelona,2,Gold,0.891,20,76,15,Double,"WiFi,Airport Shuttle,Pool,Parking",2025-08-23,2025-08-24,2025-08-22,1,1
+U000567,Leisure,18-25,Tokyo,1,Gold,0.931,30,109,17,Single,"24h Front Desk,Bar,WiFi,Spa,Laundry,Pool",2025-10-26,2025-11-01,2025-09-14,42,6
+U000568,Family,65+,Paris,3,Silver,0.701,57,207,6,Family,"Restaurant,WiFi,Kitchen",2025-12-07,2025-12-10,2025-08-13,116,3
+U000569,Business,46-55,Rome,1,Silver,0.138,125,558,4,Single,"Room Service,WiFi,Gym,Business Center,Pet Friendly",2025-11-11,2025-11-12,2025-09-25,47,1
+U000570,Budget,56-65,Madrid,2,Gold,0.828,27,104,16,Double,"Bar,Breakfast,Room Service",2025-09-12,2025-09-15,2025-09-09,3,3
+U000571,Business,36-45,Los Angeles,1,Gold,0.28,101,449,10,Single,"WiFi,Parking,Gym,Concierge",2025-12-17,2025-12-20,2025-11-29,18,3
+U000572,Budget,65+,New York,2,Silver,0.81,20,79,4,Double,"Parking,Breakfast",2025-08-07,2025-08-08,2025-06-24,44,1
+U000573,Budget,36-45,Sydney,2,None,0.763,25,98,0,Double,"Parking,WiFi,Gym,Business Center,Breakfast",2025-09-03,2025-09-06,2025-08-09,25,3
+U000574,Family,36-45,Singapore,5,Gold,0.835,66,238,11,Suite,"WiFi,Breakfast,Balcony",2025-09-15,2025-09-17,2025-08-06,40,2
+U000575,Budget,26-35,Istanbul,3,None,0.755,21,81,2,Deluxe,"Bar,Breakfast,Parking,WiFi",2025-10-23,2025-10-25,2025-08-24,60,2
+U000576,Business,65+,Los Angeles,1,None,0.356,80,357,2,Single,"Room Service,Parking,Beach Access,Business Center,Laundry",2025-09-24,2025-09-30,2025-09-06,18,6
+U000577,Business,56-65,Prague,1,Gold,0.089,117,524,14,Single,"Beach Access,Room Service,Gym,Air Conditioning,Parking,WiFi",2025-07-29,2025-07-30,2025-07-24,5,1
+U000578,Budget,36-45,Madrid,2,None,0.732,26,100,1,Double,"Restaurant,Breakfast,WiFi,Laundry,Bar",2025-11-06,2025-11-07,2025-05-01,189,1
+U000579,Budget,26-35,Vienna,3,Gold,0.683,21,83,16,Deluxe,"WiFi,Parking",2025-10-28,2025-10-29,2025-09-18,40,1
+U000580,Family,26-35,Tokyo,3,None,0.843,54,194,1,Family,"Pool,Parking,Spa,WiFi,Restaurant",2026-01-10,2026-01-12,2025-11-01,70,2
+U000581,Budget,65+,Rome,1,None,0.765,21,80,0,Single,"Parking,24h Front Desk,Room Service,Breakfast,WiFi",2025-10-29,2025-11-01,2025-07-03,118,3
+U000582,Luxury,46-55,Barcelona,1,Gold,0.243,241,1433,20,Single,"Room Service,Concierge,Spa",2025-11-09,2025-11-11,2025-08-27,74,2
+U000583,Business,65+,São Paulo,1,Silver,0.295,82,365,7,Single,"Gym,WiFi,Room Service,Parking",2025-10-26,2025-10-27,2025-10-07,19,1
+U000584,Luxury,56-65,Barcelona,3,Gold,0.153,229,1367,15,Suite,"24h Front Desk,Restaurant,Spa,Concierge,Beach Access",2025-12-30,2026-01-03,2025-12-06,24,4
+U000585,Budget,46-55,Los Angeles,4,Silver,0.699,31,120,4,Suite,"Business Center,Parking",2025-10-10,2025-10-13,2025-09-16,24,3
+U000586,Budget,18-25,London,3,None,0.905,15,59,1,Deluxe,"Balcony,Laundry",2025-09-13,2025-09-16,2025-09-05,8,3
+U000587,Budget,65+,Dubai,3,Gold,0.788,21,80,20,Deluxe,"Airport Shuttle,Breakfast",2025-09-20,2025-09-21,2025-08-09,42,1
+U000588,Budget,36-45,Madrid,3,None,0.793,25,97,1,Suite,"Breakfast,Parking",2025-10-02,2025-10-07,2025-09-19,13,5
+U000589,Family,46-55,Rome,4,Silver,0.605,85,311,7,Family,"Airport Shuttle,Gym,Restaurant,Parking,WiFi",2025-09-19,2025-09-23,2025-09-05,14,4
+U000590,Budget,46-55,Barcelona,1,Silver,0.865,29,111,5,Single,"WiFi,Breakfast,Business Center,24h Front Desk,Airport Shuttle",2025-12-14,2025-12-23,2025-11-07,37,9
+U000591,Budget,36-45,Sydney,1,None,1.0,23,88,2,Single,"WiFi,Gym",2025-08-23,2025-08-25,2025-06-30,54,2
+U000592,Luxury,26-35,Sydney,2,Platinum,0.387,159,941,44,Suite,"Spa,Bar,Room Service,Concierge,Restaurant,Laundry",2025-08-16,2025-08-21,2025-07-23,24,5
+U000593,Business,56-65,Bangkok,1,Gold,0.228,112,499,9,Single,"WiFi,Pool,Room Service",2025-07-28,2025-08-04,2025-05-04,85,7
+U000594,Family,56-65,Barcelona,6,Platinum,0.755,74,269,35,Suite,"Spa,WiFi",2025-12-25,2025-12-29,2025-11-24,31,4
+U000595,Leisure,36-45,Istanbul,2,None,0.591,54,199,1,Double,"WiFi,Bar,Pool,Gym",2025-12-09,2025-12-11,2025-12-03,6,2
+U000596,Budget,46-55,Rome,3,None,0.653,31,122,2,Suite,"Parking,WiFi,Business Center",2026-01-07,2026-01-08,2025-11-10,58,1
+U000597,Business,65+,Los Angeles,1,Silver,0.384,80,353,7,Single,"Business Center,Room Service,Parking,Gym,Bar",2025-12-08,2025-12-13,2025-11-21,17,5
+U000598,Business,26-35,Paris,1,Silver,0.475,77,341,8,Single,"Balcony,Conference Rooms,Parking,WiFi,Room Service",2025-08-29,2025-09-02,2025-08-25,4,4
+U000599,Business,65+,Miami,1,Silver,0.286,82,366,3,Single,"Parking,Business Center,24h Front Desk,WiFi",2025-10-11,2025-10-12,2025-07-21,82,1
+U000600,Leisure,36-45,Paris,1,None,0.49,56,207,2,Single,"WiFi,Bar",2025-10-28,2025-10-31,2025-08-25,64,3
+U000601,Leisure,36-45,Vienna,3,Platinum,0.601,54,198,42,Deluxe,"Beach Access,WiFi",2025-09-12,2025-09-14,2025-08-05,38,2
+U000602,Business,26-35,Tokyo,1,Platinum,0.413,79,349,49,Single,"Gym,Parking,Room Service,WiFi",2025-11-08,2025-11-17,2025-09-30,39,9
+U000603,Business,46-55,São Paulo,1,None,0.336,117,519,0,Single,"Parking,Gym",2026-01-06,2026-01-09,2025-12-23,14,3
+U000604,Budget,56-65,Berlin,1,Gold,0.788,27,106,18,Single,"Parking,Breakfast,Gym,WiFi",2025-11-16,2025-11-26,2025-09-20,57,10
+U000605,Budget,56-65,Barcelona,3,None,0.803,27,105,2,Deluxe,"Breakfast,Concierge,WiFi,Room Service",2025-09-19,2025-09-23,2025-09-07,12,4
+U000606,Family,36-45,Miami,4,None,0.759,68,247,2,Family,"Breakfast,Pool,WiFi",2025-08-08,2025-08-10,2025-07-10,29,2
+U000607,Family,46-55,Madrid,5,Silver,0.53,87,321,3,Suite,"Pool,Room Service",2025-09-25,2025-09-28,2025-09-24,1,3
+U000608,Luxury,46-55,Miami,4,Silver,0.044,257,1537,3,Suite,"Restaurant,Room Service,Spa,Bar,Concierge",2025-09-13,2025-09-15,2025-08-29,15,2
+U000609,Leisure,65+,Dubai,1,Gold,0.645,44,159,17,Single,"Spa,WiFi,Beach Access,Bar,Pet Friendly,Restaurant",2025-08-21,2025-08-27,2025-08-09,12,6
+U000610,Business,46-55,Barcelona,1,Gold,0.242,121,538,13,Single,"Conference Rooms,Business Center,Parking",2025-08-12,2025-08-19,2025-07-29,14,7
+U000611,Family,36-45,São Paulo,4,None,0.666,70,257,2,Family,"Restaurant,Parking,Pet Friendly",2025-09-13,2025-09-18,2025-06-19,86,5
+U000612,Family,46-55,Barcelona,3,None,0.592,86,313,1,Family,"Breakfast,Balcony,WiFi,Parking,24h Front Desk,Pool",2025-09-11,2025-09-13,2025-09-06,5,2
+U000613,Business,46-55,London,1,Platinum,0.204,122,545,28,Single,"Gym,Business Center,Room Service,Bar,Parking",2025-10-22,2025-10-27,2025-10-02,20,5
+U000614,Business,36-45,Bangkok,1,Silver,0.377,98,433,4,Single,"Parking,Concierge,Gym,WiFi,Business Center",2025-10-13,2025-10-14,2025-10-03,10,1
+U000615,Budget,56-65,Rome,1,Silver,0.719,28,109,6,Single,"24h Front Desk,Parking,Breakfast",2025-09-01,2025-09-03,2025-08-27,5,2
+U000616,Family,65+,Singapore,4,Gold,0.739,56,203,12,Family,"Kitchen,Air Conditioning,Parking,Pool",2026-01-07,2026-01-11,2025-12-07,31,4
+U000617,Business,56-65,Vienna,1,Platinum,0.405,105,467,23,Single,"WiFi,Gym",2025-08-21,2025-08-23,2025-08-02,19,2
+U000618,Leisure,46-55,Miami,1,Silver,0.572,65,237,8,Single,"WiFi,Pet Friendly,Bar,Pool",2025-09-14,2025-09-19,2025-09-04,10,5
+U000619,Budget,26-35,Singapore,1,None,0.98,19,73,0,Single,"Pool,WiFi,Parking",2026-01-14,2026-01-16,2025-11-13,62,2
+U000620,Budget,65+,Sydney,2,None,0.815,20,79,2,Double,"Kitchen,Breakfast",2025-09-08,2025-09-11,2025-07-03,67,3
+U000621,Leisure,26-35,Amsterdam,2,Gold,0.608,44,161,20,Double,"WiFi,Bar,Spa,Beach Access",2025-11-14,2025-11-16,2025-08-17,89,2
+U000622,Leisure,36-45,Amsterdam,1,None,0.498,56,206,1,Single,"Business Center,Room Service,WiFi,Beach Access,Pool",2025-12-13,2025-12-20,2025-11-28,15,7
+U000623,Family,36-45,Amsterdam,3,Silver,0.716,69,251,6,Family,"Laundry,WiFi",2025-08-09,2025-08-12,2025-06-27,43,3
+U000624,Family,56-65,Istanbul,3,Platinum,0.604,79,288,37,Family,"Breakfast,Pool,Pet Friendly",2025-09-02,2025-09-04,2025-07-27,37,2
+U000625,Family,56-65,Dubai,5,None,0.527,81,297,1,Suite,"Parking,Restaurant",2025-11-26,2025-11-29,2025-11-22,4,3
+U000626,Luxury,56-65,Madrid,2,Gold,0.14,230,1373,16,Deluxe,"Business Center,Restaurant,Room Service,Bar,Spa,Beach Access",2025-09-12,2025-09-16,2025-08-15,28,4
+U000627,Business,26-35,London,1,None,0.337,81,359,1,Single,"Concierge,Parking,WiFi",2025-08-16,2025-08-19,2025-05-19,89,3
+U000628,Family,46-55,Amsterdam,3,Silver,0.528,88,321,3,Family,"Parking,Kitchen,Air Conditioning,Breakfast",2025-08-07,2025-08-12,2025-07-29,9,5
+U000629,Budget,36-45,Paris,1,None,0.777,25,98,2,Single,"Parking,Conference Rooms",2025-08-29,2025-09-04,2025-08-19,10,6
+U000630,Budget,18-25,Mumbai,3,None,1.0,15,56,2,Deluxe,"Parking,Breakfast",2025-11-04,2025-11-06,2025-10-16,19,2
+U000631,Luxury,65+,Los Angeles,2,Silver,0.073,176,1054,3,Deluxe,"Business Center,Restaurant,24h Front Desk,Spa,Breakfast,Room Service",2025-12-29,2025-12-31,2025-12-27,2,2
+U000632,Luxury,36-45,Madrid,1,Platinum,0.174,209,1243,33,Single,"Bar,Room Service,Spa",2025-10-26,2025-10-29,2025-10-11,15,3
+U000633,Business,26-35,Vienna,1,Silver,0.29,82,366,8,Single,"Spa,Room Service,Gym,Business Center",2025-12-13,2025-12-15,2025-11-08,35,2
+U000634,Budget,46-55,Dubai,1,None,0.763,30,116,2,Single,"Pet Friendly,Breakfast,Parking,WiFi,Business Center",2025-08-21,2025-08-23,2025-07-26,26,2
+U000635,Luxury,18-25,Rome,1,Gold,0.21,131,781,10,Single,"Room Service,Concierge",2025-07-25,2025-08-01,2025-07-01,24,7
+U000636,Budget,46-55,Barcelona,1,Silver,0.581,32,126,8,Single,"WiFi,Spa",2025-11-13,2025-11-27,2025-10-21,23,14
+U000637,Luxury,26-35,Bangkok,2,Platinum,0.304,164,971,45,Deluxe,"Pool,Room Service,Restaurant,Airport Shuttle,Spa,Concierge",2026-01-11,2026-01-18,2025-07-11,184,7
+U000638,Leisure,65+,Prague,3,None,0.694,43,156,2,Deluxe,"Bar,Spa,24h Front Desk,Air Conditioning",2025-07-27,2025-07-30,2025-06-28,29,3
+U000639,Budget,18-25,Dubai,2,None,0.948,15,57,2,Double,"Air Conditioning,Conference Rooms",2026-01-08,2026-01-10,2025-11-18,51,2
+U000640,Luxury,46-55,Paris,1,Platinum,0.107,252,1504,25,Single,"Pool,Spa,Concierge,Pet Friendly,Restaurant",2025-11-01,2025-11-08,2025-10-03,29,7
+U000641,Leisure,36-45,São Paulo,1,None,0.546,55,202,2,Single,"Spa,Pool,Bar,Beach Access",2025-11-01,2025-11-06,2025-10-23,9,5
+U000642,Luxury,18-25,Vienna,1,Gold,0.321,127,750,10,Single,"Restaurant,Concierge,Room Service,Bar,Spa",2025-12-22,2025-12-24,2025-12-09,13,2
+U000643,Leisure,26-35,Barcelona,2,None,0.687,43,156,1,Double,"Pet Friendly,Beach Access,Conference Rooms,Gym,Bar,Spa",2025-08-26,2025-08-30,2025-08-14,12,4
+U000644,Business,65+,Bangkok,1,Silver,0.412,79,349,6,Single,"Business Center,Spa",2025-07-21,2025-07-24,2025-07-20,1,3
+U000645,Business,26-35,New York,1,Platinum,0.277,83,368,39,Single,"Bar,Room Service,Gym,Parking,WiFi,Business Center",2025-10-22,2025-10-23,2025-10-11,11,1
+U000646,Family,56-65,Dubai,4,None,0.665,77,280,1,Family,"Parking,Conference Rooms,Breakfast,Restaurant",2025-12-28,2025-12-29,2025-08-15,135,1
+U000647,Leisure,46-55,Paris,1,Gold,0.504,66,243,13,Single,"Bar,Beach Access,Spa",2025-12-26,2025-12-29,2025-11-30,26,3
+U000648,Leisure,65+,Bangkok,1,None,0.441,47,173,0,Single,"Bar,WiFi,Beach Access,Pool",2025-07-25,2025-08-01,2025-04-28,88,7
+U000649,Family,36-45,Istanbul,4,Gold,0.756,68,247,12,Family,"Concierge,Air Conditioning",2025-09-29,2025-10-01,2025-09-25,4,2
+U000650,Leisure,26-35,London,2,None,0.753,42,152,0,Double,"Pool,Beach Access,24h Front Desk,WiFi,Restaurant,Bar",2025-08-28,2025-08-31,2025-07-06,53,3
+U000651,Luxury,36-45,New York,2,Silver,0.153,210,1253,4,Suite,"Pet Friendly,Spa",2025-09-12,2025-09-14,2025-08-02,41,2
+U000652,Budget,65+,Sydney,1,None,0.87,20,77,2,Single,"Parking,Restaurant,Breakfast",2025-11-07,2025-11-11,2025-09-28,40,4
+U000653,Leisure,36-45,Amsterdam,1,None,0.43,57,212,1,Single,"Breakfast,Pool",2025-10-10,2025-10-12,2025-09-22,18,2
+U000654,Luxury,18-25,Paris,2,Silver,0.119,135,807,7,Deluxe,"Room Service,Restaurant",2025-12-09,2025-12-12,2025-11-15,24,3
+U000655,Luxury,46-55,Los Angeles,2,Gold,0.14,249,1487,18,Deluxe,"Spa,Bar",2025-10-14,2025-10-17,2025-09-08,36,3
+U000656,Business,46-55,Los Angeles,1,Platinum,0.271,119,532,41,Single,"Pool,WiFi,Room Service,Parking,Business Center,Gym",2025-10-29,2025-11-01,2025-10-07,22,3
+U000657,Leisure,26-35,Prague,1,Silver,0.644,44,159,7,Single,"Restaurant,Beach Access,Pool,Bar,Spa",2025-08-13,2025-08-18,2025-07-16,28,5
+U000658,Family,26-35,New York,4,None,0.772,55,201,0,Family,"WiFi,Restaurant,Parking,Laundry,Pet Friendly,Pool",2025-12-28,2026-01-02,2025-12-01,27,5
+U000659,Business,26-35,Los Angeles,1,None,0.331,81,360,2,Single,"Concierge,Air Conditioning",2025-10-16,2025-10-19,2025-10-10,6,3
+U000660,Luxury,46-55,São Paulo,1,Gold,0.161,247,1476,10,Single,"Air Conditioning,Room Service,Restaurant,Concierge",2025-09-15,2025-09-16,2025-07-09,68,1
+U000661,Family,26-35,Madrid,3,None,0.712,57,206,0,Family,"Parking,WiFi,Restaurant,Beach Access",2026-01-14,2026-01-23,2025-12-08,37,9
+U000662,Luxury,65+,Miami,2,Platinum,0.297,164,973,44,Double,"Room Service,Restaurant,Balcony,Spa",2025-08-10,2025-08-13,2025-07-16,25,3
+U000663,Budget,56-65,Bangkok,1,None,0.655,29,113,1,Single,"Breakfast,WiFi,Pet Friendly",2025-12-06,2025-12-09,2025-11-28,8,3
+U000664,Budget,26-35,Barcelona,3,Platinum,0.856,20,77,45,Suite,"WiFi,Pet Friendly,Parking,Spa",2025-12-04,2025-12-06,2025-11-18,16,2
+U000665,Luxury,36-45,Vienna,2,Gold,0.278,202,1198,16,Suite,"Restaurant,Spa",2026-01-14,2026-01-15,2026-01-05,9,1
+U000666,Business,65+,Bangkok,1,None,0.329,81,361,1,Single,"Breakfast,Business Center,Parking,Gym,Room Service",2025-12-31,2026-01-01,2025-12-02,29,1
+U000667,Budget,56-65,Madrid,2,Platinum,0.733,28,109,34,Double,"Air Conditioning,Pool",2025-08-12,2025-08-14,2025-07-26,17,2
+U000668,Budget,26-35,London,1,Silver,0.986,19,73,3,Single,"WiFi,Airport Shuttle,Breakfast,Parking,Restaurant",2025-10-14,2025-10-15,2025-09-25,19,1
+U000669,Business,56-65,Amsterdam,1,Gold,0.179,114,508,13,Single,"Room Service,Business Center,Beach Access,WiFi",2026-01-08,2026-01-09,2025-12-27,12,1
+U000670,Luxury,65+,Istanbul,2,Gold,0.298,164,973,20,Deluxe,"Concierge,Restaurant,Room Service",2025-10-11,2025-10-12,2025-08-05,67,1
+U000671,Leisure,46-55,Berlin,3,None,0.444,68,249,1,Suite,"Beach Access,WiFi",2025-10-23,2025-10-25,2025-10-22,1,2
+U000672,Luxury,36-45,London,2,Silver,0.336,198,1172,7,Double,"Restaurant,Concierge,Bar,Room Service",2025-09-09,2025-09-10,2025-09-08,1,1
+U000673,Luxury,56-65,Berlin,1,Gold,0.22,224,1334,10,Single,"Bar,Room Service,Conference Rooms,Spa",2025-08-05,2025-08-06,2025-07-17,19,1
+U000674,Luxury,65+,Vienna,4,Gold,0.216,168,1002,13,Deluxe,"Concierge,WiFi,Bar",2026-01-03,2026-01-04,2025-12-27,7,1
+U000675,Business,26-35,Tokyo,1,Silver,0.315,81,362,5,Single,"Business Center,Breakfast,Pet Friendly",2025-08-15,2025-08-16,2025-08-09,6,1
+U000676,Business,26-35,Dubai,1,Gold,0.163,86,383,17,Single,"Business Center,Room Service,Parking,Gym",2025-09-12,2025-09-14,2025-09-08,4,2
+U000677,Leisure,56-65,Istanbul,2,Silver,0.38,64,236,8,Double,"Bar,Spa,Pool,WiFi,Concierge,Beach Access",2025-12-09,2025-12-11,2025-11-24,15,2
+U000678,Family,36-45,Miami,3,Silver,0.663,70,257,6,Family,"Pool,Restaurant,Breakfast",2025-11-26,2025-12-04,2025-10-30,27,8
+U000679,Business,65+,Dubai,1,Silver,0.462,78,343,4,Single,"Parking,Gym,Airport Shuttle,Business Center,WiFi",2025-08-11,2025-08-14,2025-08-10,1,3
+U000680,Budget,56-65,Bangkok,2,None,0.682,29,111,0,Double,"Beach Access,Airport Shuttle,WiFi,Parking,Breakfast",2025-09-26,2025-09-28,2025-08-28,29,2
+U000681,Luxury,36-45,London,3,Gold,0.213,206,1226,12,Suite,"Gym,Airport Shuttle,Bar,Restaurant,Laundry,Spa",2025-12-23,2025-12-30,2025-09-03,111,7
+U000682,Budget,26-35,Miami,2,None,0.88,20,76,1,Double,"Breakfast,Pet Friendly,Parking,Spa",2025-08-04,2025-08-06,2025-06-13,52,2
+U000683,Family,65+,Istanbul,3,Gold,0.626,58,214,20,Family,"Parking,Restaurant,WiFi",2025-12-11,2025-12-14,2025-11-09,32,3
+U000684,Leisure,36-45,Singapore,2,Silver,0.946,47,169,8,Double,"Pool,Breakfast,Beach Access",2025-12-21,2025-12-22,2025-12-19,2,1
+U000685,Family,36-45,Prague,4,Silver,0.613,72,263,7,Family,"Restaurant,Air Conditioning,WiFi",2025-09-01,2025-09-07,2025-06-22,71,6
+U000686,Leisure,18-25,Madrid,2,Gold,0.667,34,122,20,Double,"WiFi,Gym",2025-12-08,2025-12-11,2025-11-23,15,3
+U000687,Budget,56-65,São Paulo,1,None,0.446,31,123,2,Single,"WiFi,Business Center,Gym",2025-08-03,2025-08-05,2025-04-19,106,2
+U000688,Business,18-25,London,1,Gold,0.528,59,260,11,Single,"Business Center,WiFi,Parking,Bar,Pet Friendly,Room Service",2025-09-21,2025-09-22,2025-09-07,14,1
+U000689,Leisure,65+,Tokyo,3,Gold,0.695,43,156,10,Deluxe,"Spa,WiFi,Bar,Pool,Concierge,Beach Access",2025-08-19,2025-08-21,2025-07-02,48,2
+U000690,Budget,56-65,Singapore,1,None,0.721,28,109,2,Single,"WiFi,Pet Friendly,Parking",2025-10-26,2025-10-28,2025-10-25,1,2
+U000691,Business,65+,Tokyo,1,Gold,0.421,79,348,20,Single,"Business Center,Bar",2025-09-23,2025-10-01,2025-08-20,34,8
+U000692,Business,65+,Dubai,1,None,0.508,76,336,0,Single,"Concierge,Pool,Gym,Room Service,Parking",2025-09-11,2025-09-17,2025-09-06,5,6
+U000693,Leisure,46-55,Madrid,2,Silver,0.539,65,240,8,Double,"Beach Access,Bar",2025-10-16,2025-10-18,2025-10-12,4,2
+U000694,Leisure,46-55,Madrid,3,Silver,0.677,62,227,5,Suite,"Air Conditioning,Pool,Bar,Room Service,Beach Access",2025-11-19,2025-11-24,2025-10-18,32,5
+U000695,Leisure,56-65,London,2,Gold,0.689,57,208,10,Double,"Business Center,Pool,WiFi,Spa,Beach Access,Bar",2025-12-09,2025-12-12,2025-11-23,16,3
+U000696,Leisure,36-45,Bangkok,3,Platinum,0.607,54,197,31,Deluxe,"Beach Access,24h Front Desk,Breakfast,Pool",2025-10-27,2025-10-28,2025-10-06,21,1
+U000697,Business,46-55,Madrid,1,Gold,0.238,121,539,17,Single,"WiFi,Gym,Room Service,Business Center,Laundry",2025-11-27,2025-12-02,2025-11-16,11,5
+U000698,Luxury,56-65,Rome,1,Silver,0.11,232,1387,4,Single,"Bar,Gym,Spa,Room Service,Concierge,Pool",2025-12-17,2025-12-20,2025-12-06,11,3
+U000699,Business,36-45,São Paulo,1,Platinum,0.325,99,441,49,Single,"Room Service,Parking,Business Center,WiFi,Gym",2025-08-03,2025-08-04,2025-07-30,4,1
+U000700,Luxury,18-25,Vienna,2,Platinum,0.376,124,735,42,Deluxe,"Room Service,Spa",2025-12-04,2025-12-06,2025-11-29,5,2
+U000701,Luxury,18-25,Los Angeles,2,Platinum,0.328,126,748,29,Double,"Bar,Spa,Concierge,Restaurant",2025-11-30,2025-12-07,2025-11-20,10,7
+U000702,Business,56-65,Barcelona,1,Gold,0.126,115,517,10,Single,"Breakfast,Gym,WiFi,Business Center,Concierge,Room Service",2025-09-19,2025-09-20,2025-09-10,9,1
+U000703,Family,46-55,Vienna,4,Silver,0.601,85,312,5,Family,"Restaurant,WiFi,Pool,Room Service,Parking",2026-01-09,2026-01-10,2025-12-27,13,1
+U000704,Budget,56-65,Madrid,1,Silver,0.699,28,110,7,Single,"Parking,Pet Friendly,WiFi,Restaurant",2025-07-27,2025-07-28,2025-07-22,5,1
+U000705,Family,18-25,London,4,Silver,0.696,44,161,5,Family,"Parking,Spa,Breakfast,24h Front Desk",2025-10-12,2025-10-19,2025-09-03,39,7
+U000706,Luxury,46-55,Dubai,3,Gold,0.125,250,1495,19,Deluxe,"Balcony,Restaurant,Air Conditioning,Spa,Bar",2025-08-08,2025-08-17,2025-06-08,61,9
+U000707,Business,18-25,Bangkok,1,Silver,0.503,59,262,8,Single,"Gym,WiFi,Business Center,24h Front Desk,Kitchen,Room Service",2025-12-03,2025-12-13,2025-10-19,45,10
+U000708,Business,18-25,Prague,1,None,0.565,58,256,2,Single,"Parking,Spa,Room Service,Laundry,Business Center,Pool",2025-12-21,2025-12-24,2025-11-22,29,3
+U000709,Leisure,56-65,Miami,4,None,0.269,66,246,1,Suite,"Spa,WiFi,Bar,Laundry",2025-10-29,2025-11-03,2025-09-11,48,5
+U000710,Family,56-65,Madrid,4,None,0.647,77,282,0,Family,"Pool,WiFi,Restaurant,Balcony,Breakfast",2025-09-19,2025-09-22,2025-08-28,22,3
+U000711,Leisure,65+,Sydney,1,Silver,0.627,44,160,5,Single,"Pet Friendly,Beach Access,WiFi,Spa",2025-08-25,2025-08-29,2025-08-06,19,4
+U000712,Luxury,18-25,Tokyo,2,Silver,0.286,128,760,8,Double,"Bar,Restaurant,Room Service,Concierge,Breakfast,Spa",2025-12-30,2026-01-02,2025-07-09,174,3
+U000713,Business,36-45,Dubai,1,Silver,0.439,96,423,8,Single,"Breakfast,Parking,Room Service,Airport Shuttle,Gym",2025-11-05,2025-11-09,2025-11-02,3,4
+U000714,Leisure,18-25,Paris,2,None,0.541,35,129,2,Double,"Bar,Beach Access,Spa,Pool",2025-11-25,2025-11-27,2025-11-23,2,2
+U000715,Family,46-55,Paris,3,Platinum,0.63,84,308,28,Family,"Breakfast,Restaurant,Gym,Pool,WiFi",2025-12-29,2025-12-30,2025-12-28,1,1
+U000716,Budget,56-65,Miami,1,None,0.732,28,109,0,Single,"Spa,Beach Access,Parking",2026-01-06,2026-01-08,2025-12-02,35,2
+U000717,Family,26-35,Tokyo,6,Silver,0.857,53,193,6,Suite,"Parking,Business Center,WiFi,Restaurant,Breakfast",2025-11-18,2025-11-26,2025-10-31,18,8
+U000718,Business,56-65,Tokyo,1,Platinum,0.231,112,498,30,Single,"Airport Shuttle,WiFi,Gym",2025-07-26,2025-07-27,2025-06-01,55,1
+U000719,Budget,65+,Bangkok,1,Silver,0.865,20,77,3,Single,"WiFi,Parking,Conference Rooms,Restaurant",2025-11-20,2025-11-23,2025-09-27,54,3
+U000720,Business,56-65,Singapore,1,Silver,0.264,110,492,5,Single,"Gym,Room Service,Conference Rooms",2025-11-18,2025-11-19,2025-11-09,9,1
+U000721,Leisure,18-25,Madrid,3,Silver,0.65,34,123,3,Suite,"Spa,Bar,Kitchen,WiFi,Beach Access",2025-07-21,2025-07-29,2025-07-20,1,8
+U000722,Business,65+,New York,1,Platinum,0.333,81,360,48,Single,"Parking,24h Front Desk,WiFi,Room Service,Business Center,Gym",2025-09-05,2025-09-08,2025-08-07,29,3
+U000723,Leisure,65+,Prague,1,None,0.54,45,166,1,Single,"Pool,Bar,Spa,WiFi,Gym",2025-08-15,2025-08-18,2025-08-13,2,3
+U000724,Luxury,18-25,Barcelona,3,Gold,0.351,125,742,20,Deluxe,"Spa,Restaurant,Pool",2025-11-10,2025-11-17,2025-10-24,17,7
+U000725,Leisure,46-55,London,3,None,0.675,62,227,0,Suite,"Bar,Spa",2025-10-01,2025-10-11,2025-05-12,142,10
+U000726,Family,65+,Rome,4,None,0.84,54,194,1,Family,"Room Service,Pool",2026-01-05,2026-01-08,2025-10-04,93,3
+U000727,Leisure,65+,Rome,2,Platinum,0.592,44,163,25,Double,"Business Center,Beach Access,WiFi,Spa",2025-08-31,2025-09-04,2025-08-19,12,4
+U000728,Budget,36-45,Berlin,3,Silver,0.781,25,98,4,Deluxe,"Breakfast,Airport Shuttle",2025-11-27,2025-11-28,2025-08-21,98,1
+U000729,Family,26-35,Rome,4,Silver,0.685,57,208,5,Family,"WiFi,Gym,Balcony,Parking,Breakfast,Pool",2025-08-26,2025-08-29,2025-08-05,21,3
+U000730,Family,65+,Tokyo,4,Platinum,0.747,56,203,50,Family,"Kitchen,WiFi,Balcony,Pool,Parking,Restaurant",2025-09-09,2025-09-10,2025-08-24,16,1
+U000731,Business,65+,Sydney,1,None,0.517,76,335,1,Single,"WiFi,Business Center",2025-10-19,2025-10-22,2025-07-21,90,3
+U000732,Budget,56-65,Los Angeles,2,Gold,0.739,28,109,10,Double,"Balcony,WiFi,Breakfast,Gym",2025-08-18,2025-08-21,2025-05-29,81,3
+U000733,Luxury,18-25,Vienna,2,Silver,0.287,128,760,8,Suite,"Room Service,Concierge,Restaurant,Bar,Pool,Balcony",2025-10-22,2025-10-29,2025-10-10,12,7
+U000734,Leisure,65+,Miami,2,None,0.697,43,155,1,Double,"WiFi,Beach Access",2025-12-25,2026-01-03,2025-11-05,50,9
+U000735,Family,18-25,Amsterdam,6,Silver,0.792,43,155,6,Suite,"Parking,Breakfast,Bar,Restaurant",2025-08-25,2025-08-28,2025-06-26,60,3
+U000736,Leisure,46-55,Amsterdam,2,Silver,0.504,66,243,5,Double,"WiFi,Pool,Beach Access,Bar,Spa,Gym",2025-12-09,2025-12-10,2025-12-01,8,1
+U000737,Luxury,65+,Miami,2,Platinum,0.339,162,958,39,Deluxe,"Room Service,Bar,Restaurant,Conference Rooms,Concierge",2025-10-24,2025-11-01,2025-08-21,64,8
+U000738,Business,26-35,Rome,1,Gold,0.513,76,336,10,Single,"Restaurant,Gym,WiFi,Parking,Spa",2025-09-12,2025-09-14,2025-09-06,6,2
+U000739,Budget,65+,Barcelona,1,Silver,0.793,21,79,7,Single,"Airport Shuttle,Pet Friendly,Parking",2025-08-14,2025-08-15,2025-08-05,9,1
+U000740,Luxury,26-35,Miami,2,Platinum,0.229,168,998,39,Double,"Restaurant,Breakfast,Spa,Concierge,Room Service",2025-08-27,2025-09-04,2025-06-13,75,8
+U000741,Business,26-35,Istanbul,1,Silver,0.334,81,360,8,Single,"Restaurant,Parking,Gym,WiFi,Room Service,Air Conditioning",2025-11-20,2025-11-23,2025-10-24,27,3
+U000742,Business,65+,Dubai,1,None,0.422,79,348,0,Single,"Room Service,Balcony,Airport Shuttle,Gym,Parking",2026-01-06,2026-01-08,2025-12-22,15,2
+U000743,Business,26-35,Barcelona,1,Gold,0.103,87,391,15,Single,"Gym,Restaurant,24h Front Desk,WiFi,Business Center,Parking",2025-08-06,2025-08-07,2025-03-17,142,1
+U000744,Business,18-25,Bangkok,1,Platinum,0.353,63,278,40,Single,"Gym,Business Center",2025-10-28,2025-11-04,2025-10-27,1,7
+U000745,Budget,46-55,Dubai,3,None,0.69,31,120,0,Deluxe,"Breakfast,Gym,Kitchen",2026-01-02,2026-01-05,2025-12-26,7,3
+U000746,Leisure,65+,Madrid,2,None,0.752,42,152,0,Double,"Parking,Pool,Breakfast,WiFi,Beach Access",2025-12-07,2025-12-12,2025-10-10,58,5
+U000747,Family,56-65,São Paulo,3,None,0.668,77,280,1,Family,"Gym,Pool,Parking,WiFi,Balcony,Breakfast",2025-12-12,2025-12-13,2025-07-21,144,1
+U000748,Budget,26-35,London,1,None,0.951,19,74,0,Single,"Parking,WiFi",2025-08-30,2025-09-04,2025-08-16,14,5
+U000749,Family,56-65,Madrid,5,Silver,0.773,74,267,3,Suite,"Air Conditioning,Pool,24h Front Desk,WiFi,Breakfast",2025-07-20,2025-07-21,2025-05-20,61,1
+U000750,Luxury,36-45,Mumbai,1,Silver,0.166,209,1247,5,Single,"Balcony,Business Center,Room Service,Concierge,WiFi",2025-10-12,2025-10-14,2025-09-17,25,2
+U000751,Business,65+,Tokyo,1,Silver,0.436,78,346,3,Single,"Room Service,Gym",2025-08-02,2025-08-03,2025-07-29,4,1
+U000752,Family,26-35,Amsterdam,3,Silver,0.445,62,230,4,Family,"Parking,Beach Access,WiFi,Pool",2025-10-23,2025-10-24,2025-10-15,8,1
+U000753,Family,56-65,Amsterdam,3,None,0.607,79,287,2,Family,"Air Conditioning,24h Front Desk",2025-11-05,2025-11-07,2025-10-08,28,2
+U000754,Leisure,18-25,Tokyo,1,None,0.659,34,123,2,Single,"Beach Access,Spa",2025-11-15,2025-11-21,2025-11-06,9,6
+U000755,Budget,56-65,Mumbai,2,None,0.9,26,101,0,Double,"Breakfast,24h Front Desk,Parking,WiFi,Pet Friendly",2025-08-29,2025-09-02,2025-08-19,10,4
+U000756,Business,46-55,Miami,1,Gold,0.275,119,531,20,Single,"Beach Access,Parking,Gym,Room Service",2025-12-04,2025-12-06,2025-12-02,2,2
+U000757,Family,18-25,Istanbul,4,None,0.823,42,152,2,Family,"Parking,Breakfast,Pool,WiFi,24h Front Desk,Spa",2025-08-23,2025-08-26,2025-08-05,18,3
+U000758,Luxury,56-65,Los Angeles,1,Platinum,0.09,233,1397,35,Single,"Concierge,Bar,Gym,Restaurant,Room Service,Spa",2025-07-27,2025-07-28,2025-07-26,1,1
+U000759,Family,36-45,Paris,6,None,0.56,73,268,1,Suite,"Pool,Breakfast",2025-10-09,2025-10-12,2025-08-06,64,3
+U000760,Luxury,46-55,Barcelona,3,Platinum,0.107,252,1504,48,Deluxe,"Bar,Concierge,Beach Access",2025-11-30,2025-12-02,2025-10-29,32,2
+U000761,Budget,65+,Berlin,3,None,0.958,19,74,1,Suite,"Pool,Bar,WiFi,Beach Access",2025-09-09,2025-09-13,2025-07-10,61,4
+U000762,Budget,18-25,Amsterdam,2,None,0.762,16,63,0,Double,"Breakfast,Spa",2025-11-16,2025-11-17,2025-11-03,13,1
+U000763,Budget,46-55,São Paulo,1,Silver,0.581,32,126,5,Single,"Pool,Parking,Beach Access,Breakfast",2025-10-01,2025-10-03,2025-09-26,5,2
+U000764,Business,18-25,Prague,1,None,0.307,64,283,1,Single,"Parking,Beach Access,Business Center,Room Service,Gym",2025-11-19,2025-11-20,2025-11-02,17,1
+U000765,Business,18-25,Miami,1,Platinum,0.412,61,272,29,Single,"Pet Friendly,Room Service",2025-11-10,2025-11-16,2025-09-14,57,6
+U000766,Budget,36-45,Vienna,1,Gold,0.585,27,106,19,Single,"Spa,Parking",2025-09-03,2025-09-05,2025-08-09,25,2
+U000767,Leisure,46-55,Barcelona,1,None,0.724,61,222,2,Single,"WiFi,Pool,Beach Access,Air Conditioning,Gym,Bar",2025-11-20,2025-11-22,2025-09-30,51,2
+U000768,Budget,65+,New York,3,Platinum,0.752,21,81,35,Suite,"Parking,Spa,Breakfast,WiFi,Pet Friendly",2025-09-25,2025-09-28,2025-09-18,7,3
+U000769,Leisure,26-35,Singapore,1,Platinum,0.701,43,155,43,Single,"Laundry,Spa,Beach Access,Bar,Pool",2025-10-22,2025-10-30,2025-10-01,21,8
+U000770,Family,36-45,Singapore,4,Gold,0.8,67,242,19,Family,"Parking,Breakfast,WiFi,Restaurant",2025-10-31,2025-11-08,2025-10-11,20,8
+U000771,Luxury,18-25,São Paulo,2,Platinum,0.213,131,780,30,Deluxe,"Bar,Room Service,Spa,Concierge,Restaurant,Gym",2025-11-24,2025-11-26,2025-11-03,21,2
+U000772,Budget,65+,Bangkok,3,Silver,0.805,20,79,3,Deluxe,"Parking,Conference Rooms,Pet Friendly",2025-08-23,2025-08-26,2025-08-11,12,3
+U000773,Business,65+,São Paulo,1,None,0.291,82,366,0,Single,"Restaurant,Gym,Kitchen,Room Service",2026-01-06,2026-01-09,2025-11-03,64,3
+U000774,Family,18-25,Barcelona,5,None,1.0,39,140,1,Suite,"Balcony,Gym,Breakfast,WiFi",2025-09-16,2025-09-18,2025-07-21,57,2
+U000775,Business,26-35,Istanbul,1,Silver,0.181,85,381,5,Single,"Parking,Laundry,Room Service",2025-12-30,2026-01-02,2025-12-23,7,3
+U000776,Budget,26-35,Los Angeles,2,None,0.99,19,72,0,Double,"Laundry,WiFi,Air Conditioning",2025-09-03,2025-09-07,2025-06-28,67,4
+U000777,Family,56-65,Amsterdam,5,None,0.626,78,285,1,Suite,"Kitchen,Pool,Parking,Breakfast",2026-01-05,2026-01-12,2025-10-27,70,7
+U000778,Budget,18-25,New York,2,None,0.822,16,61,1,Double,"Pool,Parking,Restaurant,WiFi,Breakfast",2025-09-14,2025-09-16,2025-06-21,85,2
+U000779,Business,65+,Prague,1,Silver,0.489,77,339,3,Single,"Balcony,Business Center,Gym,Room Service,Pet Friendly",2025-11-26,2025-11-28,2025-11-07,19,2
+U000780,Business,18-25,Madrid,1,Platinum,0.355,63,278,32,Single,"WiFi,Beach Access,Parking,Gym",2025-10-22,2025-10-25,2025-09-23,29,3
+U000781,Budget,65+,New York,1,None,0.899,20,76,1,Single,"24h Front Desk,WiFi,Conference Rooms,Breakfast",2025-10-23,2025-10-28,2025-08-30,54,5
+U000782,Leisure,26-35,Mumbai,1,None,0.672,43,157,0,Single,"Gym,WiFi,Beach Access,Spa,Bar",2025-12-21,2025-12-23,2025-12-12,9,2
+U000783,Family,36-45,Miami,4,Silver,0.812,67,241,3,Family,"WiFi,Pool,Restaurant,24h Front Desk",2025-11-19,2025-11-21,2025-11-18,1,2
+U000784,Budget,56-65,Istanbul,1,None,0.743,28,108,1,Single,"Balcony,Restaurant,WiFi",2025-10-04,2025-10-10,2025-09-20,14,6
+U000785,Family,36-45,Prague,4,None,0.874,65,234,1,Family,"Laundry,Restaurant,Pool",2025-11-13,2025-11-16,2025-11-03,10,3
+U000786,Business,18-25,Amsterdam,1,Gold,0.513,59,261,17,Single,"Business Center,Air Conditioning,Kitchen,Parking",2025-09-27,2025-09-29,2025-07-30,59,2
+U000787,Family,65+,Tokyo,3,Gold,0.683,57,209,18,Family,"Pool,WiFi,Kitchen,Breakfast,24h Front Desk",2025-11-02,2025-11-04,2025-08-14,80,2
+U000788,Budget,36-45,Barcelona,1,None,0.886,24,93,1,Single,"WiFi,Pet Friendly",2025-10-21,2025-10-23,2025-10-19,2,2
+U000789,Business,36-45,São Paulo,1,Platinum,0.24,102,455,27,Single,"Room Service,Parking,Business Center,WiFi",2025-09-15,2025-09-18,2025-08-22,24,3
+U000790,Luxury,36-45,Sydney,1,Gold,0.121,212,1267,10,Single,"Breakfast,Spa,Concierge,Conference Rooms",2025-08-07,2025-08-15,2025-07-14,24,8
+U000791,Luxury,18-25,Los Angeles,2,Silver,0.352,125,741,5,Suite,"Restaurant,Conference Rooms,Bar,Room Service,Concierge",2025-08-31,2025-09-04,2025-08-30,1,4
+U000792,Luxury,65+,Los Angeles,2,None,0.202,169,1007,1,Double,"Balcony,Restaurant,Bar",2025-08-10,2025-08-14,2025-08-08,2,4
+U000793,Family,65+,Vienna,5,None,0.601,59,216,0,Suite,"Restaurant,Bar,Pool",2026-01-07,2026-01-08,2025-11-04,64,1
+U000794,Leisure,56-65,New York,2,Gold,0.573,60,218,14,Double,"WiFi,Air Conditioning,Spa,Beach Access,Bar,Breakfast",2026-01-10,2026-01-12,2025-12-19,22,2
+U000795,Budget,36-45,Tokyo,3,None,0.826,25,96,2,Suite,"Concierge,Air Conditioning,Parking,Airport Shuttle,Breakfast",2025-12-13,2025-12-16,2025-12-03,10,3
+U000796,Family,46-55,Paris,3,Silver,0.63,84,308,6,Family,"Conference Rooms,WiFi,Restaurant,Spa,Pool,24h Front Desk",2025-12-15,2025-12-16,2025-10-31,45,1
+U000797,Luxury,56-65,Vienna,4,Gold,0.176,227,1356,14,Deluxe,"Bar,Conference Rooms,Restaurant",2025-09-13,2025-09-16,2025-08-02,42,3
+U000798,Leisure,36-45,Singapore,2,None,0.557,55,202,2,Double,"Beach Access,Spa,Bar",2025-10-09,2025-10-12,2025-08-02,68,3
+U000799,Business,26-35,Dubai,1,Platinum,0.234,84,373,49,Single,"Gym,Parking,WiFi",2025-10-14,2025-10-17,2025-08-05,70,3
+U000800,Business,18-25,Madrid,1,Gold,0.275,64,286,13,Single,"Business Center,Room Service,Parking,Pool,WiFi",2025-09-21,2025-09-24,2025-09-11,10,3
+U000801,Leisure,18-25,São Paulo,4,Gold,0.778,32,117,9,Deluxe,"Spa,Beach Access,Bar",2025-09-06,2025-09-13,2025-07-24,44,7
+U000802,Business,46-55,Singapore,1,Silver,0.184,123,549,7,Single,"Business Center,Room Service",2025-11-25,2025-11-28,2025-11-17,8,3
+U000803,Luxury,56-65,Dubai,2,Gold,0.0,240,1440,19,Suite,"Balcony,Conference Rooms,Room Service,Bar,Spa",2025-10-10,2025-10-13,2025-09-18,22,3
+U000804,Leisure,46-55,Istanbul,1,Silver,0.6,64,234,7,Single,"Bar,WiFi",2025-08-11,2025-08-12,2025-08-08,3,1
+U000805,Leisure,46-55,Dubai,2,None,0.557,65,238,0,Double,"WiFi,Airport Shuttle",2025-08-23,2025-09-01,2025-08-16,7,9
+U000806,Family,65+,London,4,Platinum,0.757,56,202,29,Family,"Beach Access,Pool,Concierge,Parking",2025-10-18,2025-10-19,2025-09-15,33,1
+U000807,Family,26-35,Vienna,6,Platinum,0.687,57,208,23,Suite,"Parking,24h Front Desk,Restaurant,WiFi,Room Service,Pool",2025-09-19,2025-09-20,2025-08-14,36,1
+U000808,Luxury,56-65,Amsterdam,3,Gold,0.048,237,1417,18,Deluxe,"Bar,Spa",2025-11-25,2025-11-27,2025-11-04,21,2
+U000809,Business,26-35,New York,1,None,0.291,82,366,1,Single,"Gym,Room Service,Business Center,Laundry",2025-08-11,2025-08-16,2025-07-30,12,5
+U000810,Leisure,18-25,Istanbul,2,None,0.689,33,121,1,Double,"Beach Access,Kitchen,Spa",2025-09-25,2025-09-28,2025-08-04,52,3
+U000811,Budget,65+,London,1,Silver,0.867,20,77,7,Single,"Parking,Breakfast,Concierge,Laundry",2025-12-02,2025-12-03,2025-10-07,56,1
+U000812,Budget,65+,Prague,2,None,0.778,21,80,2,Double,"Business Center,Parking,WiFi",2025-10-05,2025-10-09,2025-08-09,57,4
+U000813,Luxury,46-55,Dubai,1,Platinum,0.162,247,1476,45,Single,"Pet Friendly,24h Front Desk,Bar,Concierge,Restaurant,Room Service",2025-12-03,2025-12-04,2025-11-22,11,1
+U000814,Business,46-55,Istanbul,1,None,0.091,126,567,1,Single,"Business Center,Parking,Pet Friendly,Room Service,WiFi,Gym",2025-08-13,2025-08-21,2025-07-17,27,8
+U000815,Leisure,56-65,Singapore,2,Silver,0.461,62,228,4,Double,"Room Service,Pool",2025-12-17,2025-12-18,2025-07-17,153,1
+U000816,Family,65+,Istanbul,4,Silver,0.882,53,191,6,Family,"Spa,Breakfast,Parking,Pool,Airport Shuttle,WiFi",2026-01-07,2026-01-09,2025-11-24,44,2
+U000817,Leisure,56-65,Barcelona,2,Silver,0.43,63,231,6,Double,"Spa,Beach Access,Gym,Air Conditioning",2025-10-21,2025-10-25,2025-08-13,69,4
+U000818,Budget,26-35,Sydney,1,None,0.911,20,75,2,Single,"Room Service,Parking,Balcony",2025-12-30,2026-01-06,2025-10-30,61,7
+U000819,Leisure,65+,Berlin,2,Silver,0.638,44,159,4,Double,"WiFi,Spa,Bar,Balcony",2025-12-23,2025-12-27,2025-11-11,42,4
+U000820,Luxury,56-65,São Paulo,1,Silver,0.1,233,1392,6,Single,"Concierge,Restaurant,Bar,Room Service,Conference Rooms",2026-01-03,2026-01-04,2025-12-10,24,1
+U000821,Family,65+,Paris,3,None,0.933,52,186,1,Family,"Pool,Parking,Restaurant,WiFi,Beach Access,Breakfast",2025-10-22,2025-10-29,2025-10-04,18,7
+U000822,Family,36-45,Mumbai,4,Platinum,0.613,72,263,37,Family,"WiFi,Restaurant",2025-11-13,2025-11-14,2025-11-12,1,1
+U000823,Business,46-55,New York,1,Silver,0.226,121,541,5,Single,"Parking,Room Service,Pet Friendly,WiFi,Business Center",2025-10-08,2025-10-10,2025-09-07,31,2
+U000824,Family,56-65,São Paulo,4,Silver,0.448,83,306,7,Family,"WiFi,Parking,Breakfast",2025-11-30,2025-12-04,2025-11-25,5,4
+U000825,Business,56-65,Bangkok,1,Gold,0.199,113,504,18,Single,"WiFi,Airport Shuttle,Gym,Parking",2025-09-03,2025-09-06,2025-07-25,40,3
+U000826,Business,56-65,Barcelona,1,Gold,0.221,112,500,17,Single,"Room Service,Gym,Breakfast,WiFi",2025-07-25,2025-07-27,2025-07-15,10,2
+U000827,Budget,65+,Miami,1,Silver,1.0,19,72,8,Single,"Parking,WiFi",2025-09-14,2025-09-15,2025-06-08,98,1
+U000828,Leisure,36-45,Dubai,1,None,0.439,57,211,1,Single,"WiFi,Spa,Beach Access",2025-09-10,2025-09-11,2025-09-01,9,1
+U000829,Family,18-25,New York,3,Gold,0.872,41,149,10,Family,"Pet Friendly,Restaurant,WiFi,Parking,Breakfast,Pool",2025-10-26,2025-10-29,2025-10-01,25,3
+U000830,Family,18-25,Barcelona,3,None,0.873,41,149,2,Family,"Airport Shuttle,Pet Friendly,WiFi,Parking,Pool",2025-08-30,2025-08-31,2025-08-26,4,1
+U000831,Budget,36-45,Singapore,2,None,0.772,25,98,1,Double,"Parking,Pool,Breakfast,WiFi,Kitchen",2026-01-08,2026-01-09,2025-11-10,59,1
+U000832,Business,26-35,New York,1,Platinum,0.061,88,397,49,Single,"Gym,WiFi,Room Service,Parking",2026-01-01,2026-01-02,2025-12-16,16,1
+U000833,Leisure,46-55,Madrid,1,None,0.589,64,235,1,Single,"Pool,Bar,Beach Access",2025-12-19,2025-12-20,2025-10-11,69,1
+U000834,Leisure,46-55,Vienna,2,None,0.441,68,250,1,Double,"Laundry,Pool,Beach Access",2025-10-07,2025-10-10,2025-09-11,26,3
+U000835,Business,56-65,Los Angeles,1,Gold,0.233,112,498,13,Single,"Parking,WiFi,Gym,Business Center,Beach Access",2025-07-31,2025-08-02,2025-07-28,3,2
+U000836,Family,36-45,Paris,5,Platinum,0.904,64,231,24,Suite,"Pool,Breakfast,Laundry,Restaurant",2025-11-06,2025-11-09,2025-10-06,31,3
+U000837,Budget,18-25,Madrid,3,Silver,0.927,15,58,3,Suite,"Breakfast,Concierge,Room Service,WiFi",2025-12-16,2025-12-21,2025-11-06,40,5
+U000838,Family,56-65,Los Angeles,4,None,0.555,80,293,1,Family,"WiFi,Pool,Parking",2025-09-20,2025-09-28,2025-09-09,11,8
+U000839,Business,56-65,Madrid,1,None,0.084,117,525,0,Single,"Parking,Conference Rooms,Gym",2025-09-08,2025-09-11,2025-08-20,19,3
+U000840,Luxury,26-35,Barcelona,1,Silver,0.134,173,1032,7,Single,"Gym,Parking,Laundry,Concierge",2025-11-28,2025-11-30,2025-11-12,16,2
+U000841,Family,18-25,Paris,3,None,0.815,42,153,0,Family,"Balcony,WiFi,Breakfast,Restaurant,Parking",2025-09-19,2025-09-25,2025-08-29,21,6
+U000842,Budget,46-55,Madrid,2,None,0.854,29,112,0,Double,"Breakfast,Gym,24h Front Desk,WiFi,Room Service",2025-10-07,2025-10-10,2025-09-12,25,3
+U000843,Budget,56-65,Istanbul,1,Silver,0.66,29,112,5,Single,"Breakfast,WiFi,Parking",2025-10-03,2025-10-06,2025-09-17,16,3
+U000844,Luxury,18-25,Amsterdam,1,Platinum,0.364,125,738,28,Single,"Parking,Concierge,Bar",2025-12-24,2025-12-25,2025-12-22,2,1
+U000845,Luxury,26-35,Singapore,1,Platinum,0.023,179,1072,38,Single,"Room Service,Restaurant,Bar,Spa,Concierge",2025-10-13,2025-10-19,2025-09-20,23,6
+U000846,Budget,56-65,Madrid,1,Platinum,0.774,28,107,40,Single,"Parking,Bar,Breakfast",2025-10-10,2025-10-14,2025-09-09,31,4
+U000847,Budget,18-25,Dubai,2,None,0.95,15,57,0,Double,"WiFi,Breakfast",2025-10-05,2025-10-10,2025-10-04,1,5
+U000848,Leisure,18-25,Los Angeles,2,Gold,0.946,30,108,14,Double,"Beach Access,Pet Friendly,Breakfast,Spa,Pool",2025-09-08,2025-09-10,2025-08-30,9,2
+U000849,Budget,56-65,Tokyo,1,Gold,0.702,28,110,18,Single,"Breakfast,Air Conditioning,WiFi,Parking,Laundry",2026-01-13,2026-01-18,2025-12-18,26,5
+U000850,Family,65+,Barcelona,4,None,0.764,56,201,1,Family,"WiFi,Business Center,Restaurant",2025-07-30,2025-07-31,2025-07-11,19,1
+U000851,Family,18-25,Amsterdam,6,Silver,0.812,42,153,3,Suite,"WiFi,Restaurant,Parking,Pool",2025-09-10,2025-09-13,2025-08-27,14,3
+U000852,Luxury,56-65,Vienna,1,Silver,0.059,236,1412,7,Single,"Spa,Concierge,Air Conditioning",2025-10-22,2025-10-25,2025-08-13,70,3
+U000853,Luxury,36-45,Paris,1,Platinum,0.133,211,1261,33,Single,"Spa,Room Service,Kitchen",2025-12-08,2025-12-13,2025-11-26,12,5
+U000854,Budget,56-65,Mumbai,2,None,0.737,28,109,2,Double,"24h Front Desk,WiFi,Conference Rooms",2025-08-31,2025-09-03,2025-07-05,57,3
+U000855,Business,56-65,Prague,1,Platinum,0.148,115,513,34,Single,"Pool,Parking,Room Service",2025-09-23,2025-09-25,2025-07-07,78,2
+U000856,Family,46-55,Amsterdam,3,Silver,0.461,90,330,4,Family,"Pet Friendly,Breakfast,Laundry,Pool,Restaurant",2025-11-20,2025-11-25,2025-10-30,21,5
+U000857,Business,46-55,Mumbai,1,Platinum,0.316,118,523,48,Single,"Business Center,Pool,Spa,Room Service,Gym,Parking",2025-12-25,2025-12-27,2025-12-23,2,2
+U000858,Family,36-45,Rome,4,Platinum,0.636,71,260,23,Family,"Kitchen,Parking,Breakfast,Restaurant",2025-07-28,2025-07-31,2025-07-23,5,3
+U000859,Family,65+,Vienna,4,Gold,0.683,57,208,12,Family,"Pool,Pet Friendly,Parking,Breakfast,Laundry,WiFi",2025-09-17,2025-09-23,2025-09-14,3,6
+U000860,Budget,46-55,Barcelona,1,Gold,0.779,30,115,20,Single,"24h Front Desk,Parking,Kitchen,WiFi,Restaurant",2025-10-14,2025-10-15,2025-09-30,14,1
+U000861,Luxury,56-65,Miami,3,Platinum,0.125,231,1380,40,Suite,"Restaurant,Balcony,Pet Friendly,Spa,Beach Access,Bar",2025-10-07,2025-10-10,2025-08-09,59,3
+U000862,Leisure,46-55,Miami,2,Silver,0.524,66,241,7,Double,"WiFi,Balcony,Gym,Bar",2025-08-31,2025-09-02,2025-06-22,70,2
+U000863,Luxury,18-25,Istanbul,2,Silver,0.233,130,775,7,Suite,"Bar,Concierge,Room Service,Restaurant,Laundry",2025-11-08,2025-11-10,2025-10-09,30,2
+U000864,Leisure,46-55,Paris,2,None,0.512,66,243,1,Double,"Spa,Breakfast,WiFi,Beach Access,Bar",2026-01-06,2026-01-11,2026-01-05,1,5
+U000865,Business,18-25,Mumbai,1,None,0.444,61,268,1,Single,"Laundry,WiFi,Gym,Room Service,Business Center,Parking",2025-08-21,2025-08-27,2025-07-08,44,6
+U000866,Leisure,46-55,Rome,1,None,0.803,59,214,1,Single,"WiFi,Bar,Conference Rooms,Pet Friendly,Spa,Pool",2025-11-01,2025-11-10,2025-06-28,126,9
+U000867,Luxury,36-45,New York,2,Gold,0.183,208,1239,10,Suite,"Restaurant,Spa,Bar,Pool,Room Service",2025-08-29,2025-08-30,2025-08-03,26,1
+U000868,Leisure,36-45,Los Angeles,1,None,0.598,54,198,0,Single,"WiFi,Pool,Beach Access,Gym,Spa,Bar",2025-12-18,2025-12-19,2025-11-24,24,1
+U000869,Business,56-65,Madrid,1,Gold,0.218,112,501,13,Single,"WiFi,Gym,Business Center,Parking,Air Conditioning",2025-11-18,2025-11-22,2025-11-07,11,4
+U000870,Budget,18-25,London,2,None,0.724,16,64,1,Double,"Bar,24h Front Desk,Balcony,WiFi,Parking",2025-08-10,2025-08-16,2025-06-29,42,6
+U000871,Leisure,18-25,New York,1,Platinum,0.731,33,119,24,Single,"Beach Access,Conference Rooms,Bar,WiFi,Pool",2025-11-16,2025-11-17,2025-11-10,6,1
+U000872,Budget,46-55,Tokyo,4,Silver,0.809,30,114,4,Suite,"Breakfast,Concierge",2025-11-15,2025-11-22,2025-10-31,15,7
+U000873,Business,36-45,Rome,1,Gold,0.238,102,456,17,Single,"Spa,Room Service,WiFi,Business Center",2025-09-22,2025-09-25,2025-09-18,4,3
+U000874,Luxury,18-25,Paris,1,Platinum,0.313,127,752,40,Single,"Restaurant,Bar,Gym",2025-08-14,2025-08-15,2025-07-15,30,1
+U000875,Family,36-45,Vienna,4,None,0.873,65,234,1,Family,"Restaurant,Breakfast,WiFi,Parking",2025-11-14,2025-11-16,2025-10-10,35,2
+U000876,Leisure,36-45,Prague,4,None,0.762,51,185,1,Suite,"Spa,Pool,WiFi,Concierge,Bar,Beach Access",2025-11-01,2025-11-04,2025-09-25,37,3
+U000877,Budget,46-55,Amsterdam,1,Silver,0.843,29,112,4,Single,"Parking,Pet Friendly,Breakfast,WiFi",2025-07-23,2025-07-24,2025-06-30,23,1
+U000878,Budget,36-45,Bangkok,2,Silver,0.695,26,101,7,Double,"Balcony,Conference Rooms,Breakfast,WiFi",2025-12-07,2025-12-09,2025-10-04,64,2
+U000879,Leisure,56-65,Bangkok,2,Gold,0.485,62,226,14,Double,"Beach Access,Breakfast",2025-07-24,2025-08-03,2025-05-28,57,10
+U000880,Leisure,36-45,Bangkok,1,Silver,0.497,56,207,3,Single,"Bar,Pool,WiFi",2025-12-22,2025-12-25,2025-08-25,119,3
+U000881,Leisure,65+,Singapore,2,Silver,0.646,44,159,5,Double,"Pool,Beach Access,Gym,Concierge,WiFi",2025-10-01,2025-10-08,2025-08-30,32,7
+U000882,Luxury,18-25,São Paulo,2,Platinum,0.446,121,715,36,Deluxe,"Concierge,Kitchen,Room Service",2025-08-06,2025-08-09,2025-07-31,6,3
+U000883,Luxury,56-65,New York,1,Platinum,0.277,220,1307,38,Single,"Concierge,Spa,Breakfast,Room Service,Restaurant,Gym",2025-12-18,2025-12-20,2025-12-04,14,2
+U000884,Budget,46-55,Los Angeles,2,Silver,0.68,31,121,5,Double,"Breakfast,Air Conditioning",2025-12-03,2025-12-12,2025-11-03,30,9
+U000885,Leisure,46-55,Miami,1,Gold,0.597,64,234,9,Single,"Laundry,Spa",2025-09-22,2025-09-25,2025-09-02,20,3
+U000886,Business,36-45,London,1,Silver,0.388,97,431,7,Single,"Gym,Room Service,Conference Rooms,Kitchen,WiFi,Business Center",2026-01-13,2026-01-17,2025-10-14,91,4
+U000887,Budget,46-55,Amsterdam,1,None,0.644,31,122,1,Single,"24h Front Desk,Parking,Breakfast,Air Conditioning,WiFi",2025-09-26,2025-09-27,2025-09-07,19,1
+U000888,Business,26-35,Barcelona,1,None,0.41,79,350,1,Single,"WiFi,Business Center,Room Service,Gym,Balcony",2025-12-15,2025-12-20,2025-12-05,10,5
+U000889,Business,18-25,New York,1,Gold,0.402,62,273,15,Single,"Room Service,Laundry,Air Conditioning",2025-12-15,2025-12-19,2025-09-12,94,4
+U000890,Leisure,36-45,Tokyo,2,None,0.581,54,200,2,Double,"Bar,Beach Access,Kitchen,Spa,WiFi",2025-11-04,2025-11-09,2025-10-04,31,5
+U000891,Family,36-45,Paris,6,Silver,0.574,73,267,5,Suite,"Restaurant,Kitchen,Breakfast,24h Front Desk,Pool",2025-08-01,2025-08-04,2025-06-06,56,3
+U000892,Luxury,26-35,Tokyo,4,None,0.107,174,1041,2,Suite,"Airport Shuttle,Spa",2025-11-24,2025-11-28,2025-10-24,31,4
+U000893,Luxury,36-45,New York,2,Platinum,0.296,200,1190,37,Suite,"Parking,Concierge,Spa,Pet Friendly",2025-07-29,2025-07-31,2025-06-26,33,2
+U000894,Business,36-45,New York,1,Platinum,0.271,101,450,27,Single,"Gym,Room Service,Bar",2025-10-28,2025-10-30,2025-10-22,6,2
+U000895,Budget,65+,London,1,None,0.804,20,79,1,Single,"Breakfast,Parking,Airport Shuttle,WiFi,Gym",2025-08-29,2025-09-01,2025-07-26,34,3
+U000896,Leisure,56-65,Singapore,4,None,0.658,58,211,1,Suite,"WiFi,Pool,Spa,Bar,Balcony,Beach Access",2025-09-28,2025-09-30,2025-09-21,7,2
+U000897,Leisure,65+,Barcelona,2,None,0.607,44,162,1,Double,"WiFi,Pool",2025-10-31,2025-11-02,2025-10-29,2,2
+U000898,Leisure,36-45,Berlin,2,None,0.623,54,196,0,Double,"Balcony,Pet Friendly,Concierge",2025-08-27,2025-08-29,2025-08-23,4,2
+U000899,Business,46-55,Singapore,1,Platinum,0.293,119,528,27,Single,"Pet Friendly,Room Service,Business Center,WiFi,Airport Shuttle",2025-08-19,2025-08-24,2025-06-19,61,5
+U000900,Leisure,26-35,Rome,2,None,0.627,44,160,0,Double,"Pool,Spa,Bar,WiFi",2025-12-29,2026-01-02,2025-11-30,29,4
+U000901,Business,56-65,Dubai,1,Gold,0.352,107,477,14,Single,"Business Center,Restaurant",2025-11-01,2025-11-04,2025-10-04,28,3
+U000902,Family,26-35,Amsterdam,4,None,0.839,54,194,1,Family,"Restaurant,Business Center,Pool",2025-10-04,2025-10-10,2025-10-03,1,6
+U000903,Family,18-25,Paris,3,Gold,0.75,43,157,16,Family,"Pool,WiFi,Breakfast,Beach Access",2026-01-02,2026-01-04,2025-12-04,29,2
+U000904,Luxury,46-55,Amsterdam,3,Gold,0.189,245,1461,11,Suite,"Room Service,Bar",2025-12-06,2025-12-08,2025-10-06,61,2
+U000905,Leisure,26-35,Amsterdam,1,Gold,0.638,44,159,17,Single,"Spa,WiFi,Beach Access,Conference Rooms",2025-09-02,2025-09-04,2025-08-24,9,2
+U000906,Luxury,18-25,Prague,2,Silver,0.283,128,761,7,Double,"Spa,Bar",2025-09-14,2025-09-16,2025-08-27,18,2
+U000907,Budget,18-25,Istanbul,1,None,0.971,15,57,2,Single,"Concierge,Breakfast,Parking,WiFi,Kitchen",2025-12-22,2025-12-27,2025-10-17,66,5
+U000908,Leisure,36-45,Los Angeles,1,Gold,0.471,57,209,15,Single,"Conference Rooms,WiFi,Spa,Beach Access,Pool",2025-08-20,2025-08-23,2025-08-07,13,3
+U000909,Business,46-55,Vienna,1,Silver,0.21,122,544,8,Single,"Parking,Business Center,Breakfast,Room Service",2026-01-12,2026-01-15,2025-12-29,14,3
+U000910,Luxury,18-25,Madrid,2,Gold,0.145,134,799,14,Suite,"Restaurant,Beach Access,Bar,Kitchen,Concierge,Room Service",2025-09-30,2025-10-01,2025-09-25,5,1
+U000911,Leisure,18-25,Prague,2,None,0.787,32,116,0,Double,"WiFi,Room Service,Spa,Bar,Beach Access,Pool",2025-09-22,2025-09-27,2025-07-29,55,5
+U000912,Business,46-55,Dubai,1,Platinum,0.127,125,560,40,Single,"Beach Access,Breakfast",2025-10-08,2025-10-14,2025-08-21,48,6
+U000913,Family,46-55,London,4,None,0.775,80,289,1,Family,"Parking,Breakfast,WiFi,Concierge,Pool,Restaurant",2025-08-30,2025-09-07,2025-07-30,31,8
+U000914,Budget,36-45,Prague,1,Silver,0.656,27,103,7,Single,"Breakfast,Pool,Conference Rooms",2025-11-04,2025-11-06,2025-10-18,17,2
+U000915,Family,56-65,Rome,5,Silver,0.534,81,296,4,Suite,"Pool,Breakfast",2025-12-09,2025-12-10,2025-12-08,1,1
+U000916,Family,46-55,Rome,6,Silver,0.825,78,283,7,Suite,"WiFi,Breakfast",2025-09-06,2025-09-13,2025-08-23,14,7
+U000917,Leisure,36-45,Madrid,2,None,0.628,54,196,1,Double,"Parking,Beach Access,WiFi,Spa,Bar",2025-07-22,2025-07-26,2025-07-21,1,4
+U000918,Leisure,26-35,Tokyo,1,Platinum,0.715,42,154,32,Single,"Spa,Bar",2025-07-27,2025-07-30,2025-06-25,32,3
+U000919,Leisure,65+,Mumbai,3,Platinum,0.683,43,156,31,Suite,"Room Service,Airport Shuttle,Pool,Spa",2025-12-31,2026-01-02,2025-11-19,42,2
+U000920,Luxury,26-35,Mumbai,1,Silver,0.21,169,1004,5,Single,"Room Service,Business Center,Bar,Airport Shuttle,Restaurant",2025-07-23,2025-07-26,2025-05-24,60,3
+U000921,Budget,18-25,Amsterdam,2,Platinum,1.0,15,56,40,Double,"Spa,Beach Access",2025-12-13,2025-12-14,2025-12-07,6,1
+U000922,Leisure,56-65,Miami,2,Silver,0.727,56,205,6,Double,"Pet Friendly,Parking,Business Center",2025-10-30,2025-11-05,2025-10-09,21,6
+U000923,Family,26-35,Vienna,4,None,0.792,55,199,0,Family,"Parking,Breakfast,WiFi",2025-08-08,2025-08-18,2025-07-25,14,10
+U000924,Family,36-45,New York,4,Gold,0.624,72,261,9,Family,"Restaurant,Parking,Balcony,Gym,Breakfast",2025-10-25,2025-11-01,2025-09-24,31,7
+U000925,Family,36-45,São Paulo,4,Silver,0.664,70,257,5,Family,"Pool,Breakfast",2025-10-05,2025-10-08,2025-09-24,11,3
+U000926,Family,46-55,Singapore,3,Silver,0.639,84,307,4,Family,"WiFi,Parking,Restaurant",2025-12-20,2025-12-21,2025-11-04,46,1
+U000927,Budget,18-25,Madrid,2,None,1.0,15,56,0,Double,"Parking,Air Conditioning",2025-10-22,2025-10-28,2025-10-20,2,6
+U000928,Family,36-45,São Paulo,3,Silver,0.689,70,254,4,Family,"Restaurant,Breakfast,Business Center,Pool",2025-07-28,2025-07-30,2025-05-30,59,2
+U000929,Luxury,18-25,Rome,2,None,0.173,133,792,2,Double,"Concierge,Laundry,Restaurant,Breakfast,Kitchen",2025-08-19,2025-08-20,2025-06-25,55,1
+U000930,Luxury,36-45,Amsterdam,3,Platinum,0.172,209,1245,24,Suite,"Spa,Room Service",2025-09-12,2025-09-14,2025-09-07,5,2
+U000931,Budget,46-55,Dubai,2,None,0.882,29,110,2,Double,"Parking,Conference Rooms,WiFi,Breakfast,Business Center",2025-09-16,2025-09-24,2025-08-26,21,8
+U000932,Business,46-55,Barcelona,1,Platinum,0.307,118,525,30,Single,"Room Service,Beach Access,Gym",2025-07-24,2025-07-27,2025-07-21,3,3
+U000933,Business,46-55,Sydney,1,Platinum,0.285,119,529,46,Single,"Pet Friendly,Parking,WiFi",2025-09-02,2025-09-03,2025-07-18,46,1
+U000934,Budget,46-55,Paris,2,Silver,0.723,31,118,4,Double,"Parking,Breakfast,Airport Shuttle,Business Center",2025-11-19,2025-11-21,2025-11-03,16,2
+U000935,Leisure,56-65,Bangkok,2,Silver,0.481,62,227,7,Double,"Room Service,Bar,Concierge",2025-12-16,2025-12-17,2025-12-12,4,1
+U000936,Luxury,56-65,Bangkok,1,Gold,0.0,240,1440,19,Single,"Spa,Room Service,Conference Rooms,Restaurant,Concierge",2025-11-30,2025-12-01,2025-10-29,32,1
+U000937,Luxury,46-55,Dubai,1,Gold,0.282,238,1413,11,Single,"Room Service,Airport Shuttle,Bar",2025-09-06,2025-09-08,2025-08-30,7,2
+U000938,Luxury,36-45,Singapore,1,Silver,0.176,208,1242,7,Single,"Bar,Room Service,Concierge,Spa,Restaurant",2025-07-26,2025-07-28,2025-05-15,72,2
+U000939,Luxury,65+,Madrid,3,Platinum,0.094,175,1046,25,Suite,"Concierge,Room Service,Bar,Spa,Conference Rooms",2025-09-10,2025-09-16,2025-08-13,28,6
+U000940,Leisure,18-25,Madrid,1,Silver,0.707,33,120,3,Single,"Spa,WiFi,Pet Friendly,Pool,Beach Access",2025-12-12,2025-12-17,2025-09-26,77,5
+U000941,Family,18-25,Singapore,3,Gold,0.78,43,155,12,Family,"Pool,Conference Rooms",2025-08-13,2025-08-20,2025-08-11,2,7
+U000942,Family,46-55,Vienna,4,Silver,0.645,84,306,6,Family,"Parking,Room Service,Pool,WiFi,Breakfast",2025-12-24,2025-12-31,2025-12-23,1,7
+U000943,Family,56-65,Madrid,3,Gold,0.71,76,275,18,Family,"Pool,Parking,Breakfast,Spa,Restaurant,WiFi",2025-12-19,2025-12-21,2025-12-08,11,2
+U000944,Luxury,56-65,Barcelona,2,Gold,0.156,229,1365,12,Suite,"Restaurant,Concierge,Bar,Room Service",2025-10-01,2025-10-03,2025-09-30,1,2
+U000945,Budget,18-25,Vienna,2,Gold,0.903,15,59,15,Double,"Room Service,WiFi,Kitchen",2025-11-24,2025-11-26,2025-10-27,28,2
+U000946,Luxury,65+,Bangkok,3,Platinum,0.242,167,993,25,Suite,"Restaurant,Bar,Concierge,Room Service,Spa,WiFi",2025-10-05,2025-10-09,2025-08-21,45,4
+U000947,Luxury,18-25,São Paulo,1,Platinum,0.122,135,806,31,Single,"Air Conditioning,Spa,Room Service,Bar",2025-08-14,2025-08-15,2025-07-20,25,1
+U000948,Business,56-65,Madrid,1,Gold,0.278,110,490,20,Single,"24h Front Desk,Gym,Room Service,Business Center,WiFi",2025-12-25,2025-12-27,2025-12-13,12,2
+U000949,Family,36-45,Barcelona,4,None,0.804,67,242,2,Family,"Pool,Breakfast,Parking,Business Center,Conference Rooms",2025-12-10,2025-12-12,2025-12-09,1,2
+U000950,Leisure,18-25,Prague,2,None,0.69,33,121,1,Double,"Pool,Bar,Room Service,Concierge,WiFi",2026-01-06,2026-01-16,2025-12-22,15,10
+U000951,Family,36-45,Bangkok,5,None,0.556,73,269,0,Suite,"Breakfast,Restaurant,Concierge,Pool,WiFi",2025-09-10,2025-09-16,2025-07-30,42,6
+U000952,Family,56-65,London,6,None,0.47,82,304,0,Suite,"Breakfast,Restaurant,Pool,Airport Shuttle",2026-01-03,2026-01-05,2025-12-01,33,2
+U000953,Family,56-65,Los Angeles,6,Gold,0.456,83,305,12,Suite,"Restaurant,WiFi,Laundry,Breakfast,Parking",2025-08-05,2025-08-07,2025-07-14,22,2
+U000954,Family,18-25,London,5,None,0.779,43,155,0,Suite,"Gym,WiFi,Pet Friendly,Restaurant,Parking,Pool",2025-08-03,2025-08-04,2025-07-27,7,1
+U000955,Luxury,56-65,São Paulo,1,Silver,0.12,231,1382,5,Single,"WiFi,Restaurant,Spa,Room Service,Bar",2025-08-03,2025-08-05,2025-05-21,74,2
+U000956,Business,18-25,New York,1,Gold,0.294,64,284,17,Single,"Room Service,Gym,Parking,Conference Rooms,WiFi",2025-10-25,2025-10-27,2025-08-25,61,2
+U000957,Luxury,56-65,Los Angeles,1,Gold,0.255,222,1318,11,Single,"Bar,Restaurant,Parking,Air Conditioning,Room Service,Concierge",2025-12-07,2025-12-08,2025-11-22,15,1
+U000958,Business,26-35,Madrid,1,Platinum,0.253,83,371,21,Single,"Breakfast,Business Center,Parking",2025-12-03,2025-12-07,2025-09-17,77,4
+U000959,Family,36-45,Barcelona,3,None,0.631,71,261,2,Family,"Laundry,Pool,Restaurant,WiFi",2025-12-15,2025-12-18,2025-11-22,23,3
+U000960,Leisure,65+,London,2,Silver,0.767,42,151,8,Double,"Bar,Pool",2025-12-09,2025-12-16,2025-11-12,27,7
+U000961,Business,36-45,Vienna,1,None,0.263,101,452,0,Single,"Room Service,Balcony,Business Center,Parking,Beach Access",2025-10-08,2025-10-10,2025-09-27,11,2
+U000962,Leisure,56-65,New York,2,Silver,0.364,64,237,8,Double,"Pool,Spa,WiFi",2025-07-23,2025-07-25,2025-07-15,8,2
+U000963,Budget,56-65,New York,1,Gold,0.869,27,102,16,Single,"Gym,WiFi,Air Conditioning",2025-07-22,2025-07-25,2025-04-12,101,3
+U000964,Family,36-45,Rome,3,None,0.582,73,266,2,Family,"Spa,Restaurant,Business Center",2025-12-11,2025-12-12,2025-11-30,11,1
+U000965,Luxury,26-35,Bangkok,3,Platinum,0.282,165,978,49,Suite,"Bar,Concierge",2025-12-28,2025-12-29,2025-11-17,41,1
+U000966,Budget,46-55,Berlin,2,None,0.764,30,116,0,Double,"Beach Access,WiFi,Breakfast",2025-11-02,2025-11-07,2025-10-27,6,5
+U000967,Budget,46-55,Tokyo,3,Silver,0.627,32,123,4,Suite,"WiFi,Parking",2025-11-14,2025-11-18,2025-11-10,4,4
+U000968,Leisure,46-55,São Paulo,4,Silver,0.64,63,230,5,Suite,"Pool,Airport Shuttle,Spa,Bar,Beach Access,WiFi",2026-01-14,2026-01-15,2025-11-03,72,1
+U000969,Business,36-45,Madrid,1,Gold,0.234,102,456,18,Single,"Airport Shuttle,Pet Friendly,Business Center,Parking",2025-08-18,2025-08-19,2025-07-30,19,1
+U000970,Business,18-25,Vienna,1,Silver,0.466,60,266,5,Single,"Airport Shuttle,Parking,Room Service,Gym,Business Center,WiFi",2025-08-07,2025-08-16,2025-08-06,1,9
+U000971,Family,46-55,Miami,4,None,0.793,79,287,2,Family,"Breakfast,Restaurant,Pool",2025-12-09,2025-12-10,2025-11-23,16,1
+U000972,Budget,65+,Sydney,3,Silver,0.897,20,76,7,Deluxe,"Parking,Breakfast,Spa,WiFi",2025-11-11,2025-11-14,2025-08-28,75,3
+U000973,Luxury,56-65,London,1,Platinum,0.031,238,1425,35,Single,"Bar,Spa",2025-12-20,2025-12-28,2025-11-18,32,8
+U000974,Luxury,65+,Berlin,2,Gold,0.226,168,999,19,Suite,"Concierge,Beach Access,Bar",2025-10-03,2025-10-04,2025-09-30,3,1
+U000975,Family,18-25,Paris,5,Silver,0.828,42,152,7,Suite,"Restaurant,Pool,Breakfast,Room Service,Parking,WiFi",2025-08-26,2025-08-30,2025-07-27,30,4
+U000976,Leisure,56-65,Tokyo,1,Gold,0.393,64,235,20,Single,"WiFi,Pool",2025-12-28,2025-12-30,2025-11-01,57,2
+U000977,Budget,65+,Los Angeles,1,Silver,0.847,20,78,6,Single,"Air Conditioning,WiFi,Kitchen",2025-11-14,2025-11-18,2025-10-15,30,4
+U000978,Family,26-35,Amsterdam,4,None,0.745,56,203,2,Family,"Restaurant,Concierge,Breakfast,Parking,WiFi",2026-01-02,2026-01-04,2025-10-04,90,2
+U000979,Family,46-55,Tokyo,4,Gold,0.494,89,326,11,Family,"Concierge,Restaurant,WiFi,Breakfast,Airport Shuttle",2025-09-18,2025-09-19,2025-09-04,14,1
+U000980,Luxury,46-55,Barcelona,2,None,0.314,235,1397,2,Double,"Kitchen,Spa",2025-12-19,2025-12-21,2025-08-26,115,2
+U000981,Family,65+,New York,6,Silver,0.708,57,206,4,Suite,"Pool,WiFi,Air Conditioning,Restaurant,Breakfast,Parking",2025-09-20,2025-09-22,2025-09-17,3,2
+U000982,Family,26-35,Dubai,6,Silver,0.793,55,199,5,Suite,"Restaurant,Breakfast",2025-10-10,2025-10-11,2025-09-14,26,1
+U000983,Luxury,26-35,Vienna,2,Gold,0.118,174,1038,15,Deluxe,"Airport Shuttle,Room Service,Spa,Bar,Concierge,Restaurant",2025-10-27,2025-11-01,2025-09-29,28,5
+U000984,Business,26-35,New York,1,Silver,0.334,81,360,6,Single,"Room Service,Business Center,Bar,Gym",2025-12-11,2025-12-16,2025-11-15,26,5
+U000985,Business,65+,New York,1,Silver,0.406,79,350,7,Single,"Gym,WiFi,Parking,Air Conditioning,Room Service,Kitchen",2025-07-24,2025-07-29,2025-06-01,53,5
+U000986,Luxury,26-35,Istanbul,2,Platinum,0.263,166,985,45,Double,"Pool,Bar,Concierge",2025-09-16,2025-09-19,2025-09-15,1,3
+U000987,Leisure,65+,Mumbai,1,Gold,0.633,44,160,19,Single,"Pool,Beach Access",2025-09-11,2025-09-13,2025-08-13,29,2
+U000988,Leisure,36-45,Singapore,3,Silver,0.554,55,202,8,Deluxe,"WiFi,Pool,Bar,Air Conditioning",2025-10-17,2025-10-23,2025-10-15,2,6
+U000989,Luxury,18-25,Miami,1,None,0.474,120,707,1,Single,"Restaurant,Bar,Room Service",2025-08-28,2025-08-30,2025-08-22,6,2
+U000990,Family,46-55,Barcelona,5,None,0.762,80,291,2,Suite,"Parking,Pool",2025-08-08,2025-08-14,2025-07-22,17,6
+U000991,Budget,26-35,Mumbai,2,Silver,0.792,21,79,7,Double,"Spa,Concierge",2025-09-09,2025-09-11,2025-07-29,42,2
+U000992,Leisure,26-35,Istanbul,1,Gold,0.565,45,164,10,Single,"Gym,Beach Access,Spa",2025-11-24,2025-11-25,2025-09-17,68,1
+U000993,Family,65+,Amsterdam,5,Gold,0.717,57,205,13,Suite,"Pet Friendly,Conference Rooms,Parking,Restaurant,Pool",2025-11-08,2025-11-13,2025-10-16,23,5
+U000994,Business,18-25,Paris,1,None,0.461,60,267,2,Single,"Gym,Spa",2025-10-19,2025-10-25,2025-10-16,3,6
+U000995,Business,18-25,Rome,1,Platinum,0.335,63,280,28,Single,"Room Service,Gym",2025-10-01,2025-10-08,2025-08-11,51,7
+U000996,Leisure,36-45,New York,1,Gold,0.714,52,189,15,Single,"Pool,Beach Access,Bar",2025-09-14,2025-09-16,2025-08-31,14,2
+U000997,Luxury,56-65,Tokyo,3,Gold,0.146,230,1370,9,Suite,"Room Service,Concierge,Bar,Spa,Laundry",2025-10-11,2025-10-12,2025-10-03,8,1
+U000998,Family,36-45,Istanbul,3,None,0.651,71,258,1,Family,"Pet Friendly,Restaurant,Pool",2025-08-07,2025-08-13,2025-07-31,7,6
+U000999,Luxury,56-65,Amsterdam,1,Gold,0.0,240,1440,18,Single,"Spa,Restaurant,Bar,Concierge,Balcony,Pool",2025-09-01,2025-09-02,2025-08-31,1,1
+U001000,Leisure,46-55,Sydney,2,Gold,0.701,62,224,12,Double,"Pool,Beach Access,Laundry,Kitchen,Spa",2025-10-06,2025-10-14,2025-08-12,55,8

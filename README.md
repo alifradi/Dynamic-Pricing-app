@@ -29,12 +29,12 @@ The simulator implements a sophisticated four-stage pipeline that mirrors real-w
 ```mermaid
 graph TD
     A[Raw Data Files] --> B[Bandit Simulation];
-    B --> C[bandit_simulation_results.csv];
+    B --> C[CTR & Click Probabilities];
     C --> D[Market & User Characterization];
     A --> D;
-    D --> E[all_parameters_scenario.csv];
+    D --> E[CPC, CVR & Price Sensitivity];
     E --> F[Strategy Application & Ranking];
-    F --> G[Results & Visualizations];
+    F --> G[Revenue, Trust & Performance Metrics];
 ```
 
 ### Stage 1: Raw Data Generation
