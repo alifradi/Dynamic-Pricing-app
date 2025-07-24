@@ -1,5 +1,6 @@
 import sys
 import os
+import traceback
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import random
@@ -14,7 +15,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import pulp
 import subprocess
 import tempfile
-import os
+from itertools import combinations
+from typing import Dict, List, Tuple
 
 # Import our data models
 from data_models.models import (
@@ -76,6 +78,19 @@ def read_root():
             "/mab_simulation",
             "/user_profiles",
             "/market_analysis"
+        ],
+        "data_files": [
+            "enhanced_user_profiles.csv",
+            "enhanced_hotels.csv", 
+            "enhanced_partner_offers.csv",
+            "trial_sampled_offers.csv",
+            "bandit_simulation_results.csv",
+            "conversion_probabilities.csv",
+            "user_dynamic_price_sensitivity.csv",
+            "user_market_state.csv",
+            "market_state_by_location.csv",
+            "policy_heatmap_debug.json",
+            "dqn_model.pth"
         ]
     }
 
@@ -225,9 +240,10 @@ def get_user_offers(user_id: str, num_hotels: int = 10, num_partners: int = 5, d
         # Add user_id
         offers_df['user_id'] = user_id
         
-        # Add days_to_go column with normal distribution
-        offers_df['days_to_go'] = np.random.normal(days_to_go, days_var, size=len(offers_df)).astype(int)
-        offers_df['days_to_go'] = offers_df['days_to_go'].clip(lower=1, upper=365)  # Ensure reasonable range
+        # Add days_to_go column - same value for all offers of the same user
+        user_days_to_go = int(np.random.normal(days_to_go, days_var))
+        user_days_to_go = max(1, min(365, user_days_to_go))  # Ensure reasonable range
+        offers_df['days_to_go'] = user_days_to_go
         
         # Add user preference matching score
         offers_df['preference_score'] = offers_df.apply(
@@ -1022,6 +1038,19 @@ def sample_offers_for_users(
     days_var: int = Query(5, ge=1, le=30),
     min_users_per_destination: int = Query(1, ge=1, le=20)
 ):
+    # Ensure parameters are integers, not Query objects
+    if hasattr(min_users_per_destination, 'annotation'):
+        min_users_per_destination = 1  # Default value if Query object
+    if hasattr(num_users, 'annotation'):
+        num_users = 1
+    if hasattr(num_hotels, 'annotation'):
+        num_hotels = 10
+    if hasattr(num_partners, 'annotation'):
+        num_partners = 5
+    if hasattr(days_to_go, 'annotation'):
+        days_to_go = 30
+    if hasattr(days_var, 'annotation'):
+        days_var = 5
     """Sample offers for N unique users by sampling hotels per region/destination, enforcing a minimum number of users per destination."""
     try:
         # Load data
@@ -1172,9 +1201,10 @@ def sample_offers_for_users(
                     offers_with_hotels['user_id'] = user_id
                     offers_with_hotels['location'] = user_destination
                     
-                    # Add days_to_go with normal distribution
-                    offers_with_hotels['days_to_go'] = np.random.normal(days_to_go, days_var, size=len(offers_with_hotels)).astype(int)
-                    offers_with_hotels['days_to_go'] = offers_with_hotels['days_to_go'].clip(lower=1, upper=365)
+                    # Add days_to_go - same value for all offers of the same user
+                    user_days_to_go = int(np.random.normal(days_to_go, days_var))
+                    user_days_to_go = max(1, min(365, user_days_to_go))  # Ensure reasonable range
+                    offers_with_hotels['days_to_go'] = user_days_to_go
                     
                     # Add preference score
                     offers_with_hotels['preference_score'] = offers_with_hotels.apply(
@@ -1325,7 +1355,7 @@ def calculate_market_conditions():
         # 1. Price Level (avg_price) - average price across all offers
         avg_price = df['price_per_night'].mean()
         
-        # 2. Booking Urgency (days_to_go) - average days to go
+        # 2. Booking Urgency (days_to_go) - average across all users
         avg_days_to_go = df['days_to_go'].mean()
         
         # 3. Price Volatility - analyze price_history_24h for trend and volatility
@@ -1409,7 +1439,7 @@ def calculate_market_conditions():
                     "weight": w1
                 },
                 "booking_urgency": {
-                    "value": round(avg_days_to_go, 1),
+                    "value": int(round(avg_days_to_go)),
                     "normalized": round(norm_days_to_go, 3),
                     "weight": w2
                 },
@@ -1466,7 +1496,7 @@ def get_market_state(location: str):
         users = users_df[users_df['user_id'].isin(user_ids)]
         # Calculate market state as before, but for this location
         avg_price = offers['price_per_night'].mean()
-        avg_days_to_go = offers['days_to_go'].mean()
+        avg_days_to_go = offers['days_to_go'].mean()  # Average across users in this location
         price_trends = []
         price_volatilities = []
         for _, row in offers.iterrows():
@@ -1506,7 +1536,7 @@ def get_market_state(location: str):
         return {
             "location": location,
             "avg_price": avg_price,
-            "avg_days_to_go": avg_days_to_go,
+            "avg_days_to_go": int(round(avg_days_to_go)),
             "avg_price_trend": avg_price_trend,
             "avg_price_volatility": avg_price_volatility,
             "competition_density": competition_density,
@@ -1576,21 +1606,21 @@ def get_dynamic_price_sensitivity(user_id: str):
         if resp.status_code != 200:
             return {"error": f"Market state not found for location {location}"}
         market_state = resp.json()
-        # Use days_to_go from offers
-        avg_days_to_go = user_offers['days_to_go'].mean()
+        # Use days_to_go from offers (all offers have the same value for a user)
+        user_days_to_go = user_offers['days_to_go'].iloc[0]
         # Base sensitivity from user profile
         base_sensitivity = float(user_row.iloc[0].get('price_sensitivity', 0.5))
         # Combine into dynamic price sensitivity
         volatility = market_state.get('avg_price_volatility', 0)
         trend = market_state.get('avg_price_trend', 0)
-        dynamic_sensitivity = 0.4 * base_sensitivity + 0.2 * volatility + 0.2 * trend + 0.2 * (1 - avg_days_to_go / 180)
+        dynamic_sensitivity = 0.4 * base_sensitivity + 0.2 * volatility + 0.2 * trend + 0.2 * (1 - user_days_to_go / 180)
         return {
             "user_id": user_id,
             "location": location,
             "base_sensitivity": base_sensitivity,
             "market_volatility": volatility,
             "market_trend": trend,
-            "avg_days_to_go": avg_days_to_go,
+            "days_to_go": user_days_to_go,
             "dynamic_price_sensitivity": dynamic_sensitivity
         }
     except Exception as e:
@@ -1973,6 +2003,19 @@ def user_dynamic_price_sensitivity_csv(
     days_var: int = Query(None, ge=1, le=30),
     min_users_per_destination: int = Query(None, ge=1, le=20)
 ):
+    # Ensure parameters are integers, not Query objects
+    if hasattr(min_users_per_destination, 'annotation'):
+        min_users_per_destination = None
+    if hasattr(num_users, 'annotation'):
+        num_users = None
+    if hasattr(num_hotels, 'annotation'):
+        num_hotels = None
+    if hasattr(num_partners, 'annotation'):
+        num_partners = None
+    if hasattr(days_to_go, 'annotation'):
+        days_to_go = None
+    if hasattr(days_var, 'annotation'):
+        days_var = None
     """Generate user dynamic price sensitivity CSV with minimum users per destination constraint."""
     try:
         import pandas as pd
@@ -1988,6 +2031,11 @@ def user_dynamic_price_sensitivity_csv(
         print(f"[DEBUG] Called user_dynamic_price_sensitivity_csv. Offers path: {offers_path}, Users path: {users_path}, Output path: {out_path}")
         print(f"[DEBUG] Parameters: num_users={num_users}, num_hotels={num_hotels}, num_partners={num_partners}, days_to_go={days_to_go}, days_var={days_var}, min_users_per_destination={min_users_per_destination}")
         
+        # Handle case where parameters are None (called without parameters)
+        if num_users is None and num_hotels is None and num_partners is None:
+            print(f"[DEBUG] No parameters provided, using existing data")
+            # Use existing data without filtering
+        
         if not os.path.exists(offers_path) or not os.path.exists(users_path):
             print(f"[ERROR] Required data files not found: {offers_path}, {users_path}")
             return {"error": "Required data files not found"}
@@ -1996,7 +2044,7 @@ def user_dynamic_price_sensitivity_csv(
         users_df = pd.read_csv(users_path)
         
         # Apply minimum users per destination constraint
-        if min_users_per_destination is not None:
+        if min_users_per_destination is not None and isinstance(min_users_per_destination, int):
             # Count users per destination
             dest_counts = offers_df.groupby('location')['user_id'].nunique()
             valid_destinations = dest_counts[dest_counts >= min_users_per_destination].index.tolist()
@@ -2020,7 +2068,7 @@ def user_dynamic_price_sensitivity_csv(
             if user_offers.empty:
                 continue
             location = user_offers.iloc[0]['location']
-            days_to_go = user_offers['days_to_go'].mean()
+            days_to_go = user_offers['days_to_go'].iloc[0]  # All offers have the same value
             
             # Get all offers for this location
             location_offers = offers_df[offers_df['location'] == location]
@@ -2068,7 +2116,7 @@ def user_dynamic_price_sensitivity_csv(
                 'num_users': n_users,
                 'price_mean': round(price_mean, 2),
                 'price_std': round(price_std, 2),
-                'avg_days_to_go': round(days_to_go, 1)
+                'days_to_go': days_to_go
             })
         
         out_df = pd.DataFrame(user_rows)
@@ -2135,7 +2183,7 @@ def save_market_state_csv():
             avg_price = offers['price_per_night'].mean()
             price_var = offers['price_fluctuation_variance'].mean()
         
-        avg_days_to_go = offers['days_to_go'].mean()
+        avg_days_to_go = offers['days_to_go'].mean()  # Average across users in this location
         unique_hotels = offers['hotel_id'].nunique()
         unique_partners = offers['partner_name'].nunique()
         competition_density = unique_hotels * unique_partners
@@ -2164,7 +2212,7 @@ def save_market_state_csv():
         rows.append({
             'location': location,
             'avg_price': avg_price,
-            'avg_days_to_go': avg_days_to_go,
+            'avg_days_to_go': int(round(avg_days_to_go)),
             'avg_price_trend': price_var,  # Using price variance as trend
             'user_count': user_count,
             'offer_count': offer_count,
@@ -2260,6 +2308,19 @@ def conversion_probabilities_csv(
     days_var: int = Query(None, ge=1, le=30),
     min_users_per_destination: int = Query(None, ge=1, le=20)
 ):
+    # Ensure parameters are integers, not Query objects
+    if hasattr(min_users_per_destination, 'annotation'):
+        min_users_per_destination = None
+    if hasattr(num_users, 'annotation'):
+        num_users = None
+    if hasattr(num_hotels, 'annotation'):
+        num_hotels = None
+    if hasattr(num_partners, 'annotation'):
+        num_partners = None
+    if hasattr(days_to_go, 'annotation'):
+        days_to_go = None
+    if hasattr(days_var, 'annotation'):
+        days_var = None
     """Compute and save conversion probabilities for all user-offer pairs to data/conversion_probabilities.csv."""
     import pandas as pd
     import numpy as np
@@ -2276,8 +2337,13 @@ def conversion_probabilities_csv(
         users_df = pd.read_csv(users_path)
         dps_df = pd.read_csv(dps_path)
         
+        # Handle case where parameters are None (called without parameters)
+        if num_users is None and num_hotels is None and num_partners is None:
+            print(f"[DEBUG] No parameters provided, using existing data")
+            # Use existing data without filtering
+        
         # Apply minimum users per destination constraint
-        if min_users_per_destination is not None:
+        if min_users_per_destination is not None and isinstance(min_users_per_destination, int):
             # Count users per destination
             dest_counts = offers_df.groupby('location')['user_id'].nunique()
             valid_destinations = dest_counts[dest_counts >= min_users_per_destination].index.tolist()
@@ -2374,140 +2440,83 @@ def get_conversion_probability(user_id: str, offer_id: str):
 
 @app.post("/run_deterministic_optimization")
 def run_deterministic_optimization():
-    """Run deterministic optimization using MiniZinc and return results"""
+    """Run deterministic optimization using unified optimizer"""
     try:
-        # Load data from CSV files
-        offers_df = pd.read_csv(get_data_path('trial_sampled_offers.csv'))
-        users_df = pd.read_csv(get_data_path('enhanced_user_profiles.csv'))
+        # Import the unified optimizer
+        from unified_optimizer import UnifiedOptimizer
         
-        if offers_df.empty or users_df.empty:
-            raise HTTPException(status_code=400, detail="No data available for optimization")
+        # Initialize optimizer
+        optimizer = UnifiedOptimizer(DATA_DIR)
         
-        # Prepare data for optimization
-        optimization_data = {
-            'offers': [],
-            'users': []
-        }
+        # Load data
+        if not optimizer.load_data():
+            raise HTTPException(status_code=400, detail="Failed to load optimization data")
         
-        # Process offers
-        for _, offer in offers_df.iterrows():
-            optimization_data['offers'].append({
-                'offer_id': int(offer['offer_id']),
-                'conversion_probability': float(offer.get('conversion_probability', 0.1)),
-                'bid_amount': float(offer.get('commission_rate', 10.0)),
-                'hotel_type': offer.get('hotel_type', 'standard'),
-                'price_level': 'high' if offer.get('price_per_night', 0) > 200 else 'medium' if offer.get('price_per_night', 0) > 100 else 'low'
-            })
+        # Prepare optimization data
+        optimization_data = optimizer.prepare_optimization_data(max_offers=50, max_users=20)
         
-        # Process users
-        unique_users = offers_df['user_id'].unique()
-        for user_id in unique_users:
-            user_data = users_df[users_df['user_id'] == user_id]
-            if not user_data.empty:
-                user = user_data.iloc[0]
-                optimization_data['users'].append({
-                    'user_id': str(user_id),
-                    'user_type': user.get('user_type', 'leisure'),
-                    'budget_level': 'high' if user.get('budget_max', 0) > 200 else 'medium' if user.get('budget_max', 0) > 100 else 'low'
-                })
+        # Run deterministic optimization
+        results = optimizer.run_deterministic_optimization(
+            optimization_data,
+            alpha=0.4,  # Revenue weight
+            beta=0.3,   # User satisfaction weight
+            gamma=0.3,  # Partner value weight
+            num_positions=10
+        )
         
-        # Run optimization using the Python script
-        result = subprocess.run([
-            'python', 'run_deterministic_optimization.py'
-        ], capture_output=True, text=True, timeout=300)
-        
-        if result.returncode != 0:
-            raise HTTPException(status_code=500, detail=f"Optimization failed: {result.stderr}")
-        
-        # Read results from generated files
-        results = {}
-        
-        # Read JSON results
-        json_path = get_data_path('deterministic_optimization_results.json')
-        if os.path.exists(json_path):
-            with open(json_path, 'r') as f:
-                results['json'] = json.load(f)
-        
-        # Read CSV results
-        csv_path = get_data_path('deterministic_optimization_results.csv')
-        if os.path.exists(csv_path):
-            csv_df = pd.read_csv(csv_path)
-            results['csv'] = csv_df.to_dict(orient='records')
+        # Save results
+        optimizer.save_results(results, 'deterministic_optimization_results.json')
         
         return {
             "status": "success",
             "message": "Deterministic optimization completed",
-            "results": results
+            "results": {
+                "json": results,
+                "csv": results.get('user_rankings', {})
+            }
         }
         
-    except subprocess.TimeoutExpired:
-        raise HTTPException(status_code=408, detail="Optimization timed out")
     except Exception as e:
+        print(f"Error in deterministic optimization: {e}")
         raise HTTPException(status_code=500, detail=f"Error running optimization: {str(e)}")
 
 @app.post("/run_stochastic_optimization")
 def run_stochastic_optimization():
-    """Run stochastic optimization using MiniZinc and return results"""
+    """Run stochastic optimization using unified optimizer"""
     try:
-        # Load data from CSV files
-        offers_df = pd.read_csv(get_data_path('trial_sampled_offers.csv'))
-        users_df = pd.read_csv(get_data_path('enhanced_user_profiles.csv'))
+        # Import the unified optimizer
+        from unified_optimizer import UnifiedOptimizer
         
-        if offers_df.empty or users_df.empty:
-            raise HTTPException(status_code=400, detail="No data available for optimization")
+        # Initialize optimizer
+        optimizer = UnifiedOptimizer(DATA_DIR)
         
-        # Prepare data for optimization
-        optimization_data = {
-            'offers': [],
-            'weights': {
-                'conversion': 0.4,
-                'revenue': 0.4,
-                'trust': 0.2
-            }
-        }
+        # Load data
+        if not optimizer.load_data():
+            raise HTTPException(status_code=400, detail="Failed to load optimization data")
         
-        # Process offers
-        for _, offer in offers_df.iterrows():
-            optimization_data['offers'].append({
-                'offer_id': int(offer['offer_id']),
-                'conversion_probability': float(offer.get('conversion_probability', 0.1)),
-                'revenue': float(offer.get('commission_rate', 10.0)),
-                'trust_score': float(offer.get('trust_score', 0.5)),
-                'price_consistency': float(offer.get('price_consistency', 0.5))
-            })
+        # Prepare optimization data
+        optimization_data = optimizer.prepare_optimization_data(max_offers=50, max_users=20)
         
-        # Run optimization using the Python script
-        result = subprocess.run([
-            'python', 'run_stochastic_optimization.py'
-        ], capture_output=True, text=True, timeout=300)
+        # Run stochastic optimization
+        results = optimizer.run_stochastic_optimization(
+            optimization_data,
+            num_selected=10
+        )
         
-        if result.returncode != 0:
-            raise HTTPException(status_code=500, detail=f"Optimization failed: {result.stderr}")
-        
-        # Read results from generated files
-        results = {}
-        
-        # Read JSON results
-        json_path = get_data_path('stochastic_optimization_results.json')
-        if os.path.exists(json_path):
-            with open(json_path, 'r') as f:
-                results['json'] = json.load(f)
-        
-        # Read CSV results
-        csv_path = get_data_path('stochastic_optimization_results.csv')
-        if os.path.exists(csv_path):
-            csv_df = pd.read_csv(csv_path)
-            results['csv'] = csv_df.to_dict(orient='records')
+        # Save results
+        optimizer.save_results(results, 'stochastic_optimization_results.json')
         
         return {
             "status": "success",
             "message": "Stochastic optimization completed",
-            "results": results
+            "results": {
+                "json": results,
+                "csv": results.get('selected_offers', [])
+            }
         }
         
-    except subprocess.TimeoutExpired:
-        raise HTTPException(status_code=408, detail="Optimization timed out")
     except Exception as e:
+        print(f"Error in stochastic optimization: {e}")
         raise HTTPException(status_code=500, detail=f"Error running optimization: {str(e)}")
 
 @app.get("/optimization_results")
@@ -2636,8 +2645,8 @@ def get_user_scenario(request: dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing user scenario: {str(e)}")
 
-@app.post("/rank")
-def rank_offers_final(request: dict):
+@app.post("/rank_user")
+def rank_offers_for_user(request: dict):
     """Rank offers using different strategies for a specific user"""
     try:
         user_id = request.get("user_id")
@@ -3000,6 +3009,704 @@ def get_conversion_probability(user_id: str, offer_id: str):
     if row.empty:
         return {"error": f"No conversion probability found for user {user_id} and offer {offer_id}"}
     return row.iloc[0].to_dict()
+
+@app.post("/rank")
+def rank_offers_with_budget_constraints(
+    alpha: float = Query(0.4, ge=0.0, le=1.0, description="Weight for trivago income"),
+    beta: float = Query(0.3, ge=0.0, le=1.0, description="Weight for user satisfaction"),
+    gamma: float = Query(0.3, ge=0.0, le=1.0, description="Weight for partner conversion value"),
+    num_positions: int = Query(10, ge=1, le=50, description="Number of ranking positions")
+):
+    """Rank offers using multi-objective optimization with budget constraints."""
+    try:
+        print(f"[DEBUG] rank_offers_with_budget_constraints called with: alpha={alpha}, beta={beta}, gamma={gamma}, num_positions={num_positions}")
+        print(f"[DEBUG] Parameter types: alpha={type(alpha)}, beta={type(beta)}, gamma={type(gamma)}, num_positions={type(num_positions)}")
+        import pandas as pd
+        import numpy as np
+        
+        # Load current offer data
+        offers_path = get_data_path('trial_sampled_offers.csv')
+        if not os.path.exists(offers_path):
+            return {"error": "No offers data available. Please run sampling first."}
+        
+        offers_df = pd.read_csv(offers_path)
+        
+        # Limit number of offers for optimization
+        n_offers = min(len(offers_df), 50)  # Limit for performance
+        offers_subset = offers_df.head(n_offers).copy()
+        
+        # Calculate user satisfaction scores based on hotel quality and price
+        offers_subset['user_satisfaction_score'] = (
+            offers_subset['star_rating'] * 0.3 +
+            (10 - offers_subset['price_per_night'] / 50) * 0.4 +  # Lower price = higher satisfaction
+            offers_subset['review_score'] * 0.3
+        )
+        
+        # Calculate conversion probabilities
+        offers_subset['conversion_probability'] = (
+            0.1 +  # Base conversion rate
+            offers_subset['star_rating'] * 0.05 +
+            offers_subset['review_score'] * 0.02 -
+            offers_subset['price_per_night'] * 0.0001
+        ).clip(0.01, 0.95)
+        
+        # Add missing columns that the optimization expects
+        import random
+        import subprocess
+        if 'remaining_budget' not in offers_subset.columns:
+            # Create a reasonable budget based on partner and hotel characteristics
+            offers_subset['remaining_budget'] = offers_subset['price_per_night'] * random.uniform(10, 50)
+        
+        if 'commission_rate' not in offers_subset.columns:
+            # Use a default commission rate
+            offers_subset['commission_rate'] = 0.15
+        
+        if 'cost_per_click_bid' not in offers_subset.columns:
+            # Calculate cost per click based on price
+            offers_subset['cost_per_click_bid'] = offers_subset['price_per_night'] * 0.01
+        
+        # Position-based click-through rates (decreasing with rank)
+        position_ctr = [1.0 / (1 + 0.5 * i) for i in range(num_positions)]
+        
+        # Create optimization data
+        mzn_data = f"""
+n_offers = {n_offers};
+n_positions = {num_positions};
+alpha = {alpha};
+beta = {beta};
+gamma = {gamma};
+
+commission_rates = {list(offers_subset['commission_rate'])};
+cost_per_click_bids = {list(offers_subset['cost_per_click_bid'])};
+user_satisfaction_scores = {list(offers_subset['user_satisfaction_score'])};
+conversion_probabilities = {list(offers_subset['conversion_probability'])};
+partner_budgets = {list(offers_subset['remaining_budget'])};
+partner_ids = {list(range(1, n_offers + 1))};  % Simplified: each offer is from different partner
+position_ctr = {position_ctr};
+"""
+        
+        # Use PuLP for linear programming optimization
+        print(f"[DEBUG] Using PuLP optimization solver")
+        return _pulp_optimization(offers_subset, alpha, beta, gamma, num_positions)
+            
+    except Exception as e:
+        print(f"[ERROR] Exception in rank_offers_with_budget_constraints: {e}")
+        traceback.print_exc()
+        return {"error": f"Exception: {str(e)}"}
+
+@app.post("/calculate_shapley_values")
+def calculate_shapley_values():
+    """Calculate Shapley values for each partner's contribution to total revenue."""
+    try:
+        import pandas as pd
+        import numpy as np
+        
+        # Load current offer data
+        offers_path = get_data_path('trial_sampled_offers.csv')
+        if not os.path.exists(offers_path):
+            return {"error": "No offers data available. Please run sampling first."}
+        
+        offers_df = pd.read_csv(offers_path)
+        
+        # Add missing columns if they don't exist
+        if 'commission_rate' not in offers_df.columns:
+            offers_df['commission_rate'] = 0.15
+        if 'cost_per_click_bid' not in offers_df.columns:
+            offers_df['cost_per_click_bid'] = offers_df['price_per_night'] * 0.01
+        if 'remaining_budget' not in offers_df.columns:
+            offers_df['remaining_budget'] = offers_df['price_per_night'] * random.uniform(10, 50)
+        
+        # Group offers by partner
+        partner_offers = offers_df.groupby('partner_name').agg({
+            'commission_rate': 'mean',
+            'cost_per_click_bid': 'sum',
+            'remaining_budget': 'first',
+            'offer_id': 'count'
+        }).reset_index()
+        
+        partner_offers.columns = ['partner_name', 'avg_commission_rate', 'total_cpc_bid', 'budget', 'num_offers']
+        
+        # Calculate expected revenue for each partner
+        partner_offers['expected_revenue'] = (
+            partner_offers['avg_commission_rate'] * 
+            partner_offers['total_cpc_bid'] * 
+            partner_offers['num_offers']
+        )
+        
+        # Calculate Shapley values using Monte Carlo approximation
+        n_partners = len(partner_offers)
+        shapley_values = {partner: 0.0 for partner in partner_offers['partner_name']}
+        
+        # Monte Carlo sampling for Shapley value calculation
+        n_samples = min(1000, 2**n_partners)  # Limit computational complexity
+        
+        for _ in range(n_samples):
+            # Random coalition
+            coalition_size = np.random.randint(1, n_partners + 1)
+            coalition = np.random.choice(partner_offers['partner_name'], coalition_size, replace=False)
+            
+            # Calculate coalition value
+            coalition_value = partner_offers[
+                partner_offers['partner_name'].isin(coalition)
+            ]['expected_revenue'].sum()
+            
+            # Calculate marginal contribution for each partner in coalition
+            for partner in coalition:
+                coalition_without_partner = [p for p in coalition if p != partner]
+                if coalition_without_partner:
+                    value_without_partner = partner_offers[
+                        partner_offers['partner_name'].isin(coalition_without_partner)
+                    ]['expected_revenue'].sum()
+                else:
+                    value_without_partner = 0
+                
+                marginal_contribution = coalition_value - value_without_partner
+                shapley_values[partner] += marginal_contribution / n_samples
+        
+        # Normalize Shapley values
+        total_shapley = sum(shapley_values.values())
+        if total_shapley > 0:
+            shapley_values = {k: v / total_shapley for k, v in shapley_values.items()}
+        
+        # Prepare results
+        results = []
+        for _, partner in partner_offers.iterrows():
+            results.append({
+                "partner_name": partner['partner_name'],
+                "num_offers": int(partner['num_offers']),
+                "avg_commission_rate": round(partner['avg_commission_rate'], 4),
+                "total_cpc_bid": round(partner['total_cpc_bid'], 2),
+                "budget": round(partner['budget'], 2),
+                "expected_revenue": round(partner['expected_revenue'], 2),
+                "shapley_value": round(shapley_values[partner['partner_name']], 4),
+                "contribution_percentage": round(shapley_values[partner['partner_name']] * 100, 2)
+            })
+        
+        # Sort by Shapley value
+        results.sort(key=lambda x: x['shapley_value'], reverse=True)
+        
+        return {
+            "shapley_values": results,
+            "total_expected_revenue": round(partner_offers['expected_revenue'].sum(), 2),
+            "total_shapley_value": round(sum(shapley_values.values()), 4),
+            "parameters": {
+                "n_partners": n_partners,
+                "n_samples": n_samples
+            }
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Exception in calculate_shapley_values: {e}")
+        traceback.print_exc()
+        return {"error": f"Exception: {str(e)}"}
+
+# Import DQN agent functions
+from dqn_agent import get_dqn_agent, calculate_reward
+
+# Add these new endpoints after the existing ones
+
+@app.post("/select_strategic_policy")
+def select_strategic_policy():
+    """Select optimal policy using DQN based on current market state"""
+    try:
+        import pandas as pd
+        import numpy as np
+        
+        # Get current market state
+        offers_path = get_data_path('trial_sampled_offers.csv')
+        if not os.path.exists(offers_path):
+            return {"error": "No offers data available. Please run sampling first."}
+        
+        offers_df = pd.read_csv(offers_path)
+        
+        # Calculate market state metrics
+        market_demand = len(offers_df)
+        days_to_go = int(round(offers_df['days_to_go'].mean())) if 'days_to_go' in offers_df.columns else 30  # Average across all users
+        competition_density = len(offers_df['partner_name'].unique()) if 'partner_name' in offers_df.columns else 5
+        
+        # Calculate price volatility
+        if 'price_per_night' in offers_df.columns:
+            price_volatility = offers_df['price_per_night'].std() / offers_df['price_per_night'].mean()
+        else:
+            price_volatility = 0.1
+        
+        # Calculate satisfaction trend (simplified)
+        satisfaction_trend = 0.0  # Would be calculated from historical data
+        
+        # Calculate budget utilization
+        if 'remaining_budget' in offers_df.columns and 'partner_marketing_budget' in offers_df.columns:
+            total_budget = offers_df['partner_marketing_budget'].sum()
+            used_budget = total_budget - offers_df['remaining_budget'].sum()
+            budget_utilization = (used_budget / total_budget) * 100 if total_budget > 0 else 0
+        else:
+            budget_utilization = 0
+        
+        # Create market state
+        market_state = {
+            'market_demand': market_demand,
+            'days_to_go': days_to_go,
+            'competition_density': competition_density,
+            'price_volatility': price_volatility,
+            'satisfaction_trend': satisfaction_trend,
+            'budget_utilization': budget_utilization
+        }
+        
+        # Get DQN agent and select policy
+        dqn_agent = get_dqn_agent()
+        state_vector = dqn_agent.get_state_vector(market_state)
+        action = dqn_agent.select_action(state_vector, training=True)
+        policy_weights = dqn_agent.get_policy_weights(action)
+        
+        return {
+            "selected_policy": {
+                "action_id": action,
+                "policy_name": policy_weights["name"],
+                "weights": policy_weights
+            },
+            "market_state": market_state,
+            "state_vector": state_vector.tolist(),
+            "epsilon": dqn_agent.epsilon
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Exception in select_strategic_policy: {e}")
+        traceback.print_exc()
+        return {"error": f"Exception: {str(e)}"}
+
+@app.post("/train_rl_agent")
+def train_rl_agent():
+    """Train the RL agent using current optimization results"""
+    try:
+        print(f"[DEBUG] Starting RL agent training...")
+        import pandas as pd
+        import numpy as np
+        
+        # Get current market state
+        offers_path = get_data_path('trial_sampled_offers.csv')
+        if not os.path.exists(offers_path):
+            return {"error": "No offers data available. Please run sampling first."}
+        
+        offers_df = pd.read_csv(offers_path)
+        
+        # Calculate market state (same as in select_strategic_policy)
+        market_demand = len(offers_df)
+        days_to_go = int(round(offers_df['days_to_go'].mean())) if 'days_to_go' in offers_df.columns else 30  # Average across all users
+        competition_density = len(offers_df['partner_name'].unique()) if 'partner_name' in offers_df.columns else 5
+        
+        if 'price_per_night' in offers_df.columns:
+            price_volatility = offers_df['price_per_night'].std() / offers_df['price_per_night'].mean()
+        else:
+            price_volatility = 0.1
+        
+        satisfaction_trend = 0.0
+        
+        if 'remaining_budget' in offers_df.columns and 'partner_marketing_budget' in offers_df.columns:
+            total_budget = offers_df['partner_marketing_budget'].sum()
+            used_budget = total_budget - offers_df['remaining_budget'].sum()
+            budget_utilization = (used_budget / total_budget) * 100 if total_budget > 0 else 0
+        else:
+            budget_utilization = 0
+        
+        market_state = {
+            'market_demand': market_demand,
+            'days_to_go': days_to_go,
+            'competition_density': competition_density,
+            'price_volatility': price_volatility,
+            'satisfaction_trend': satisfaction_trend,
+            'budget_utilization': budget_utilization
+        }
+        
+        # Get DQN agent
+        dqn_agent = get_dqn_agent()
+        current_state = dqn_agent.get_state_vector(market_state)
+        
+        # Select action
+        action = dqn_agent.select_action(current_state, training=True)
+        
+        # Run optimization with selected policy
+        policy_weights = dqn_agent.get_policy_weights(action)
+        
+        # Call the ranking function directly with policy weights
+        # Create a mock request object for the function call
+        class MockRequest:
+            def __init__(self, alpha, beta, gamma, num_positions):
+                self.query_params = {
+                    "alpha": alpha,
+                    "beta": beta,
+                    "gamma": gamma,
+                    "num_positions": num_positions
+                }
+        
+        mock_request = MockRequest(
+            policy_weights["alpha"],
+            policy_weights["beta"],
+            policy_weights["gamma"],
+            10
+        )
+        
+        # Call the ranking function directly
+        print(f"[DEBUG] Calling optimization with weights: alpha={policy_weights['alpha']}, beta={policy_weights['beta']}, gamma={policy_weights['gamma']}")
+        try:
+            ranking_result = rank_offers_with_budget_constraints(
+                alpha=policy_weights["alpha"],
+                beta=policy_weights["beta"],
+                gamma=policy_weights["gamma"],
+                num_positions=10
+            )
+            print(f"[DEBUG] Optimization result: {ranking_result}")
+        except Exception as e:
+            print(f"[ERROR] Optimization failed with exception: {e}")
+            import traceback
+            traceback.print_exc()
+            return {"error": f"Optimization failed with exception: {str(e)}"}
+        
+        if "error" in ranking_result:
+            return {"error": f"Optimization failed: {ranking_result['error']}"}
+        
+        # Calculate reward
+        reward = calculate_reward(ranking_result.get("objectives", {}))
+        
+        # Simulate next state (in practice, this would be the actual next state)
+        next_market_state = market_state.copy()
+        next_market_state['market_demand'] = max(0, market_demand - 1)  # Simplified
+        next_state = dqn_agent.get_state_vector(next_market_state)
+        
+        # Train the agent with multiple episodes for realistic training
+        print(f"[DEBUG] Starting realistic RL training with multiple episodes...")
+        
+        # Run multiple training episodes
+        num_episodes = 50  # More realistic training
+        total_loss = 0
+        episode_rewards = []
+        
+        for episode in range(num_episodes):
+            # Simulate different market conditions for each episode
+            episode_market_state = market_state.copy()
+            episode_market_state['market_demand'] = max(10, market_demand + np.random.randint(-20, 20))
+            episode_market_state['days_to_go'] = max(1, days_to_go + np.random.randint(-10, 10))
+            episode_market_state['competition_density'] = max(1, competition_density + np.random.randint(-2, 2))
+            
+            episode_state = dqn_agent.get_state_vector(episode_market_state)
+            episode_action = dqn_agent.select_action(episode_state, training=True)
+            
+            # Run optimization for this episode
+            episode_policy_weights = dqn_agent.get_policy_weights(episode_action)
+            episode_ranking_result = rank_offers_with_budget_constraints(
+                alpha=episode_policy_weights["alpha"],
+                beta=episode_policy_weights["beta"],
+                gamma=episode_policy_weights["gamma"],
+                num_positions=10
+            )
+            
+            if "error" not in episode_ranking_result:
+                episode_reward = calculate_reward(episode_ranking_result.get("objectives", {}))
+                episode_rewards.append(episode_reward)
+                
+                # Simulate next state
+                episode_next_state = episode_market_state.copy()
+                episode_next_state['market_demand'] = max(0, episode_market_state['market_demand'] - 1)
+                episode_next_state_vector = dqn_agent.get_state_vector(episode_next_state)
+                
+                # Train the agent
+                episode_loss = dqn_agent.step(episode_state, episode_action, episode_reward, episode_next_state_vector, done=False)
+                if episode_loss is not None:
+                    total_loss += episode_loss
+        
+        # Save model
+        model_path = get_data_path('dqn_model.pth')
+        dqn_agent.save_model(model_path)
+        
+        avg_loss = total_loss / num_episodes if num_episodes > 0 else 0
+        avg_reward = np.mean(episode_rewards) if episode_rewards else 0
+        
+        print(f"[DEBUG] RL Training completed successfully!")
+        print(f"[DEBUG] Episodes trained: {num_episodes}")
+        print(f"[DEBUG] Final action selected: {action}")
+        print(f"[DEBUG] Policy: {policy_weights['name']}")
+        print(f"[DEBUG] Average reward: {avg_reward:.4f}")
+        print(f"[DEBUG] Average loss: {avg_loss:.4f}")
+        print(f"[DEBUG] Final epsilon: {dqn_agent.epsilon:.4f}")
+        print(f"[DEBUG] Model saved to: {model_path}")
+        
+        return {
+            "training_result": {
+                "action_selected": action,
+                "policy_name": policy_weights["name"],
+                "reward": avg_reward,
+                "loss": avg_loss,
+                "epsilon": dqn_agent.epsilon
+            },
+            "optimization_results": ranking_result,
+            "market_state": market_state
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Exception in train_rl_agent: {e}")
+        traceback.print_exc()
+        return {"error": f"Exception: {str(e)}"}
+
+def _pulp_optimization(offers_df, alpha, beta, gamma, num_positions):
+    """Use PuLP for linear programming optimization"""
+    try:
+        import pulp
+        
+        # Create optimization problem
+        prob = pulp.LpProblem("Hotel_Ranking_Optimization", pulp.LpMaximize)
+        
+        # Decision variables: x[i] = 1 if offer i is selected, 0 otherwise
+        n_offers = len(offers_df)
+        x = pulp.LpVariable.dicts("offer", range(n_offers), cat='Binary')
+        
+        # Objective function: maximize weighted sum of objectives
+        trivago_income = pulp.lpSum([
+            alpha * offers_df.iloc[i]['commission_rate'] * offers_df.iloc[i]['cost_per_click_bid'] * x[i]
+            for i in range(n_offers)
+        ])
+        
+        user_satisfaction = pulp.lpSum([
+            beta * offers_df.iloc[i]['user_satisfaction_score'] * x[i]
+            for i in range(n_offers)
+        ])
+        
+        partner_conversion_value = pulp.lpSum([
+            gamma * offers_df.iloc[i]['conversion_probability'] * offers_df.iloc[i]['price_per_night'] * x[i]
+            for i in range(n_offers)
+        ])
+        
+        prob += trivago_income + user_satisfaction + partner_conversion_value
+        
+        # Constraints
+        # 1. Select exactly num_positions offers
+        prob += pulp.lpSum([x[i] for i in range(n_offers)]) == num_positions
+        
+        # 2. Budget constraints (if available)
+        if 'remaining_budget' in offers_df.columns:
+            prob += pulp.lpSum([
+                offers_df.iloc[i]['cost_per_click_bid'] * x[i]
+                for i in range(n_offers)
+            ]) <= offers_df['remaining_budget'].sum()
+        
+        # Solve the problem
+        prob.solve(pulp.PULP_CBC_CMD(msg=False))
+        
+        if prob.status != pulp.LpStatusOptimal:
+            print(f"[DEBUG] PuLP optimization failed, using fallback")
+            return _simple_optimization_fallback(offers_df, alpha, beta, gamma, num_positions)
+        
+        # Extract solution
+        selected_offers = []
+        for i in range(n_offers):
+            if x[i].value() == 1:
+                selected_offers.append(i)
+        
+        # Calculate objectives
+        trivago_income_val = sum([
+            alpha * offers_df.iloc[i]['commission_rate'] * offers_df.iloc[i]['cost_per_click_bid']
+            for i in selected_offers
+        ])
+        
+        user_satisfaction_val = sum([
+            beta * offers_df.iloc[i]['user_satisfaction_score']
+            for i in selected_offers
+        ]) / len(selected_offers) if selected_offers else 0
+        
+        partner_conversion_val = sum([
+            gamma * offers_df.iloc[i]['conversion_probability'] * offers_df.iloc[i]['price_per_night']
+            for i in selected_offers
+        ])
+        
+        total_objective = trivago_income_val + user_satisfaction_val + partner_conversion_val
+        
+        # Create ranked offers list
+        ranked_offers = []
+        for pos, offer_idx in enumerate(selected_offers):
+            offer = offers_df.iloc[offer_idx]
+            ranked_offers.append({
+                "position": pos + 1,
+                "offer_id": offer['offer_id'],
+                "hotel_id": offer.get('hotel_id', f"hotel_{offer_idx}"),
+                "partner_name": offer['partner_name'],
+                "price_per_night": offer['price_per_night'],
+                "commission_rate": offer['commission_rate'],
+                "cost_per_click_bid": offer['cost_per_click_bid'],
+                "user_satisfaction_score": offer['user_satisfaction_score'],
+                "conversion_probability": offer['conversion_probability'],
+                "remaining_budget": offer.get('remaining_budget', 0)
+            })
+        
+        return {
+            "ranking": ranked_offers,
+            "objectives": {
+                "trivago_income": trivago_income_val,
+                "user_satisfaction": user_satisfaction_val,
+                "partner_conversion_value": partner_conversion_val,
+                "total_objective": total_objective
+            },
+            "weights": {
+                "alpha": alpha,
+                "beta": beta,
+                "gamma": gamma
+            },
+            "parameters": {
+                "n_offers": n_offers,
+                "n_positions": num_positions
+            }
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] PuLP optimization failed: {e}")
+        return _simple_optimization_fallback(offers_df, alpha, beta, gamma, num_positions)
+
+def _simple_optimization_fallback(offers_df, alpha, beta, gamma, num_positions):
+    """Simple optimization fallback when PuLP optimization fails"""
+    try:
+        # Sort offers by weighted objective
+        offers_df['weighted_score'] = (
+            alpha * offers_df['commission_rate'] * offers_df['cost_per_click_bid'] +
+            beta * offers_df['user_satisfaction_score'] +
+            gamma * offers_df['conversion_probability'] * offers_df['price_per_night']
+        )
+        
+        # Get top offers
+        top_offers = offers_df.nlargest(num_positions, 'weighted_score')
+        
+        # Calculate objectives
+        trivago_income = (top_offers['commission_rate'] * top_offers['cost_per_click_bid']).sum()
+        user_satisfaction = top_offers['user_satisfaction_score'].mean()
+        partner_conversion_value = (top_offers['conversion_probability'] * top_offers['price_per_night']).sum()
+        total_objective = alpha * trivago_income + beta * user_satisfaction + gamma * partner_conversion_value
+        
+        # Create ranking
+        ranking = list(range(1, len(top_offers) + 1))
+        
+        # Create ranked offers list
+        ranked_offers = []
+        for i, (_, offer) in enumerate(top_offers.iterrows()):
+            ranked_offers.append({
+                "position": i + 1,
+                "offer_id": offer['offer_id'],
+                "hotel_id": offer.get('hotel_id', f"hotel_{i}"),
+                "partner_name": offer['partner_name'],
+                "price_per_night": offer['price_per_night'],
+                "commission_rate": offer['commission_rate'],
+                "cost_per_click_bid": offer['cost_per_click_bid'],
+                "user_satisfaction_score": offer['user_satisfaction_score'],
+                "conversion_probability": offer['conversion_probability'],
+                "remaining_budget": offer['remaining_budget']
+            })
+        
+        return {
+            "ranking": ranked_offers,
+            "objectives": {
+                "trivago_income": trivago_income,
+                "user_satisfaction": user_satisfaction,
+                "partner_conversion_value": partner_conversion_value,
+                "total_objective": total_objective
+            },
+            "weights": {
+                "alpha": alpha,
+                "beta": beta,
+                "gamma": gamma
+            },
+            "parameters": {
+                "n_offers": len(offers_df),
+                "n_positions": num_positions
+            }
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Fallback optimization failed: {e}")
+        return {"error": f"Fallback optimization failed: {str(e)}"}
+
+@app.get("/data_status")
+def get_data_status():
+    """Get status of all data files in the /data directory"""
+    import os
+    from datetime import datetime
+    
+    data_files = [
+        "enhanced_user_profiles.csv",
+        "enhanced_hotels.csv", 
+        "enhanced_partner_offers.csv",
+        "trial_sampled_offers.csv",
+        "bandit_simulation_results.csv",
+        "conversion_probabilities.csv",
+        "user_dynamic_price_sensitivity.csv",
+        "user_market_state.csv",
+        "market_state_by_location.csv",
+        "policy_heatmap_debug.json",
+        "dqn_model.pth",
+        "deterministic_optimization_results.json",
+        "stochastic_optimization_results.json",
+        "optimization_results.json"
+    ]
+    
+    status = {}
+    for filename in data_files:
+        file_path = get_data_path(filename)
+        if os.path.exists(file_path):
+            stat = os.stat(file_path)
+            status[filename] = {
+                "exists": True,
+                "size_bytes": stat.st_size,
+                "size_mb": round(stat.st_size / (1024 * 1024), 2),
+                "last_modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                "file_path": file_path
+            }
+        else:
+            status[filename] = {
+                "exists": False,
+                "size_bytes": 0,
+                "size_mb": 0,
+                "last_modified": None,
+                "file_path": file_path
+            }
+    
+    return {
+        "data_directory": DATA_DIR,
+        "total_files": len(data_files),
+        "existing_files": sum(1 for info in status.values() if info["exists"]),
+        "total_size_mb": sum(info["size_mb"] for info in status.values() if info["exists"]),
+        "files": status
+    }
+
+@app.get("/get_policy_heatmap")
+def get_policy_heatmap():
+    """Get policy heatmap data for visualization"""
+    try:
+        # Generate sample market scenarios
+        market_scenarios = []
+        
+        for demand in [10, 30, 50, 70, 90]:
+            for days in [7, 30, 90, 180]:
+                for competition in [3, 5, 8, 12]:
+                    market_scenarios.append({
+                        'market_demand': demand,
+                        'days_to_go': days,
+                        'competition_density': competition,
+                        'price_volatility': 0.1,
+                        'satisfaction_trend': 0.0,
+                        'budget_utilization': 50.0
+                    })
+        
+        # Get DQN agent and generate heatmap
+        dqn_agent = get_dqn_agent()
+        heatmap_data = dqn_agent.get_policy_heatmap(market_scenarios)
+        
+        # Save heatmap data to file for debugging
+        import json
+        heatmap_file = get_data_path('policy_heatmap_debug.json')
+        with open(heatmap_file, 'w') as f:
+            json.dump(heatmap_data, f, indent=2, default=str)
+        print(f"[DEBUG] Policy heatmap data saved to: {heatmap_file}")
+        print(f"[DEBUG] Heatmap data contains {len(heatmap_data.get('heatmap_data', []))} scenarios")
+        
+        return heatmap_data
+        
+    except Exception as e:
+        print(f"[ERROR] Exception in get_policy_heatmap: {e}")
+        traceback.print_exc()
+        return {"error": f"Exception: {str(e)}"}
 
 if __name__ == "__main__":
     import sys

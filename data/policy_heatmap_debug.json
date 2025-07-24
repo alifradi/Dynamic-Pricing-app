@@ -1,0 +1,991 @@
+{
+  "heatmap_data": [
+    {
+      "market_demand": 10,
+      "days_to_go": 7,
+      "competition_density": 3,
+      "q_values": [
+        85.30368041992188,
+        88.09505462646484,
+        84.00753784179688,
+        93.00297546386719
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 10,
+      "days_to_go": 7,
+      "competition_density": 5,
+      "q_values": [
+        89.46354675292969,
+        92.35515594482422,
+        88.10820007324219,
+        97.52734375
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 10,
+      "days_to_go": 7,
+      "competition_density": 8,
+      "q_values": [
+        95.71440124511719,
+        98.75530242919922,
+        94.26642608642578,
+        104.32190704345703
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 10,
+      "days_to_go": 7,
+      "competition_density": 12,
+      "q_values": [
+        104.03752136230469,
+        107.28189849853516,
+        102.46036529541016,
+        113.36564636230469
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 10,
+      "days_to_go": 30,
+      "competition_density": 3,
+      "q_values": [
+        88.00553131103516,
+        90.89253997802734,
+        86.66575622558594,
+        95.93717193603516
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 10,
+      "days_to_go": 30,
+      "competition_density": 5,
+      "q_values": [
+        92.17379760742188,
+        95.15966033935547,
+        90.77418518066406,
+        100.46820068359375
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 10,
+      "days_to_go": 30,
+      "competition_density": 8,
+      "q_values": [
+        98.42909240722656,
+        101.56367492675781,
+        96.93876647949219,
+        107.26759338378906
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 10,
+      "days_to_go": 30,
+      "competition_density": 12,
+      "q_values": [
+        106.7457275390625,
+        110.08411407470703,
+        105.12838745117188,
+        116.30720520019531
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 10,
+      "days_to_go": 90,
+      "competition_density": 3,
+      "q_values": [
+        95.06478881835938,
+        98.2072525024414,
+        93.604736328125,
+        103.60304260253906
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 10,
+      "days_to_go": 90,
+      "competition_density": 5,
+      "q_values": [
+        99.23274230957031,
+        102.47454833984375,
+        97.71316528320312,
+        108.13394165039062
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 10,
+      "days_to_go": 90,
+      "competition_density": 8,
+      "q_values": [
+        105.48442077636719,
+        108.87525177001953,
+        103.87557983398438,
+        114.93006134033203
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 10,
+      "days_to_go": 90,
+      "competition_density": 12,
+      "q_values": [
+        113.79511260986328,
+        117.38573455810547,
+        112.06733703613281,
+        123.96903228759766
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 10,
+      "days_to_go": 180,
+      "competition_density": 3,
+      "q_values": [
+        105.65135192871094,
+        109.17919158935547,
+        104.01201629638672,
+        115.10037994384766
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 10,
+      "days_to_go": 180,
+      "competition_density": 5,
+      "q_values": [
+        109.81930541992188,
+        113.44647979736328,
+        108.12043762207031,
+        119.63127136230469
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 10,
+      "days_to_go": 180,
+      "competition_density": 8,
+      "q_values": [
+        116.05299377441406,
+        119.82958221435547,
+        114.26571655273438,
+        126.41179656982422
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 10,
+      "days_to_go": 180,
+      "competition_density": 12,
+      "q_values": [
+        124.36241912841797,
+        128.33860778808594,
+        122.45430755615234,
+        135.44940185546875
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 30,
+      "days_to_go": 7,
+      "competition_density": 3,
+      "q_values": [
+        95.38145446777344,
+        98.55016326904297,
+        93.94429016113281,
+        103.96549224853516
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 30,
+      "days_to_go": 7,
+      "competition_density": 5,
+      "q_values": [
+        99.5416259765625,
+        102.80982208251953,
+        98.04646301269531,
+        108.48988342285156
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 30,
+      "days_to_go": 7,
+      "competition_density": 8,
+      "q_values": [
+        105.79811096191406,
+        109.21546173095703,
+        104.21647644042969,
+        115.29393768310547
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 30,
+      "days_to_go": 7,
+      "competition_density": 12,
+      "q_values": [
+        114.12712860107422,
+        117.74512481689453,
+        112.42597961425781,
+        124.35096740722656
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 30,
+      "days_to_go": 30,
+      "competition_density": 3,
+      "q_values": [
+        98.09951782226562,
+        101.36446380615234,
+        96.61720275878906,
+        106.9130859375
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 30,
+      "days_to_go": 30,
+      "competition_density": 5,
+      "q_values": [
+        102.26766967773438,
+        105.63143157958984,
+        100.72731018066406,
+        111.44633483886719
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 30,
+      "days_to_go": 30,
+      "competition_density": 8,
+      "q_values": [
+        108.52125549316406,
+        112.03433990478516,
+        106.89241790771484,
+        118.24577331542969
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 30,
+      "days_to_go": 30,
+      "competition_density": 12,
+      "q_values": [
+        116.84791564941406,
+        120.56002044677734,
+        115.099365234375,
+        127.29978942871094
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 30,
+      "days_to_go": 90,
+      "competition_density": 3,
+      "q_values": [
+        105.18711853027344,
+        108.70689392089844,
+        103.59151458740234,
+        114.60623931884766
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 30,
+      "days_to_go": 90,
+      "competition_density": 5,
+      "q_values": [
+        109.35531616210938,
+        112.97530364990234,
+        107.70079803466797,
+        119.13758087158203
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 30,
+      "days_to_go": 90,
+      "competition_density": 8,
+      "q_values": [
+        115.60517120361328,
+        119.37434387207031,
+        113.86090087890625,
+        125.9324722290039
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 30,
+      "days_to_go": 90,
+      "competition_density": 12,
+      "q_values": [
+        123.92005920410156,
+        127.88838958740234,
+        122.05619812011719,
+        134.9761199951172
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 30,
+      "days_to_go": 180,
+      "competition_density": 3,
+      "q_values": [
+        115.77389526367188,
+        119.67989349365234,
+        113.99961853027344,
+        126.10397338867188
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 30,
+      "days_to_go": 180,
+      "competition_density": 5,
+      "q_values": [
+        119.94241333007812,
+        123.94786071777344,
+        118.10855865478516,
+        130.63563537597656
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 30,
+      "days_to_go": 180,
+      "competition_density": 8,
+      "q_values": [
+        126.18578338623047,
+        130.3403778076172,
+        124.26261901855469,
+        137.42440795898438
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 30,
+      "days_to_go": 180,
+      "competition_density": 12,
+      "q_values": [
+        134.49722290039062,
+        138.8503875732422,
+        132.45089721679688,
+        146.4632110595703
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 50,
+      "days_to_go": 7,
+      "competition_density": 3,
+      "q_values": [
+        105.44136047363281,
+        108.99763488769531,
+        103.87632751464844,
+        114.92247772216797
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 50,
+      "days_to_go": 7,
+      "competition_density": 5,
+      "q_values": [
+        109.60223388671875,
+        113.25757598876953,
+        107.97885131835938,
+        119.44654846191406
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 50,
+      "days_to_go": 7,
+      "competition_density": 8,
+      "q_values": [
+        115.85496520996094,
+        119.65753936767578,
+        114.1416015625,
+        126.24163818359375
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 50,
+      "days_to_go": 7,
+      "competition_density": 12,
+      "q_values": [
+        124.19680786132812,
+        128.1974639892578,
+        122.3638916015625,
+        135.310791015625
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 50,
+      "days_to_go": 30,
+      "competition_density": 3,
+      "q_values": [
+        108.1669692993164,
+        111.81705474853516,
+        106.55384826660156,
+        117.87523651123047
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 50,
+      "days_to_go": 30,
+      "competition_density": 5,
+      "q_values": [
+        112.32784271240234,
+        116.07698059082031,
+        110.6563720703125,
+        122.3992919921875
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 50,
+      "days_to_go": 30,
+      "competition_density": 8,
+      "q_values": [
+        118.58734130859375,
+        122.48307800292969,
+        116.82452392578125,
+        129.20010375976562
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 50,
+      "days_to_go": 30,
+      "competition_density": 12,
+      "q_values": [
+        126.92261505126953,
+        131.01895141601562,
+        125.04214477539062,
+        138.2642059326172
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 50,
+      "days_to_go": 90,
+      "competition_density": 3,
+      "q_values": [
+        115.26544189453125,
+        119.16523742675781,
+        113.53247833251953,
+        125.57060241699219
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 50,
+      "days_to_go": 90,
+      "competition_density": 5,
+      "q_values": [
+        119.44023132324219,
+        123.4372329711914,
+        117.64570617675781,
+        130.10580444335938
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 50,
+      "days_to_go": 90,
+      "competition_density": 8,
+      "q_values": [
+        125.69419860839844,
+        129.8411407470703,
+        123.81071472167969,
+        136.9055633544922
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 50,
+      "days_to_go": 90,
+      "competition_density": 12,
+      "q_values": [
+        134.01998901367188,
+        138.36636352539062,
+        132.01473999023438,
+        145.95864868164062
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 50,
+      "days_to_go": 180,
+      "competition_density": 3,
+      "q_values": [
+        125.88836669921875,
+        130.17160034179688,
+        123.98086547851562,
+        137.10231018066406
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 50,
+      "days_to_go": 180,
+      "competition_density": 5,
+      "q_values": [
+        130.05746459960938,
+        134.44125366210938,
+        128.0913848876953,
+        141.63290405273438
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 50,
+      "days_to_go": 180,
+      "competition_density": 8,
+      "q_values": [
+        136.31138610839844,
+        140.84381103515625,
+        134.25286865234375,
+        148.429443359375
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 50,
+      "days_to_go": 180,
+      "competition_density": 12,
+      "q_values": [
+        144.62550354003906,
+        149.35739135742188,
+        142.44419860839844,
+        157.4766082763672
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 70,
+      "days_to_go": 7,
+      "competition_density": 3,
+      "q_values": [
+        115.50019836425781,
+        119.44275665283203,
+        113.80552673339844,
+        125.88019561767578
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 70,
+      "days_to_go": 7,
+      "competition_density": 5,
+      "q_values": [
+        119.66203308105469,
+        123.70479583740234,
+        117.91059875488281,
+        130.4036102294922
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 70,
+      "days_to_go": 7,
+      "competition_density": 8,
+      "q_values": [
+        125.90911865234375,
+        130.09994506835938,
+        124.06909942626953,
+        137.194091796875
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 70,
+      "days_to_go": 7,
+      "competition_density": 12,
+      "q_values": [
+        134.25579833984375,
+        138.64181518554688,
+        132.2937469482422,
+        146.26187133789062
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 70,
+      "days_to_go": 30,
+      "competition_density": 3,
+      "q_values": [
+        118.22502136230469,
+        122.26142120361328,
+        116.48249053955078,
+        128.8335723876953
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 70,
+      "days_to_go": 30,
+      "competition_density": 5,
+      "q_values": [
+        122.38714599609375,
+        126.52330017089844,
+        120.58707427978516,
+        133.35671997070312
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 70,
+      "days_to_go": 30,
+      "competition_density": 8,
+      "q_values": [
+        128.64178466796875,
+        132.92559814453125,
+        126.75218200683594,
+        140.1524200439453
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 70,
+      "days_to_go": 30,
+      "competition_density": 12,
+      "q_values": [
+        136.98851013183594,
+        141.46737670898438,
+        134.97601318359375,
+        149.21994018554688
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 70,
+      "days_to_go": 90,
+      "competition_density": 3,
+      "q_values": [
+        125.33301544189453,
+        129.6146240234375,
+        123.46629333496094,
+        136.53822326660156
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 70,
+      "days_to_go": 90,
+      "competition_density": 5,
+      "q_values": [
+        129.50733947753906,
+        133.8869171142578,
+        127.57997131347656,
+        141.07138061523438
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 70,
+      "days_to_go": 90,
+      "competition_density": 8,
+      "q_values": [
+        135.76882934570312,
+        140.29537963867188,
+        133.75048828125,
+        147.87110900878906
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 70,
+      "days_to_go": 90,
+      "competition_density": 12,
+      "q_values": [
+        144.10836791992188,
+        148.83432006835938,
+        141.9669189453125,
+        156.93760681152344
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 70,
+      "days_to_go": 180,
+      "competition_density": 3,
+      "q_values": [
+        135.9811248779297,
+        140.6409912109375,
+        133.9387969970703,
+        148.08834838867188
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 70,
+      "days_to_go": 180,
+      "competition_density": 5,
+      "q_values": [
+        140.15647888183594,
+        144.91452026367188,
+        138.05337524414062,
+        152.62547302246094
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 70,
+      "days_to_go": 180,
+      "competition_density": 8,
+      "q_values": [
+        146.40350341796875,
+        151.3148193359375,
+        144.20877075195312,
+        159.41900634765625
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 70,
+      "days_to_go": 180,
+      "competition_density": 12,
+      "q_values": [
+        154.7216033935547,
+        159.83424377441406,
+        152.40475463867188,
+        168.46807861328125
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 90,
+      "days_to_go": 7,
+      "competition_density": 3,
+      "q_values": [
+        125.555908203125,
+        129.88592529296875,
+        123.73410034179688,
+        136.84043884277344
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 90,
+      "days_to_go": 7,
+      "competition_density": 5,
+      "q_values": [
+        129.71803283691406,
+        134.14779663085938,
+        127.83868408203125,
+        141.3636016845703
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 90,
+      "days_to_go": 7,
+      "competition_density": 8,
+      "q_values": [
+        135.9612274169922,
+        140.54061889648438,
+        133.99554443359375,
+        148.1483154296875
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 90,
+      "days_to_go": 7,
+      "competition_density": 12,
+      "q_values": [
+        144.3090057373047,
+        149.08421325683594,
+        142.22064208984375,
+        157.21714782714844
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 90,
+      "days_to_go": 30,
+      "competition_density": 3,
+      "q_values": [
+        128.2806396484375,
+        132.7046356201172,
+        126.41122436523438,
+        139.79388427734375
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 90,
+      "days_to_go": 30,
+      "competition_density": 5,
+      "q_values": [
+        132.44276428222656,
+        136.96652221679688,
+        130.51580810546875,
+        144.31703186035156
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 90,
+      "days_to_go": 30,
+      "competition_density": 8,
+      "q_values": [
+        138.69277954101562,
+        143.36517333984375,
+        136.6777801513672,
+        151.10736083984375
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 90,
+      "days_to_go": 30,
+      "competition_density": 12,
+      "q_values": [
+        147.04078674316406,
+        151.90982055664062,
+        144.903076171875,
+        160.177978515625
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 90,
+      "days_to_go": 90,
+      "competition_density": 3,
+      "q_values": [
+        135.38864135742188,
+        140.05783081054688,
+        133.39501953125,
+        147.49855041503906
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 90,
+      "days_to_go": 90,
+      "competition_density": 5,
+      "q_values": [
+        139.5572509765625,
+        144.325439453125,
+        137.5046844482422,
+        152.02781677246094
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 90,
+      "days_to_go": 90,
+      "competition_density": 8,
+      "q_values": [
+        145.81820678710938,
+        150.73426818847656,
+        143.67498779296875,
+        158.83175659179688
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 90,
+      "days_to_go": 90,
+      "competition_density": 12,
+      "q_values": [
+        154.16603088378906,
+        159.27847290039062,
+        151.897705078125,
+        167.9026641845703
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 90,
+      "days_to_go": 180,
+      "competition_density": 3,
+      "q_values": [
+        146.0482635498047,
+        151.09201049804688,
+        143.87521362304688,
+        159.0637664794922
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 90,
+      "days_to_go": 180,
+      "competition_density": 5,
+      "q_values": [
+        150.22386169433594,
+        155.365234375,
+        147.98770141601562,
+        163.60044860839844
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 90,
+      "days_to_go": 180,
+      "competition_density": 8,
+      "q_values": [
+        156.48727416992188,
+        161.7750244140625,
+        154.15618896484375,
+        170.40541076660156
+      ],
+      "best_policy": "Partner-Focused Policy"
+    },
+    {
+      "market_demand": 90,
+      "days_to_go": 180,
+      "competition_density": 12,
+      "q_values": [
+        164.82040405273438,
+        170.30935668945312,
+        162.36590576171875,
+        179.4659881591797
+      ],
+      "best_policy": "Partner-Focused Policy"
+    }
+  ],
+  "policies": {
+    "0": {
+      "name": "High-Trust Policy",
+      "alpha": 0.2,
+      "beta": 0.6,
+      "gamma": 0.2
+    },
+    "1": {
+      "name": "Balanced Policy",
+      "alpha": 0.4,
+      "beta": 0.3,
+      "gamma": 0.3
+    },
+    "2": {
+      "name": "High-Revenue Policy",
+      "alpha": 0.6,
+      "beta": 0.2,
+      "gamma": 0.2
+    },
+    "3": {
+      "name": "Partner-Focused Policy",
+      "alpha": 0.3,
+      "beta": 0.2,
+      "gamma": 0.5
+    }
+  },
+  "epsilon": 0.04470026135116646
+}

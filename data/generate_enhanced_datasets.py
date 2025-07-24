@@ -135,11 +135,30 @@ class HotelDatasetGenerator:
             return f"{fake.company().replace(',', '').replace('Inc', '').replace('LLC', '').strip()} {random.choice(suffixes)}"
     
     def generate_partner_offers(self, hotels_df, n=10000):
-        """Generate realistic partner offers with price fluctuation"""
+        """Generate realistic partner offers with price fluctuation and marketing budgets"""
         offers = []
         
         # Generate base date for price fluctuation (last 24 hours)
         base_date = datetime.now() - timedelta(hours=24)
+        
+        # Partner marketing budget ranges (in USD)
+        partner_budgets = {
+            "Booking.com": (50000, 200000),
+            "Expedia": (40000, 180000),
+            "Hotels.com": (30000, 150000),
+            "Agoda": (25000, 120000),
+            "Priceline": (20000, 100000),
+            "Kayak": (15000, 80000),
+            "Orbitz": (10000, 60000),
+            "Travelocity": (8000, 50000),
+            "HotelDirect": (5000, 30000),
+            "Venere": (3000, 20000),
+            "HRS": (2000, 15000),
+            "Lastminute.com": (1500, 10000),
+            "Otel.com": (1000, 8000),
+            "Getaroom": (500, 5000),
+            "Hotwire": (300, 3000)
+        }
         
         for i in range(n):
             hotel = hotels_df.iloc[i % len(hotels_df)]
@@ -169,6 +188,16 @@ class HotelDatasetGenerator:
             # Generate price fluctuation data for past 24 hours with custom variance
             price_history = self._generate_price_fluctuation(price_per_night, base_date, variance_factor)
             
+            # Partner marketing budget
+            budget_min, budget_max = partner_budgets.get(partner, (1000, 10000))
+            partner_marketing_budget = round(np.random.uniform(budget_min, budget_max), 2)
+            
+            # Cost per click bid (influenced by partner budget and hotel quality)
+            base_cpc = np.random.uniform(0.5, 3.0)
+            # Higher quality hotels get higher bids
+            quality_multiplier = 1 + (hotel["star_rating"] - 3) * 0.2
+            cost_per_click_bid = round(base_cpc * quality_multiplier, 2)
+            
             offer = {
                 "offer_id": f"O{i+1:06d}",
                 "hotel_id": hotel["hotel_id"],
@@ -177,8 +206,10 @@ class HotelDatasetGenerator:
                 "price_per_night": price_per_night,
                 "total_price": total_price,
                 "trivago_displayed_price": trivago_price,
-                "cost_per_click_bid": round(np.random.uniform(0.5, 3.0), 2),
+                "cost_per_click_bid": cost_per_click_bid,
                 "commission_rate": round(np.random.uniform(0.08, 0.20), 3),
+                "partner_marketing_budget": partner_marketing_budget,
+                "remaining_budget": partner_marketing_budget,  # Will be updated during simulation
                 "cancellation_policy": np.random.choice(["Free", "Non-refundable", "Partial"], 
                                                       p=[0.6, 0.25, 0.15]),
                 "breakfast_included": random.choice([True, False]),
@@ -401,10 +432,13 @@ class HotelDatasetGenerator:
         return ",".join(selected)
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate enhanced hotel datasets.")
-    parser.add_argument('--hotels', type=int, default=10000, help='Number of hotels to generate')
-    parser.add_argument('--offers', type=int, default=10000, help='Number of partner offers to generate')
-    parser.add_argument('--users', type=int, default=10000, help='Number of user profiles to generate')
+    parser = argparse.ArgumentParser(description="Generate enhanced hotel datasets for trivago simulation.")
+    parser.add_argument('--hotels', type=int, default=10000, 
+                       help='Maximum number of hotels in the pool for dynamic sampling')
+    parser.add_argument('--offers', type=int, default=10000, 
+                       help='Maximum number of partner offers in the pool for dynamic sampling')
+    parser.add_argument('--users', type=int, default=10000, 
+                       help='Maximum number of user profiles in the pool for dynamic sampling')
     args = parser.parse_args()
 
     # Ensure data directory exists (relative to script location)
@@ -414,22 +448,25 @@ def main():
         os.makedirs(data_dir)
 
     print("\U0001F3E8 Starting Enhanced Hotel Dataset Generation...")
+    print("📊 Note: These datasets serve as the maximum pool for dynamic sampling during simulation.")
+    print("   The actual number of records used in each simulation will be determined by the UI parameters.\n")
     
     generator = HotelDatasetGenerator()
     
-    print(f"\U0001F4CA Generating Hotels dataset ({args.hotels} rows)...")
+    print(f"\U0001F4CA Generating Hotels dataset (pool size: {args.hotels} rows)...")
     hotels_df = generator.generate_hotels(args.hotels)
     hotels_path = os.path.join(data_dir, "enhanced_hotels.csv")
     hotels_df.to_csv(hotels_path, index=False)
     print(f"✅ Hotels dataset saved: {len(hotels_df)} rows, {len(hotels_df.columns)} columns")
     
-    print(f"\U0001F4B0 Generating Partner Offers dataset ({args.offers} rows)...")
+    print(f"\U0001F4B0 Generating Partner Offers dataset (pool size: {args.offers} rows)...")
     offers_df = generator.generate_partner_offers(hotels_df, args.offers)
     offers_path = os.path.join(data_dir, "enhanced_partner_offers.csv")
     offers_df.to_csv(offers_path, index=False)
     print(f"✅ Partner Offers dataset saved: {len(offers_df)} rows, {len(offers_df.columns)} columns")
+    print(f"   💰 Added partner_marketing_budget and remaining_budget columns for budget constraints")
     
-    print(f"\U0001F465 Generating User Profiles dataset ({args.users} rows)...")
+    print(f"\U0001F465 Generating User Profiles dataset (pool size: {args.users} rows)...")
     users_df = generator.generate_user_profiles(args.users)
     users_path = os.path.join(data_dir, "enhanced_user_profiles.csv")
     users_df.to_csv(users_path, index=False)
@@ -441,11 +478,18 @@ def main():
     print(f"Partner Offers: {len(offers_df)} rows from {len(offers_df['partner_name'].unique())} partners")
     print(f"User Profiles: {len(users_df)} rows with {len(users_df['user_type'].unique())} user types")
     
+    # Budget statistics
+    total_budget = offers_df['partner_marketing_budget'].sum()
+    avg_budget = offers_df['partner_marketing_budget'].mean()
+    print(f"💰 Total Partner Marketing Budget: ${total_budget:,.2f}")
+    print(f"💰 Average Partner Budget: ${avg_budget:,.2f}")
+    
     print("\n🎉 All datasets generated successfully!")
     print("Files created:")
     print("- enhanced_hotels.csv")
-    print("- enhanced_partner_offers.csv") 
+    print("- enhanced_partner_offers.csv (with budget constraints)")
     print("- enhanced_user_profiles.csv")
+    print("\n💡 These datasets are now ready for dynamic sampling in the trivago simulation.")
 
 if __name__ == "__main__":
     main()

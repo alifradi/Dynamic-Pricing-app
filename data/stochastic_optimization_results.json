@@ -1,0 +1,113 @@
+{
+  "optimization_type": "stochastic",
+  "status": "Optimal",
+  "objective_value": 258.82175810085005,
+  "selected_offers": [
+    {
+      "offer_id": 10048,
+      "hotel_id": "H00048",
+      "partner_name": "Venere",
+      "price_per_night": 445.55,
+      "conversion_probability": 0.505445,
+      "user_satisfaction_score": 4.9356,
+      "trust_score": 1.0,
+      "commission_rate": 0.188
+    },
+    {
+      "offer_id": 20048,
+      "hotel_id": "H00048",
+      "partner_name": "Lastminute.com",
+      "price_per_night": 453.67,
+      "conversion_probability": 0.504633,
+      "user_satisfaction_score": 4.87064,
+      "trust_score": 1.0,
+      "commission_rate": 0.104
+    },
+    {
+      "offer_id": 40048,
+      "hotel_id": "H00048",
+      "partner_name": "Expedia",
+      "price_per_night": 477.36,
+      "conversion_probability": 0.502264,
+      "user_satisfaction_score": 4.68112,
+      "trust_score": 1.0,
+      "commission_rate": 0.095
+    },
+    {
+      "offer_id": 30048,
+      "hotel_id": "H00048",
+      "partner_name": "Otel.com",
+      "price_per_night": 498.25,
+      "conversion_probability": 0.500175,
+      "user_satisfaction_score": 4.514,
+      "trust_score": 1.0,
+      "commission_rate": 0.107
+    },
+    {
+      "offer_id": 48,
+      "hotel_id": "H00048",
+      "partner_name": "Kayak",
+      "price_per_night": 507.92,
+      "conversion_probability": 0.49920800000000004,
+      "user_satisfaction_score": 4.43664,
+      "trust_score": 1.0,
+      "commission_rate": 0.129
+    },
+    {
+      "offer_id": 13199,
+      "hotel_id": "H03199",
+      "partner_name": "Venere",
+      "price_per_night": 157.48,
+      "conversion_probability": 0.47225200000000006,
+      "user_satisfaction_score": 6.760160000000001,
+      "trust_score": 1.0,
+      "commission_rate": 0.141
+    },
+    {
+      "offer_id": 47393,
+      "hotel_id": "H07393",
+      "partner_name": "Expedia",
+      "price_per_night": 183.6,
+      "conversion_probability": 0.48164,
+      "user_satisfaction_score": 6.7312,
+      "trust_score": 1.0,
+      "commission_rate": 0.115
+    },
+    {
+      "offer_id": 13644,
+      "hotel_id": "H03644",
+      "partner_name": "Booking.com",
+      "price_per_night": 144.0,
+      "conversion_probability": 0.4736,
+      "user_satisfaction_score": 6.868,
+      "trust_score": 1.0,
+      "commission_rate": 0.146
+    },
+    {
+      "offer_id": 43644,
+      "hotel_id": "H03644",
+      "partner_name": "HRS",
+      "price_per_night": 142.58,
+      "conversion_probability": 0.47374200000000005,
+      "user_satisfaction_score": 6.87936,
+      "trust_score": 1.0,
+      "commission_rate": 0.171
+    },
+    {
+      "offer_id": 37393,
+      "hotel_id": "H07393",
+      "partner_name": "Priceline",
+      "price_per_night": 165.6,
+      "conversion_probability": 0.48344,
+      "user_satisfaction_score": 6.8752,
+      "trust_score": 1.0,
+      "commission_rate": 0.135
+    }
+  ],
+  "num_selected": 10,
+  "metadata": {
+    "total_offers": 50,
+    "total_users": 1,
+    "timestamp": "2025-07-24T13:44:09.306337"
+  }
+}
