@@ -141,20 +141,20 @@ fetch_shapley_data <- function() {
 fetch_policy_heatmap <- function() {
   tryCatch({
     print("[DEBUG] Fetching policy heatmap data...")
-    res <- GET(paste0(API_URL, "/get_policy_heatmap"))
+  res <- GET(paste0(API_URL, "/get_policy_heatmap"))
     print(paste("[DEBUG] Response status:", res$status_code))
     
-    if (res$status_code == 200) {
-      data <- fromJSON(rawToChar(res$content))
+  if (res$status_code == 200) {
+    data <- fromJSON(rawToChar(res$content))
       print(paste("[DEBUG] Data fetched successfully, scenarios:", length(data$heatmap_data)))
-      return(data)
+    return(data)
     } else {
       print(paste("[ERROR] API returned status:", res$status_code))
       return(NULL)
-    }
+  }
   }, error = function(e) {
     print(paste("[ERROR] Fetch policy heatmap error:", e$message))
-    return(NULL)
+  return(NULL)
   })
 }
 
@@ -203,6 +203,25 @@ ui <- dashboardPage(
           font-size: 12px;
           color: #7f8c8d;
           text-transform: uppercase;
+        }
+        .info-box {
+          background: #f8f9fa;
+          border: 2px solid #e9ecef;
+          border-radius: 8px;
+          padding: 15px;
+          text-align: center;
+          margin: 10px 0;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .info-box h4 {
+          margin: 0 0 10px 0;
+          color: #495057;
+          font-size: 14px;
+          font-weight: 600;
+        }
+        .info-box p {
+          margin: 0;
+          font-weight: bold;
         }
         .strategy-card {
           background: white;
@@ -346,21 +365,31 @@ ui <- dashboardPage(
           box(
             title = "Optimization Results", status = "primary", solidHeader = TRUE, width = 12,
             fluidRow(
-              column(6,
-                actionButton("run_optimization_btn", "Run Optimization", 
-                           class = "btn-primary", icon = icon("cogs"))
-              ),
-              column(4,
-                actionButton("run_deterministic_btn", "Run Deterministic Optimization", 
-                           class = "btn-warning", icon = icon("calculator"))
-              ),
-              column(4,
-                actionButton("run_stochastic_btn", "Run Stochastic Optimization", 
-                           class = "btn-info", icon = icon("dice"))
+              column(12,
+                actionButton("run_simple_optimization", "Solve LP Problem", 
+                           class = "btn-success btn-lg", icon = icon("calculator"),
+                           style = "width: 100%; height: 60px; font-size: 18px;")
               )
             ),
+            fluidRow(
+              column(12,
+                div(style = "text-align: center; padding: 10px; background-color: #f8f9fa; border-radius: 5px; margin-top: 10px;",
+                  helpText("Simple LP Model: Maximize 2x + y, Subject to: x≥0, y≥0, x≤3, y≤2")
+                )
+              )
+            ),
+
             br(), br(),
-            DT::dataTableOutput("optimization_results_table")
+
+
+            fluidRow(
+              column(12,
+                box(
+                  title = "Simple Optimization Results (2x + y)", status = "success", solidHeader = TRUE, width = 12,
+                  DT::dataTableOutput("simple_optimization_table")
+                )
+              )
+            )
           )
         ),
         fluidRow(
@@ -591,6 +620,7 @@ server <- function(input, output, session) {
     simulation_message = NULL,
     policy_selection_result = NULL,
     optimization_results = NULL,
+    simple_optimization_results = NULL,
     ab_test_results = NULL,
     refresh_counter = 0
   )
@@ -634,7 +664,7 @@ server <- function(input, output, session) {
                    alpha = input$alpha_weight,
                    beta = input$beta_weight,
                    gamma = input$gamma_weight,
-                   num_positions = 10
+                   num_positions = 5
                  ))
       
       if (res2$status_code != 200) {
@@ -791,10 +821,10 @@ server <- function(input, output, session) {
   output$policy_table <- renderDT({
     tryCatch({
       print("[DEBUG] Policy table rendering...")
-      heatmap_data <- get_cached_data("policy_heatmap", fetch_policy_heatmap)
+    heatmap_data <- get_cached_data("policy_heatmap", fetch_policy_heatmap)
       print(paste("[DEBUG] Policy data received:", !is.null(heatmap_data)))
-      
-      if (is.null(heatmap_data) || "error" %in% names(heatmap_data)) {
+    
+    if (is.null(heatmap_data) || "error" %in% names(heatmap_data)) {
         print("[DEBUG] No policy data available")
         return(data.frame(
           Message = "No policy data available",
@@ -931,7 +961,7 @@ server <- function(input, output, session) {
                    alpha = input$alpha_weight,
                    beta = input$beta_weight,
                    gamma = input$gamma_weight,
-                   num_positions = 10
+                   num_positions = 5
                  ))
       
       if (res$status_code == 200) {
@@ -947,63 +977,64 @@ server <- function(input, output, session) {
     })
   })
   
-  # Run deterministic optimization
-  observeEvent(input$run_deterministic_btn, {
+
+  
+
+  
+
+
+  
+  # Test button handler
+
+  
+
+  
+  # Simple optimization handler
+  observeEvent(input$run_simple_optimization, {
     tryCatch({
-      showNotification("Running deterministic optimization...", type = "message")
+      print("=== SIMPLE OPTIMIZATION BUTTON CLICKED ===")
+      showNotification("Running simple optimization (2x + y)...", type = "message")
       
-      res <- POST(paste0(API_URL, "/run_deterministic_optimization"))
+      print(paste("Simple optimization API URL:", API_URL))
+      
+      # Make API call for simple optimization
+      print("Making simple optimization API call...")
+      showNotification("Simple optimization is running...", type = "message")
+      res <- POST(
+        paste0(API_URL, "/run_simple_optimization"),
+        timeout(60)  # 1 minute timeout should be sufficient
+      )
+      
+      print(paste("Simple optimization response status:", res$status_code))
       
       if (res$status_code == 200) {
-        deterministic_data <- fromJSON(rawToChar(res$content))
-        showNotification("Deterministic optimization completed!", type = "message")
+        simple_optimization_data <- fromJSON(rawToChar(res$content))
+        showNotification("Simple optimization completed!", type = "message")
         
-        # Update the reactive value so the table can display the results
-        rv$optimization_results <- deterministic_data
+        # Update the reactive value for simple optimization results
+        rv$simple_optimization_results <- simple_optimization_data
         
-        # Show results in a simple format
-        if (!is.null(deterministic_data$results)) {
-          showNotification(paste("Results saved to /data folder. Total expected income:", 
-                               round(deterministic_data$results$json$optimization_results$total_expected_income, 2)), 
+        # Show results summary
+        if (!is.null(simple_optimization_data$objective_value)) {
+          objective_value <- simple_optimization_data$objective_value
+          x_value <- simple_optimization_data$variables$x
+          y_value <- simple_optimization_data$variables$y
+          showNotification(paste("Simple optimization completed! x =", x_value, ", y =", y_value, ", Objective =", objective_value), 
                          type = "message")
         }
       } else {
-        showNotification("Error in deterministic optimization", type = "error")
+        showNotification("Simple optimization failed", type = "error")
       }
       
     }, error = function(e) {
-      showNotification(paste("Error:", e$message), type = "error")
+      error_msg <- e$message
+      showNotification(paste("Error in simple optimization:", error_msg), type = "error")
     })
   })
   
-  # Run stochastic optimization
-  observeEvent(input$run_stochastic_btn, {
-    tryCatch({
-      showNotification("Running stochastic optimization...", type = "message")
-      
-      res <- POST(paste0(API_URL, "/run_stochastic_optimization"))
-      
-      if (res$status_code == 200) {
-        stochastic_data <- fromJSON(rawToChar(res$content))
-        showNotification("Stochastic optimization completed!", type = "message")
-        
-        # Update the reactive value so the table can display the results
-        rv$optimization_results <- stochastic_data
-        
-        # Show results in a simple format
-        if (!is.null(stochastic_data$results)) {
-          showNotification(paste("Results saved to /data folder. Total expected value:", 
-                               round(stochastic_data$results$optimization_results$total_expected_value, 2)), 
-                         type = "message")
-        }
-      } else {
-        showNotification("Error in stochastic optimization", type = "error")
-      }
-      
-    }, error = function(e) {
-      showNotification(paste("Error:", e$message), type = "error")
-    })
-  })
+
+  
+
   
     # Helper function to safely extract values from nested structures
   safe_extract <- function(obj, field, default = NULL) {
@@ -1021,167 +1052,8 @@ server <- function(input, output, session) {
     return(obj[[field]])
   }
   
-  # Optimization results table
-  output$optimization_results_table <- DT::renderDataTable({
-    tryCatch({
-      if (is.null(rv$optimization_results)) {
-        return(data.frame(Message = "Run optimization to see results"))
-      }
-      
-      # Debug: print the structure of optimization results
-      print("Optimization results structure:")
-      print(str(rv$optimization_results))
-      
-      # Check if this is deterministic/stochastic optimization results
-      if (!is.null(safe_access(rv$optimization_results, "results")) && 
-          !is.null(safe_access(rv$optimization_results$results, "json"))) {
-        
-        # Handle deterministic/stochastic optimization results
-        opt_results <- rv$optimization_results$results$json
-        
-        if (!is.null(safe_access(opt_results, "optimization_results"))) {
-          opt_data <- opt_results$optimization_results
-          
-          # Deterministic optimization
-          if (!is.null(safe_access(opt_data, "user_rankings"))) {
-            user_rankings <- opt_data$user_rankings
-            offers <- safe_access(opt_results$original_data, "offers", list())
-            
-            # Create ranking table from user rankings
-            ranking_data <- list()
-            
-            # Handle the case where user_rankings is a nested array
-            if (is.list(user_rankings) && length(user_rankings) > 0) {
-              for (user_idx in seq_along(user_rankings)) {
-                ranking <- user_rankings[[user_idx]]
-                # ranking is now a vector of offer IDs
-                if (is.numeric(ranking) || is.list(ranking)) {
-                  for (rank in seq_along(ranking)) {
-                    offer_id <- ranking[rank]
-                    if (is.numeric(offer_id) && offer_id > 0 && offer_id <= length(offers)) {
-                      offer <- offers[[offer_id]]
-                      # Check if offer is a list before accessing with $
-                      if (is.list(offer)) {
-                        ranking_data[[length(ranking_data) + 1]] <- list(
-                          Position = rank,
-                          User = paste0("User ", user_idx),
-                          Offer_ID = safe_extract(offer, "offer_id", offer_id),
-                          Conversion_Prob = round(safe_extract(offer, "conversion_probability", 0), 3),
-                          Bid_Amount = round(safe_extract(offer, "bid_amount", 0), 3),
-                          Hotel_Type = safe_extract(offer, "hotel_type", "unknown"),
-                          Price_Level = safe_extract(offer, "price_level", "unknown")
-                        )
-                      }
-                    }
-                  }
-                }
-              }
-            }
-            
-            if (length(ranking_data) > 0) {
-              df <- do.call(rbind, lapply(ranking_data, function(x) {
-                data.frame(
-                  Position = x$Position,
-                  User = x$User,
-                  Offer_ID = x$Offer_ID,
-                  Conversion_Prob = x$Conversion_Prob,
-                  Bid_Amount = x$Bid_Amount,
-                  Hotel_Type = x$Hotel_Type,
-                  Price_Level = x$Price_Level,
-                  stringsAsFactors = FALSE
-                )
-              }))
-              
-              return(DT::datatable(df, 
-                                  options = list(pageLength = 10, scrollX = TRUE),
-                                  rownames = FALSE))
-            } else {
-              return(data.frame(Message = "No ranking data generated from deterministic optimization"))
-            }
-          }
-          
-          # Stochastic optimization
-          if (!is.null(safe_access(opt_data, "selected_offers"))) {
-            selected_offers <- opt_data$selected_offers
-            
-            if (length(selected_offers) > 0) {
-              df <- do.call(rbind, lapply(selected_offers, function(offer) {
-                # Check if offer is a list before accessing with $
-                if (is.list(offer)) {
-                  data.frame(
-                    Offer_ID = safe_extract(offer, "offer_id", "unknown"),
-                    Conversion_Prob = round(safe_extract(offer, "conversion_probability", 0), 3),
-                    Revenue = round(safe_extract(offer, "revenue", 0), 3),
-                    Trust_Score = round(safe_extract(offer, "trust_score", 0), 3),
-                    Price_Consistency = round(safe_extract(offer, "price_consistency", 0), 3),
-                    stringsAsFactors = FALSE
-                  )
-                } else {
-                  # Fallback for non-list offers
-                  data.frame(
-                    Offer_ID = "unknown",
-                    Conversion_Prob = 0,
-                    Revenue = 0,
-                    Trust_Score = 0,
-                    Price_Consistency = 0,
-                    stringsAsFactors = FALSE
-                  )
-                }
-              }))
-              
-              return(DT::datatable(df, 
-                                  options = list(pageLength = 10, scrollX = TRUE),
-                                  rownames = FALSE))
-            } else {
-              return(data.frame(Message = "No offers selected in stochastic optimization"))
-            }
-          }
-        }
-      }
-      
-      # Handle original optimization results structure
-      ranking_data <- safe_access(rv$optimization_results, "ranking")
-      if (is.null(ranking_data)) {
-        return(data.frame(Message = "No ranking data available"))
-      }
-      
-      df <- do.call(rbind, lapply(ranking_data, function(x) {
-        if (is.list(x)) {
-          data.frame(
-            Position = safe_extract(x, "position", "N/A"),
-            Hotel = safe_extract(x, "hotel_id", "N/A"),
-            Partner = safe_extract(x, "partner_name", "N/A"),
-            Price = paste0("$", safe_extract(x, "price_per_night", 0)),
-            Commission = paste0(round(safe_extract(x, "commission_rate", 0) * 100, 1), "%"),
-            Satisfaction = round(safe_extract(x, "user_satisfaction_score", 0), 3),
-            Conversion = round(safe_extract(x, "conversion_probability", 0), 3),
-            stringsAsFactors = FALSE
-          )
-        } else {
-          # Fallback for non-list items
-          data.frame(
-            Position = "N/A",
-            Hotel = "N/A", 
-            Partner = "N/A",
-            Price = "$0",
-            Commission = "0%",
-            Satisfaction = 0,
-            Conversion = 0,
-            stringsAsFactors = FALSE
-          )
-        }
-      }))
-      
-      DT::datatable(df, 
-                    options = list(pageLength = 10, scrollX = TRUE),
-                    rownames = FALSE)
-      
-    }, error = function(e) {
-      print(paste("Error in optimization results table:", e$message))
-      print(paste("Error call:", deparse(e$call)))
-      return(data.frame(Error = paste("Error displaying results:", e$message)))
-    })
-  })
+
+
   
   # --- ECOSYSTEM HEALTH TAB ---
   
@@ -1557,6 +1429,66 @@ server <- function(input, output, session) {
       "Total Size: ", round(status_data$total_size_mb, 1), " MB\n",
       "Last Updated: ", Sys.time()
     )
+  })
+  
+  # Simple optimization results table
+  output$simple_optimization_table <- DT::renderDataTable({
+    tryCatch({
+      if (is.null(rv$simple_optimization_results)) {
+        return(data.frame(Message = "Run simple optimization to see results"))
+      }
+      
+      # Get simple optimization results - handle both API response formats
+      simple_results <- rv$simple_optimization_results
+      
+      if (is.null(simple_results)) {
+        return(data.frame(Message = "No simple optimization results available"))
+      }
+      
+      # Handle different response formats
+      # Format 1: Direct results from /simple_optimization_results
+      if (!is.null(simple_results$objective_value) && !is.null(simple_results$variables)) {
+        # Direct format - use as is
+        results_data <- simple_results
+      }
+      # Format 2: Wrapped results from /run_simple_optimization
+      else if (!is.null(simple_results$results) && !is.null(simple_results$results$objective_value)) {
+        # Wrapped format - extract from results
+        results_data <- simple_results$results
+      }
+      else {
+        return(data.frame(Message = "Invalid simple optimization results format"))
+      }
+      
+      # Create table with optimal values
+      optimal_data <- data.frame(
+        Variable = c("x", "y", "Objective Value"),
+        Optimal_Value = c(
+          round(results_data$variables$x, 4),
+          round(results_data$variables$y, 4),
+          round(results_data$objective_value, 4)
+        ),
+        Constraint = c(
+          "0 ≤ x ≤ 3",
+          "0 ≤ y ≤ 2",
+          "2x + y"
+        ),
+        Status = c(
+          ifelse(results_data$variables$x >= 0 && results_data$variables$x <= 3, "✅ Feasible", "❌ Infeasible"),
+          ifelse(results_data$variables$y >= 0 && results_data$variables$y <= 2, "✅ Feasible", "❌ Infeasible"),
+          "✅ Optimal"
+        ),
+        stringsAsFactors = FALSE
+      )
+      
+      DT::datatable(optimal_data, 
+                    options = list(pageLength = 10, scrollX = TRUE),
+                    rownames = FALSE) %>%
+        DT::formatRound(columns = c("Optimal_Value"), digits = 4)
+      
+    }, error = function(e) {
+      return(data.frame(Message = paste("Error displaying results:", e$message)))
+    })
   })
 }
 

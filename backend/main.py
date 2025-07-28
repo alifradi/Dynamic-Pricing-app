@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 from typing import List, Dict, Any, Optional
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 import pulp
 import subprocess
@@ -30,13 +30,18 @@ from data_models.data_generator import DataGenerator
 
 from collections import defaultdict
 
-# Define the data directory path - use the Docker volume mount path
-DATA_DIR = '/data'  # This matches the Docker Compose volume mount
+# Define the data directory path - use the local data directory
+DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')  # Local data directory
 
 # Update all file path references to use DATA_DIR
 def get_data_path(filename):
     """Get the full path for a data file"""
-    return os.path.join(DATA_DIR, filename)
+    # Use /data for container environment, fallback to local DATA_DIR
+    container_data_dir = "/data"
+    if os.path.exists(container_data_dir):
+        return os.path.join(container_data_dir, filename)
+    else:
+        return os.path.join(DATA_DIR, filename)
 
 app = FastAPI(
     title="Enhanced Hotel Ranking Simulation API",
@@ -2438,38 +2443,85 @@ def get_conversion_probability(user_id: str, offer_id: str):
         return {"error": f"No conversion probability found for user {user_id} and offer {offer_id}"}
     return row.iloc[0].to_dict()
 
-@app.post("/run_deterministic_optimization")
-def run_deterministic_optimization():
-    """Run deterministic optimization using unified optimizer"""
+
+
+@app.post("/run_three_stage_optimization")
+def run_three_stage_optimization(
+    alpha: float = Form(0.4, ge=0.0, le=1.0, description="Revenue weight from Strategic Levers"),
+    beta: float = Form(0.3, ge=0.0, le=1.0, description="User satisfaction weight from Strategic Levers"),
+    gamma: float = Form(0.3, ge=0.0, le=1.0, description="Partner value weight from Strategic Levers"),
+    confidence_level: float = Form(0.8, ge=0.5, le=0.95, description="Confidence level for chance constraints"),
+    num_positions: int = Form(10, ge=5, le=20, description="Number of ranking positions")
+):
+    """
+    Three-stage stochastic optimization for Trivago revenue optimization.
+    
+    Stage 1: Offer exposure decision
+    Stage 2: User regret minimization (stochastic)
+    Stage 3: Re-conversion maximization
+    
+    Includes chance constraints for partner marketing budgets.
+    """
+    print(f"[DEBUG] Three-stage optimization called with parameters: alpha={alpha}, beta={beta}, gamma={gamma}, confidence_level={confidence_level}, num_positions={num_positions}")
+    
     try:
         # Import the unified optimizer
+        print("[DEBUG] Importing UnifiedOptimizer...")
         from unified_optimizer import UnifiedOptimizer
         
         # Initialize optimizer
-        optimizer = UnifiedOptimizer(DATA_DIR)
+        print(f"[DEBUG] Initializing optimizer with DATA_DIR: {DATA_DIR}")
+        # Use /data for container environment, fallback to local DATA_DIR
+        container_data_dir = "/data"
+        if os.path.exists(container_data_dir):
+            optimizer = UnifiedOptimizer(container_data_dir)
+            print(f"[DEBUG] Using container data directory: {container_data_dir}")
+        else:
+            optimizer = UnifiedOptimizer(DATA_DIR)
+            print(f"[DEBUG] Using local data directory: {DATA_DIR}")
         
         # Load data
+        print("[DEBUG] Loading data...")
         if not optimizer.load_data():
+            print("[ERROR] Failed to load optimization data")
             raise HTTPException(status_code=400, detail="Failed to load optimization data")
+        print("[DEBUG] Data loaded successfully")
         
-        # Prepare optimization data
-        optimization_data = optimizer.prepare_optimization_data(max_offers=50, max_users=20)
+        # Prepare optimization data with automatic sampling
+        print("[DEBUG] Preparing optimization data...")
+        optimization_data = optimizer.prepare_optimization_data()
+        print(f"[DEBUG] Optimization data prepared: {len(optimization_data.get('offers', []))} offers, {len(optimization_data.get('users', []))} users")
         
-        # Run deterministic optimization
-        results = optimizer.run_deterministic_optimization(
+        # Run three-stage stochastic optimization with user parameters
+        print("[DEBUG] Running three-stage stochastic optimization...")
+        results = optimizer.run_three_stage_stochastic_optimization(
             optimization_data,
-            alpha=0.4,  # Revenue weight
-            beta=0.3,   # User satisfaction weight
-            gamma=0.3,  # Partner value weight
-            num_positions=10
+            alpha=alpha,
+            beta=beta,
+            gamma=gamma,
+            confidence_level=confidence_level,
+            num_positions=num_positions
         )
+        print(f"[DEBUG] Optimization completed with status: {results.get('status')}")
         
         # Save results
-        optimizer.save_results(results, 'deterministic_optimization_results.json')
+        print("[DEBUG] Saving results...")
+        optimizer.save_results(results, 'three_stage_optimization_results.json')
+        print("[DEBUG] Results saved successfully")
         
         return {
             "status": "success",
-            "message": "Deterministic optimization completed",
+            "message": "Three-stage stochastic optimization completed",
+            "model_type": "three_stage_stochastic",
+            "parameters": {
+                "alpha": alpha,
+                "beta": beta,
+                "gamma": gamma,
+                "confidence_level": confidence_level,
+                "num_positions": num_positions,
+                "total_offers": len(optimization_data.get('offers', [])),
+                "total_users": len(optimization_data.get('users', []))
+            },
             "results": {
                 "json": results,
                 "csv": results.get('user_rankings', {})
@@ -2477,47 +2529,79 @@ def run_deterministic_optimization():
         }
         
     except Exception as e:
-        print(f"Error in deterministic optimization: {e}")
-        raise HTTPException(status_code=500, detail=f"Error running optimization: {str(e)}")
+        print(f"[ERROR] Error in three-stage optimization: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error running three-stage optimization: {str(e)}")
 
-@app.post("/run_stochastic_optimization")
-def run_stochastic_optimization():
-    """Run stochastic optimization using unified optimizer"""
+@app.post("/run_simple_optimization")
+def run_simple_optimization():
+    """
+    Simple optimization model: Maximize 2x + y
+    Subject to: x >= 0, y >= 0, x <= 3, y <= 2
+    
+    Returns the optimal values of x and y along with the objective function value.
+    """
+    print("[DEBUG] Simple optimization called")
+    
     try:
         # Import the unified optimizer
+        print("[DEBUG] Importing UnifiedOptimizer...")
         from unified_optimizer import UnifiedOptimizer
         
         # Initialize optimizer
-        optimizer = UnifiedOptimizer(DATA_DIR)
+        print(f"[DEBUG] Initializing optimizer with DATA_DIR: {DATA_DIR}")
+        # Use /data for container environment, fallback to local DATA_DIR
+        container_data_dir = "/data"
+        if os.path.exists(container_data_dir):
+            optimizer = UnifiedOptimizer(container_data_dir)
+            print(f"[DEBUG] Using container data directory: {container_data_dir}")
+        else:
+            optimizer = UnifiedOptimizer(DATA_DIR)
+            print(f"[DEBUG] Using local data directory: {DATA_DIR}")
         
-        # Load data
-        if not optimizer.load_data():
-            raise HTTPException(status_code=400, detail="Failed to load optimization data")
-        
-        # Prepare optimization data
-        optimization_data = optimizer.prepare_optimization_data(max_offers=50, max_users=20)
-        
-        # Run stochastic optimization
-        results = optimizer.run_stochastic_optimization(
-            optimization_data,
-            num_selected=10
-        )
+        # Run simple optimization
+        print("[DEBUG] Running simple optimization...")
+        results = optimizer.run_simple_optimization()
+        print(f"[DEBUG] Optimization completed with status: {results.get('status')}")
         
         # Save results
-        optimizer.save_results(results, 'stochastic_optimization_results.json')
+        print("[DEBUG] Saving results...")
+        optimizer.save_results(results, 'simple_optimization_results.json')
+        print("[DEBUG] Results saved successfully")
         
         return {
             "status": "success",
-            "message": "Stochastic optimization completed",
-            "results": {
-                "json": results,
-                "csv": results.get('selected_offers', [])
-            }
+            "message": "Simple optimization completed",
+            "model_type": "simple_2x_plus_y",
+            "parameters": {
+                "objective_function": "2x + y",
+                "constraints": "x >= 0, y >= 0, x <= 3, y <= 2"
+            },
+            "results": results
         }
         
     except Exception as e:
-        print(f"Error in stochastic optimization: {e}")
-        raise HTTPException(status_code=500, detail=f"Error running optimization: {str(e)}")
+        print(f"[ERROR] Error in simple optimization: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error running simple optimization: {str(e)}")
+
+@app.get("/simple_optimization_results")
+def get_simple_optimization_results():
+    """Get the latest simple optimization results"""
+    try:
+        # Check if simple optimization results exist
+        results_file = get_data_path('simple_optimization_results.json')
+        if os.path.exists(results_file):
+            with open(results_file, 'r') as f:
+                results = json.load(f)
+            return results
+        else:
+            raise HTTPException(status_code=404, detail="No simple optimization results found")
+    except Exception as e:
+        print(f"[ERROR] Error reading simple optimization results: {e}")
+        raise HTTPException(status_code=500, detail=f"Error reading simple optimization results: {str(e)}")
 
 @app.get("/optimization_results")
 def get_optimization_results():
@@ -2533,6 +2617,41 @@ def get_optimization_results():
             return {"message": "No optimization results available. Run optimization first."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error reading optimization results: {str(e)}")
+
+@app.get("/three_stage_optimization_results")
+def get_three_stage_optimization_results():
+    """Get the three-stage optimization results"""
+    try:
+        # Check if three-stage optimization results exist
+        results_file = get_data_path('three_stage_optimization_results.json')
+        if os.path.exists(results_file):
+            with open(results_file, 'r') as f:
+                results = json.load(f)
+            
+            # Structure the data to match the expected API response format
+            structured_data = {
+                "status": "success",
+                "message": "Three-stage optimization results loaded",
+                "model_type": "three_stage_stochastic",
+                "parameters": {
+                    "alpha": 0.4,
+                    "beta": 0.3,
+                    "gamma": 0.3,
+                    "confidence_level": 0.8,
+                    "num_positions": 10,
+                    "total_offers": results.get('metadata', {}).get('total_offers', 0),
+                    "total_users": results.get('metadata', {}).get('total_users', 0)
+                },
+                "results": {
+                    "json": results,
+                    "csv": results.get('user_rankings', {})
+                }
+            }
+            return structured_data
+        else:
+            return {"message": "No three-stage optimization results available. Run optimization first."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading three-stage optimization results: {str(e)}")
 
 # New endpoints for final implementation
 
@@ -3406,8 +3525,8 @@ def train_rl_agent():
                 episode_next_state = episode_market_state.copy()
                 episode_next_state['market_demand'] = max(0, episode_market_state['market_demand'] - 1)
                 episode_next_state_vector = dqn_agent.get_state_vector(episode_next_state)
-                
-                # Train the agent
+        
+        # Train the agent
                 episode_loss = dqn_agent.step(episode_state, episode_action, episode_reward, episode_next_state_vector, done=False)
                 if episode_loss is not None:
                     total_loss += episode_loss

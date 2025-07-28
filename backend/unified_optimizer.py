@@ -83,25 +83,74 @@ class UnifiedOptimizer:
             print(f"Error loading data: {e}")
             return False
     
-    def prepare_optimization_data(self, max_offers: int = 50, max_users: int = 20) -> Dict[str, Any]:
+    def prepare_optimization_data(self, max_offers: int = None, max_users: int = None) -> Dict[str, Any]:
         """
-        Prepare data for optimization by cleaning and structuring it.
+        Prepare data for optimization using automatic sampling.
+        Uses simulated/sampled data with configurable limits.
         
         Args:
-            max_offers: Maximum number of offers to process
-            max_users: Maximum number of users to process
-            
+            max_offers: Maximum number of offers to use (None = use all)
+            max_users: Maximum number of users to use (None = use all)
+        
         Returns:
             Dict containing prepared optimization data
         """
         if self.offers_data is None:
             raise ValueError("No offers data loaded. Call load_data() first.")
         
-        # Sample data for performance
-        offers_sample = self.offers_data.head(max_offers).copy()
+        # Use all available data if limits not specified, but cap at PuLP limits
+        if max_offers is None:
+            max_offers = min(len(self.offers_data), 100)  # Cap at 100 offers for PuLP
+        if max_users is None:
+            max_users = min(len(self.offers_data['user_id'].unique()), 100)  # Cap at 100 users for PuLP
         
-        # Get unique users from the sample
-        unique_users = offers_sample['user_id'].unique()[:max_users]
+        print(f"Preparing optimization data: max_offers={max_offers}, max_users={max_users}")
+        print(f"Available data: {len(self.offers_data)} offers, {len(self.offers_data['user_id'].unique())} users")
+        
+        # Validate problem size for PuLP limits
+        # Assuming num_positions=5 (from UI), target < 100K decision variables
+        estimated_variables = max_offers * max_users * 5  # 5 positions
+        if estimated_variables > 100_000:
+            print(f"WARNING: Problem size ({estimated_variables:,} variables) may exceed PuLP limits")
+            print("Consider reducing max_offers or max_users")
+        else:
+            print(f"Problem size ({estimated_variables:,} variables) is within PuLP limits")
+        
+        # First, get unique users to ensure we have multiple users
+        all_unique_users = self.offers_data['user_id'].unique()
+        if len(all_unique_users) > max_users:
+            # Sample users randomly
+            selected_users = np.random.choice(all_unique_users, max_users, replace=False)
+        else:
+            selected_users = all_unique_users
+        
+        # Filter offers for selected users
+        offers_sample = self.offers_data[self.offers_data['user_id'].isin(selected_users)].copy()
+        
+        # Ensure balanced sampling across users
+        offers_per_user = max_offers // len(selected_users)
+        balanced_offers = []
+        
+        for user_id in selected_users:
+            user_offers = offers_sample[offers_sample['user_id'] == user_id]
+            if len(user_offers) > offers_per_user:
+                # Sample offers for this user
+                user_sample = user_offers.sample(n=offers_per_user, random_state=42)
+            else:
+                # Take all offers for this user
+                user_sample = user_offers
+            
+            balanced_offers.append(user_sample)
+        
+        # Combine all user samples
+        if balanced_offers:
+            offers_sample = pd.concat(balanced_offers, ignore_index=True)
+        else:
+            # Fallback: take first max_offers
+            offers_sample = offers_sample.head(max_offers)
+        
+        # Get the actual unique users from the final sample
+        unique_users = offers_sample['user_id'].unique()
         
         # Prepare offers data
         offers_list = []
@@ -423,6 +472,284 @@ class UnifiedOptimizer:
             'num_positions': num_positions,
             'metadata': optimization_data['metadata']
         }
+    
+    def run_three_stage_stochastic_optimization(self, optimization_data: Dict[str, Any],
+                                              alpha: float = 0.4,
+                                              beta: float = 0.3,
+                                              gamma: float = 0.3,
+                                              confidence_level: float = 0.8,
+                                              num_positions: int = 10) -> Dict[str, Any]:
+        """
+        Three-stage stochastic optimization for Trivago revenue optimization.
+        
+        Stage 1: Offer exposure decision
+        Stage 2: User regret minimization (stochastic)
+        Stage 3: Re-conversion maximization
+        
+        Args:
+            optimization_data: Prepared optimization data
+            confidence_level: Confidence level for chance constraints (default 0.8 = 80%)
+            num_positions: Number of ranking positions
+            
+        Returns:
+            Dict containing optimization results
+        """
+        offers = optimization_data['offers']
+        users = optimization_data['users']
+        
+        # Create optimization problem
+        prob = pulp.LpProblem("Three_Stage_Stochastic_Optimization", pulp.LpMaximize)
+        
+        # Stage 1: Decision variables for offer exposure
+        # x[i,j,k] = 1 if offer i is ranked at position j for user k
+        x = pulp.LpVariable.dicts("x", 
+                                 [(i, j, k) for i in range(len(offers)) 
+                                  for j in range(num_positions) 
+                                  for k in range(len(users))], 
+                                 cat='Binary')
+        
+        # Stage 2: Stochastic regret variables (expected regret for each user)
+        regret = pulp.LpVariable.dicts("regret", 
+                                      [k for k in range(len(users))], 
+                                      lowBound=0)
+        
+        # Stage 3: Re-conversion probability variables
+        reconversion = pulp.LpVariable.dicts("reconversion", 
+                                            [k for k in range(len(users))], 
+                                            lowBound=0, upBound=1)
+        
+        # Objective function: Maximize Trivago revenue minus expected regret plus re-conversion value
+        revenue_obj = 0
+        regret_obj = 0
+        reconversion_obj = 0
+        
+        for i, offer in enumerate(offers):
+            for j in range(num_positions):
+                for k, user in enumerate(users):
+                    position_factor = 1.0 / (1 + 0.5 * j)  # Position decay
+                    
+                    # Stage 1: Revenue from bid fees and conversions
+                    bid_fee = offer['cost_per_click_bid']
+                    conversion_revenue = offer['price_per_night'] * offer['commission_rate'] * offer['conversion_probability']
+                    revenue_obj += x[i, j, k] * position_factor * (bid_fee + conversion_revenue)
+        
+        # Stage 2: Expected regret (stochastic component)
+        for k, user in enumerate(users):
+            # Expected regret based on price sensitivity and user preferences
+            user_price_sensitivity = user.get('price_sensitivity', 0.5)
+            regret_obj += regret[k] * user_price_sensitivity
+        
+        # Stage 3: Re-conversion value
+        for k, user in enumerate(users):
+            # Re-conversion value based on user satisfaction and trust
+            user_satisfaction = user.get('preference_score', 0.5)
+            reconversion_obj += reconversion[k] * user_satisfaction * 100  # Scale factor
+        
+        # Combined objective using user-defined weights
+        prob += alpha * revenue_obj - beta * regret_obj + gamma * reconversion_obj
+        
+        # Constraints
+        
+        # 1. Position constraints: Each position for each user can have at most one offer
+        for j in range(num_positions):
+            for k in range(len(users)):
+                prob += pulp.lpSum(x[i, j, k] for i in range(len(offers))) <= 1
+        
+        # 2. Offer constraints: Each offer can be assigned to at most one position per user
+        for i in range(len(offers)):
+            for k in range(len(users)):
+                prob += pulp.lpSum(x[i, j, k] for j in range(num_positions)) <= 1
+        
+        # 3. Stage 2: Regret constraints (stochastic)
+        for k, user in enumerate(users):
+            user_offers = [i for i, offer in enumerate(offers) if offer.get('user_id') == user['user_id']]
+            if user_offers:
+                # Expected regret based on price differences
+                avg_price = sum(offers[i]['price_per_night'] for i in user_offers) / len(user_offers)
+                for i in user_offers:
+                    for j in range(num_positions):
+                        price_diff = abs(offers[i]['price_per_night'] - avg_price) / avg_price
+                        prob += regret[k] >= x[i, j, k] * price_diff * 0.1
+        
+        # 4. Stage 3: Re-conversion constraints
+        for k, user in enumerate(users):
+            # Re-conversion probability based on ranking quality
+            for i, offer in enumerate(offers):
+                for j in range(num_positions):
+                    position_quality = 1.0 / (1 + 0.3 * j)  # Better positions = higher re-conversion
+                    trust_factor = offer['trust_score']
+                    prob += reconversion[k] >= x[i, j, k] * position_quality * trust_factor * 0.1
+        
+        # 5. CHANCE CONSTRAINT: Marketing budget constraint (80% confidence)
+        # Group offers by partner
+        partner_offers = {}
+        for i, offer in enumerate(offers):
+            partner = offer['partner_name']
+            if partner not in partner_offers:
+                partner_offers[partner] = []
+            partner_offers[partner].append(i)
+        
+        # Budget constraint for each partner
+        for partner, offer_indices in partner_offers.items():
+            total_budget = sum(offers[i]['cost_per_click_bid'] for i in offer_indices)
+            # Chance constraint: P(budget_consumed <= 0.8 * total_budget) >= confidence_level
+            # This translates to: expected_budget_consumption <= 0.8 * total_budget * confidence_level
+            max_budget_consumption = 0.8 * total_budget * confidence_level
+            
+            budget_consumption = 0
+            for i in offer_indices:
+                for j in range(num_positions):
+                    for k in range(len(users)):
+                        # Expected budget consumption considering conversion probability
+                        expected_cost = offers[i]['cost_per_click_bid'] * offers[i]['conversion_probability']
+                        budget_consumption += x[i, j, k] * expected_cost
+            
+            prob += budget_consumption <= max_budget_consumption
+        
+        # Solve the problem
+        prob.solve(pulp.PULP_CBC_CMD(msg=False))
+        
+        # Extract results
+        user_rankings = {}
+        stage_metrics = {}
+        
+        for k, user in enumerate(users):
+            user_rankings[user['user_id']] = []
+            user_revenue = 0
+            user_regret = regret[k].value() if regret[k].value() is not None else 0
+            user_reconversion = reconversion[k].value() if reconversion[k].value() is not None else 0
+            
+            for j in range(num_positions):
+                for i, offer in enumerate(offers):
+                    if x[i, j, k].value() == 1:
+                        position_factor = 1.0 / (1 + 0.5 * j)
+                        offer_revenue = position_factor * (
+                            offer['cost_per_click_bid'] + 
+                            offer['price_per_night'] * offer['commission_rate'] * offer['conversion_probability']
+                        )
+                        user_revenue += offer_revenue
+                        
+                        user_rankings[user['user_id']].append({
+                            'position': j + 1,
+                            'offer_id': offer['offer_id'],
+                            'hotel_id': offer['hotel_id'],
+                            'partner_name': offer['partner_name'],
+                            'price_per_night': offer['price_per_night'],
+                            'cost_per_click_bid': offer['cost_per_click_bid'],
+                            'conversion_probability': offer['conversion_probability'],
+                            'user_satisfaction_score': offer['user_satisfaction_score'],
+                            'trust_score': offer['trust_score'],
+                            'expected_revenue': offer_revenue
+                        })
+            
+            stage_metrics[user['user_id']] = {
+                'stage1_revenue': user_revenue,
+                'stage2_regret': user_regret,
+                'stage3_reconversion_prob': user_reconversion
+            }
+        
+        return {
+            'optimization_type': 'three_stage_stochastic',
+            'status': pulp.LpStatus[prob.status],
+            'objective_value': pulp.value(prob.objective),
+            'user_rankings': user_rankings,
+            'stage_metrics': stage_metrics,
+            'confidence_level': confidence_level,
+            'num_positions': num_positions,
+            'metadata': {
+                'total_offers': len(offers),
+                'total_users': len(users),
+                'total_revenue': sum(metrics['stage1_revenue'] for metrics in stage_metrics.values()),
+                'total_regret': sum(metrics['stage2_regret'] for metrics in stage_metrics.values()),
+                'avg_reconversion': sum(metrics['stage3_reconversion_prob'] for metrics in stage_metrics.values()) / len(users),
+                'timestamp': datetime.now().isoformat()
+            }
+        }
+    
+    def run_simple_optimization(self) -> Dict[str, Any]:
+        """
+        Simple optimization model: Maximize 2x + y
+        Subject to: x >= 0, y >= 0, x <= 3, y <= 2
+        
+        Returns:
+            Dict containing optimization results with x, y values and objective value
+        """
+        try:
+            # Create optimization problem
+            prob = pulp.LpProblem("Simple_Optimization_2x_plus_y", pulp.LpMaximize)
+            
+            # Decision variables
+            x = pulp.LpVariable("x", lowBound=0, upBound=3, cat='Continuous')
+            y = pulp.LpVariable("y", lowBound=0, upBound=2, cat='Continuous')
+            
+            # Objective function: Maximize 2x + y
+            prob += 2 * x + y, "Objective"
+            
+            # Constraints are already defined in variable bounds:
+            # x >= 0, y >= 0 (lowBound=0)
+            # x <= 3, y <= 2 (upBound=3 and upBound=2)
+            
+            # Solve the problem
+            print("Solving simple optimization: Maximize 2x + y")
+            prob.solve()
+            
+            # Get results
+            if prob.status == pulp.LpStatusOptimal:
+                x_value = pulp.value(x)
+                y_value = pulp.value(y)
+                objective_value = pulp.value(prob.objective)
+                
+                results = {
+                    "status": "Optimal",
+                    "objective_value": objective_value,
+                    "variables": {
+                        "x": x_value,
+                        "y": y_value
+                    },
+                    "constraints": {
+                        "x_lower": 0,
+                        "x_upper": 3,
+                        "y_lower": 0,
+                        "y_upper": 2
+                    },
+                    "model_info": {
+                        "objective_function": "2x + y",
+                        "constraints": "x >= 0, y >= 0, x <= 3, y <= 2",
+                        "solver_status": pulp.LpStatus[prob.status]
+                    },
+                    "metadata": {
+                        "timestamp": datetime.now().isoformat(),
+                        "model_type": "simple_2x_plus_y"
+                    }
+                }
+                
+                print(f"Optimization completed successfully!")
+                print(f"x = {x_value}")
+                print(f"y = {y_value}")
+                print(f"Objective value = {objective_value}")
+                
+                return results
+            else:
+                print(f"Optimization failed with status: {pulp.LpStatus[prob.status]}")
+                return {
+                    "status": "Failed",
+                    "error": f"Optimization failed with status: {pulp.LpStatus[prob.status]}",
+                    "metadata": {
+                        "timestamp": datetime.now().isoformat(),
+                        "model_type": "simple_2x_plus_y"
+                    }
+                }
+                
+        except Exception as e:
+            print(f"Error in simple optimization: {e}")
+            return {
+                "status": "Error",
+                "error": str(e),
+                "metadata": {
+                    "timestamp": datetime.now().isoformat(),
+                    "model_type": "simple_2x_plus_y"
+                }
+            }
     
     def save_results(self, results: Dict[str, Any], filename: str) -> bool:
         """
