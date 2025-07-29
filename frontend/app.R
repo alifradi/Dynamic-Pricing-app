@@ -365,17 +365,17 @@ ui <- dashboardPage(
           box(
             title = "Optimization Results", status = "primary", solidHeader = TRUE, width = 12,
             fluidRow(
-              column(12,
-                actionButton("run_simple_optimization", "Solve LP Problem", 
-                           class = "btn-success btn-lg", icon = icon("calculator"),
-                           style = "width: 100%; height: 60px; font-size: 18px;")
-              )
+                           column(12,
+               actionButton("run_simple_optimization", "Run Multi-Objective Ranking Optimization", 
+                          class = "btn-success btn-lg", icon = icon("calculator"),
+                          style = "width: 100%; height: 60px; font-size: 18px;")
+             )
             ),
             fluidRow(
               column(12,
-                div(style = "text-align: center; padding: 10px; background-color: #f8f9fa; border-radius: 5px; margin-top: 10px;",
-                  helpText("Simple LP Model: Maximize 2x + y, Subject to: x≥0, y≥0, x≤3, y≤2")
-                )
+                               div(style = "text-align: center; padding: 10px; background-color: #f8f9fa; border-radius: 5px; margin-top: 10px;",
+                 helpText("Sophisticated Multi-Objective Model: Maximize α×Trivago_Score + β×User_Score + γ×Partner_Score")
+               )
               )
             ),
 
@@ -384,10 +384,10 @@ ui <- dashboardPage(
 
             fluidRow(
               column(12,
-                box(
-                  title = "Simple Optimization Results (2x + y)", status = "success", solidHeader = TRUE, width = 12,
-                  DT::dataTableOutput("simple_optimization_table")
-                )
+                               box(
+                 title = "Multi-Objective Ranking Optimization Results", status = "success", solidHeader = TRUE, width = 12,
+                 DT::dataTableOutput("simple_optimization_table")
+               )
               )
             )
           )
@@ -624,6 +624,12 @@ server <- function(input, output, session) {
     ab_test_results = NULL,
     refresh_counter = 0
   )
+  
+  # Clear any old data when app starts
+  observe({
+    print("[DEBUG] App starting - clearing old optimization data")
+    rv$simple_optimization_results <- NULL
+  })
   
   # --- STRATEGIC LEVERS TAB ---
   
@@ -989,46 +995,56 @@ server <- function(input, output, session) {
   
 
   
-  # Simple optimization handler
+  # Sophisticated multi-objective optimization handler
   observeEvent(input$run_simple_optimization, {
     tryCatch({
-      print("=== SIMPLE OPTIMIZATION BUTTON CLICKED ===")
-      showNotification("Running simple optimization (2x + y)...", type = "message")
+      print("=== SOPHISTICATED MULTI-OBJECTIVE OPTIMIZATION BUTTON CLICKED ===")
+      showNotification("Running sophisticated multi-objective ranking optimization...", type = "message")
       
-      print(paste("Simple optimization API URL:", API_URL))
+      print(paste("Multi-objective optimization API URL:", API_URL))
       
-      # Make API call for simple optimization
-      print("Making simple optimization API call...")
-      showNotification("Simple optimization is running...", type = "message")
+      # Make API call for sophisticated multi-objective optimization
+      print("Making multi-objective optimization API call...")
+      showNotification("Multi-objective optimization is running...", type = "message")
+      
+      # Call the /rank endpoint with default weights
       res <- POST(
-        paste0(API_URL, "/run_simple_optimization"),
-        timeout(60)  # 1 minute timeout should be sufficient
+        paste0(API_URL, "/rank?alpha=0.4&beta=0.3&gamma=0.3&num_positions=5"),
+        timeout(120)  # 2 minute timeout for complex optimization
       )
       
-      print(paste("Simple optimization response status:", res$status_code))
+      print(paste("Multi-objective optimization response status:", res$status_code))
       
       if (res$status_code == 200) {
-        simple_optimization_data <- fromJSON(rawToChar(res$content))
-        showNotification("Simple optimization completed!", type = "message")
+        optimization_data <- fromJSON(rawToChar(res$content))
+        showNotification("Multi-objective optimization completed!", type = "message")
         
-        # Update the reactive value for simple optimization results
-        rv$simple_optimization_results <- simple_optimization_data
+        # Update the reactive value for optimization results
+        rv$simple_optimization_results <- optimization_data
         
         # Show results summary
-        if (!is.null(simple_optimization_data$objective_value)) {
-          objective_value <- simple_optimization_data$objective_value
-          x_value <- simple_optimization_data$variables$x
-          y_value <- simple_optimization_data$variables$y
-          showNotification(paste("Simple optimization completed! x =", x_value, ", y =", y_value, ", Objective =", objective_value), 
-                         type = "message")
+        if (!is.null(optimization_data$objectives)) {
+          trivago_score <- optimization_data$objectives$trivago_income
+          user_score <- optimization_data$objectives$user_satisfaction
+          partner_score <- optimization_data$objectives$partner_conversion_value
+          total_objective <- optimization_data$objectives$total_objective
+          
+          showNotification(
+            paste("Multi-objective optimization completed!",
+                  "Trivago Score:", round(trivago_score, 2),
+                  "User Score:", round(user_score, 2),
+                  "Partner Score:", round(partner_score, 2),
+                  "Total Objective:", round(total_objective, 2)), 
+            type = "message"
+          )
         }
       } else {
-        showNotification("Simple optimization failed", type = "error")
+        showNotification("Multi-objective optimization failed", type = "error")
       }
       
     }, error = function(e) {
       error_msg <- e$message
-      showNotification(paste("Error in simple optimization:", error_msg), type = "error")
+      showNotification(paste("Error in multi-objective optimization:", error_msg), type = "error")
     })
   })
   
@@ -1431,60 +1447,128 @@ server <- function(input, output, session) {
     )
   })
   
-  # Simple optimization results table
+  # Multi-objective optimization results table
   output$simple_optimization_table <- DT::renderDataTable({
     tryCatch({
+      print(paste("[DEBUG] Table render - rv$simple_optimization_results is null:", is.null(rv$simple_optimization_results)))
+      if (!is.null(rv$simple_optimization_results)) {
+        print(paste("[DEBUG] Table render - results type:", class(rv$simple_optimization_results)))
+        print(paste("[DEBUG] Table render - results length:", length(rv$simple_optimization_results)))
+      }
+      
       if (is.null(rv$simple_optimization_results)) {
-        return(data.frame(Message = "Run simple optimization to see results"))
+        return(data.frame(Message = "Run multi-objective optimization to see results"))
       }
       
-      # Get simple optimization results - handle both API response formats
-      simple_results <- rv$simple_optimization_results
+      # Get optimization results
+      results <- rv$simple_optimization_results
       
-      if (is.null(simple_results)) {
-        return(data.frame(Message = "No simple optimization results available"))
+      # Check if results are a JSON string and parse if needed
+      if (is.character(results)) {
+        print("[DEBUG] Results is character string, parsing JSON...")
+        results <- jsonlite::fromJSON(results, simplifyVector = FALSE)
       }
       
-      # Handle different response formats
-      # Format 1: Direct results from /simple_optimization_results
-      if (!is.null(simple_results$objective_value) && !is.null(simple_results$variables)) {
-        # Direct format - use as is
-        results_data <- simple_results
-      }
-      # Format 2: Wrapped results from /run_simple_optimization
-      else if (!is.null(simple_results$results) && !is.null(simple_results$results$objective_value)) {
-        # Wrapped format - extract from results
-        results_data <- simple_results$results
-      }
-      else {
-        return(data.frame(Message = "Invalid simple optimization results format"))
+      # Ensure we have a list structure
+      if (!is.list(results)) {
+        return(data.frame(Message = "Invalid results format: expected JSON object"))
       }
       
-      # Create table with optimal values
-      optimal_data <- data.frame(
-        Variable = c("x", "y", "Objective Value"),
-        Optimal_Value = c(
-          round(results_data$variables$x, 4),
-          round(results_data$variables$y, 4),
-          round(results_data$objective_value, 4)
-        ),
-        Constraint = c(
-          "0 ≤ x ≤ 3",
-          "0 ≤ y ≤ 2",
-          "2x + y"
-        ),
-        Status = c(
-          ifelse(results_data$variables$x >= 0 && results_data$variables$x <= 3, "✅ Feasible", "❌ Infeasible"),
-          ifelse(results_data$variables$y >= 0 && results_data$variables$y <= 2, "✅ Feasible", "❌ Infeasible"),
-          "✅ Optimal"
-        ),
-        stringsAsFactors = FALSE
-      )
+      # Handle case where results might be wrapped in a 'results' key
+      if (!is.null(results$results)) {
+        print("[DEBUG] Results wrapped in 'results' key, extracting...")
+        results <- results$results
+      }
       
-      DT::datatable(optimal_data, 
-                    options = list(pageLength = 10, scrollX = TRUE),
-                    rownames = FALSE) %>%
-        DT::formatRound(columns = c("Optimal_Value"), digits = 4)
+      if (is.null(results)) {
+        return(data.frame(Message = "No optimization results available"))
+      }
+      
+      # Handle parsed JSON - Check if we have the sophisticated optimization format
+      if ("ranking" %in% names(results) && "objectives" %in% names(results)) {
+        
+        print("[DEBUG] Processing sophisticated optimization format")
+        
+        # Create ranking table
+        ranking_data <- do.call(rbind, lapply(results$ranking, function(item) {
+          data.frame(
+            Position = item$position,
+            Offer_ID = item$offer_id,
+            Hotel_ID = item$hotel_id,
+            Partner = item$partner_name,
+            Price = paste0("$", round(item$price_per_night, 2)),
+            Commission_Rate = paste0(round(item$commission_rate * 100, 1), "%"),
+            CPC_Bid = paste0("$", round(item$cost_per_click_bid, 2)),
+            Satisfaction_Score = round(item$user_satisfaction_score, 3),
+            Conversion_Prob = paste0(round(item$conversion_probability * 100, 1), "%"),
+            Remaining_Budget = paste0("$", round(item$remaining_budget, 2)),
+            stringsAsFactors = FALSE
+          )
+        }))
+        
+        # Create objectives summary table
+        objectives_data <- data.frame(
+          Metric = c("Trivago Income Score", "User Satisfaction Score", "Partner Conversion Score", "Total Objective Value"),
+          Value = c(
+            round(results$objectives$trivago_income, 2),
+            round(results$objectives$user_satisfaction, 2),
+            round(results$objectives$partner_conversion_value, 2),
+            round(results$objectives$total_objective, 2)
+          ),
+          Weight = c(
+            paste0("α = ", results$weights$alpha),
+            paste0("β = ", results$weights$beta),
+            paste0("γ = ", results$weights$gamma),
+            "Combined"
+          ),
+          stringsAsFactors = FALSE
+        )
+        
+        # Return the ranking table as primary display
+        DT::datatable(ranking_data, 
+                      options = list(pageLength = 10, scrollX = TRUE),
+                      rownames = FALSE,
+                      caption = paste("Optimal Ranking with", nrow(ranking_data), "positions. Total Objective:", 
+                                    round(results$objectives$total_objective, 2))) %>%
+          DT::formatStyle(
+            'Position',
+            backgroundColor = DT::styleEqual(1, '#2ecc71')
+          )
+        
+      } else if ("objective_value" %in% names(results) && "variables" %in% names(results)) {
+        # Handle simple optimization format (2x + y)
+        simple_results <- results
+        
+        # Create table with optimal values
+        optimal_data <- data.frame(
+          Variable = c("x", "y", "Objective Value"),
+          Optimal_Value = c(
+            round(simple_results$variables$x, 4),
+            round(simple_results$variables$y, 4),
+            round(simple_results$objective_value, 4)
+          ),
+          Constraint = c(
+            "0 ≤ x ≤ 3",
+            "0 ≤ y ≤ 2",
+            "2x + y"
+          ),
+          Status = c(
+            ifelse(simple_results$variables$x >= 0 && simple_results$variables$x <= 3, "✅ Feasible", "❌ Infeasible"),
+            ifelse(simple_results$variables$y >= 0 && simple_results$variables$y <= 2, "✅ Feasible", "❌ Infeasible"),
+            "✅ Optimal"
+          ),
+          stringsAsFactors = FALSE
+        )
+        
+        DT::datatable(optimal_data, 
+                      options = list(pageLength = 10, scrollX = TRUE),
+                      rownames = FALSE) %>%
+          DT::formatRound(columns = c("Optimal_Value"), digits = 4)
+        
+      } else {
+        # Fallback for unrecognized format
+        return(data.frame(Message = "Optimization completed but results format not recognized"))
+      }
       
     }, error = function(e) {
       return(data.frame(Message = paste("Error displaying results:", e$message)))

@@ -64,6 +64,9 @@ data_generator = DataGenerator()
 # Global storage for scenarios (in production, use a database)
 scenarios_cache = {}
 
+# Global storage for partner marketing budgets (session state)
+partner_budget_state = {}
+
 @app.get("/")
 def read_root():
     """Root endpoint with API information"""
@@ -2537,55 +2540,163 @@ def run_three_stage_optimization(
 @app.post("/run_simple_optimization")
 def run_simple_optimization():
     """
-    Simple optimization model: Maximize 2x + y
-    Subject to: x >= 0, y >= 0, x <= 3, y <= 2
+    Sophisticated multi-objective ranking optimization
+    This endpoint now runs the sophisticated multi-objective optimization instead of the simple 2x+y model.
     
-    Returns the optimal values of x and y along with the objective function value.
+    Returns the optimal ranking with detailed objectives and constraints.
     """
-    print("[DEBUG] Simple optimization called")
+    print("[DEBUG] Sophisticated multi-objective optimization called via simple endpoint")
     
     try:
-        # Import the unified optimizer
-        print("[DEBUG] Importing UnifiedOptimizer...")
-        from unified_optimizer import UnifiedOptimizer
+        import pandas as pd
+        import numpy as np
         
-        # Initialize optimizer
-        print(f"[DEBUG] Initializing optimizer with DATA_DIR: {DATA_DIR}")
-        # Use /data for container environment, fallback to local DATA_DIR
-        container_data_dir = "/data"
-        if os.path.exists(container_data_dir):
-            optimizer = UnifiedOptimizer(container_data_dir)
-            print(f"[DEBUG] Using container data directory: {container_data_dir}")
+        # Load current offer data
+        offers_path = get_data_path('trial_sampled_offers.csv')
+        if not os.path.exists(offers_path):
+            return {"error": "No offers data available. Please run sampling first."}
+        
+        offers_df = pd.read_csv(offers_path)
+        
+        # Limit number of offers for optimization
+        n_offers = min(len(offers_df), 50)  # Limit for performance
+        offers_subset = offers_df.head(n_offers).copy()
+        
+        # Calculate user satisfaction scores based on hotel quality and price
+        offers_subset['user_satisfaction_score'] = (
+            offers_subset['star_rating'] * 0.3 +
+            (10 - offers_subset['price_per_night'] / 50) * 0.4 +  # Lower price = higher satisfaction
+            offers_subset['review_score'] * 0.3
+        )
+        
+        # Calculate conversion probabilities
+        offers_subset['conversion_probability'] = (
+            0.1 +  # Base conversion rate
+            offers_subset['star_rating'] * 0.05 +
+            offers_subset['review_score'] * 0.02 -
+            offers_subset['price_per_night'] * 0.0001
+        ).clip(0.01, 0.95)
+        
+        # Add missing columns that the optimization expects
+        import random
+        import subprocess
+        
+        # Initialize partner budget state if not exists
+        if not partner_budget_state:
+            print("[DEBUG] Initializing partner budget state")
+            for partner in offers_subset['partner_name'].unique():
+                partner_offers = offers_subset[offers_subset['partner_name'] == partner]
+                initial_budget = partner_offers['price_per_night'].mean() * random.uniform(20, 100)
+                partner_budget_state[partner] = initial_budget
+                print(f"[DEBUG] Partner {partner}: initial budget = ${initial_budget:.2f}")
+        
+        # Update remaining budgets from state
+        if 'remaining_budget' not in offers_subset.columns:
+            offers_subset['remaining_budget'] = offers_subset['partner_name'].map(partner_budget_state)
         else:
-            optimizer = UnifiedOptimizer(DATA_DIR)
-            print(f"[DEBUG] Using local data directory: {DATA_DIR}")
+            # Update with current state
+            for partner in offers_subset['partner_name'].unique():
+                partner_mask = offers_subset['partner_name'] == partner
+                offers_subset.loc[partner_mask, 'remaining_budget'] = partner_budget_state.get(partner, 1000)
         
-        # Run simple optimization
-        print("[DEBUG] Running simple optimization...")
-        results = optimizer.run_simple_optimization()
-        print(f"[DEBUG] Optimization completed with status: {results.get('status')}")
+        if 'commission_rate' not in offers_subset.columns:
+            # Use a default commission rate
+            offers_subset['commission_rate'] = 0.15
         
-        # Save results
-        print("[DEBUG] Saving results...")
-        optimizer.save_results(results, 'simple_optimization_results.json')
+        if 'cost_per_click_bid' not in offers_subset.columns:
+            # Calculate cost per click based on price
+            offers_subset['cost_per_click_bid'] = offers_subset['price_per_night'] * 0.01
+        
+        # Run sophisticated multi-objective optimization with default weights
+        print("[DEBUG] Running sophisticated multi-objective optimization...")
+        result = _pulp_optimization(offers_subset, alpha=0.4, beta=0.3, gamma=0.3, num_positions=5)
+        
+        # Update partner budgets based on optimization results
+        if 'ranking' in result and not result.get('error'):
+            _update_partner_budgets(offers_subset, result['ranking'])
+        
+        # Save results to simple_optimization_results.json
+        print("[DEBUG] Saving sophisticated results to simple_optimization_results.json...")
+        results_file = get_data_path('simple_optimization_results.json')
+        with open(results_file, 'w') as f:
+            json.dump(result, f, indent=2, default=str)
         print("[DEBUG] Results saved successfully")
+        
+        # Save objective function and decision variables summary
+        print("[DEBUG] Saving objective function and decision variables summary...")
+        summary_data = {
+            "objective_function": {
+                "formula": "α×Trivago_Score + β×User_Score + γ×Partner_Score",
+                "weights": {
+                    "alpha": 0.4,
+                    "beta": 0.3,
+                    "gamma": 0.3
+                },
+                "components": {
+                    "trivago_score": "Σ(pClick_ij × pConvert_j × Commission_j × Price_j × X_ij)",
+                    "user_score": "Σ(pClick_ij × Satisfaction_j × X_ij)",
+                    "partner_score": "Σ(pClick_ij × pConvert_j × Price_j × X_ij)"
+                }
+            },
+            "decision_variables": {
+                "description": "X_ij (binary) - 1 if offer j is placed in position i, 0 otherwise",
+                "total_variables": n_offers * 5,  # n_offers × n_positions
+                "n_offers": n_offers,
+                "n_positions": 5
+            },
+            "constraints": {
+                "assignment_constraints": [
+                    "Each position can have at most one offer: Σ(X_ij) ≤ 1 for all i",
+                    "Each offer can be used at most once: Σ(X_ij) ≤ 1 for all j",
+                    "Exactly 5 offers must be assigned: Σ(X_ij) = 5"
+                ],
+                "budget_constraints": [
+                    "Partner budget constraint: Σ(pClick_ij × CPC_j × X_ij) ≤ Remaining_Budget_P for each partner P"
+                ]
+            },
+            "optimal_solution": {
+                "total_objective_value": result['objectives']['total_objective'],
+                "trivago_income": result['objectives']['trivago_income'],
+                "user_satisfaction": result['objectives']['user_satisfaction'],
+                "partner_conversion_value": result['objectives']['partner_conversion_value'],
+                "solver_status": result['optimization_details']['solver_status'],
+                "constraints_added": result['optimization_details']['constraints_added']
+            },
+            "ranking_summary": {
+                "total_positions": len(result['ranking']),
+                "partners_included": list(set([item['partner_name'] for item in result['ranking']])),
+                "average_price": sum([item['price_per_night'] for item in result['ranking']]) / len(result['ranking']),
+                "average_commission": sum([item['commission_rate'] for item in result['ranking']]) / len(result['ranking'])
+            },
+            "metadata": {
+                "timestamp": datetime.now().isoformat(),
+                "model_type": "sophisticated_multi_objective_ranking",
+                "data_source": "trial_sampled_offers.csv"
+            }
+        }
+        
+        summary_file = get_data_path('optimization_summary.json')
+        with open(summary_file, 'w') as f:
+            json.dump(summary_data, f, indent=2, default=str)
+        print("[DEBUG] Optimization summary saved successfully")
         
         return {
             "status": "success",
-            "message": "Simple optimization completed",
-            "model_type": "simple_2x_plus_y",
+            "message": "Sophisticated multi-objective optimization completed",
+            "model_type": "sophisticated_multi_objective",
             "parameters": {
-                "objective_function": "2x + y",
-                "constraints": "x >= 0, y >= 0, x <= 3, y <= 2"
+                "objective_function": "α×Trivago_Score + β×User_Score + γ×Partner_Score",
+                "constraints": "Assignment constraints + Partner budget constraints",
+                "weights": {"alpha": 0.4, "beta": 0.3, "gamma": 0.3}
             },
-            "results": results
+            "results": result
         }
         
     except Exception as e:
-        print(f"[ERROR] Error in simple optimization: {e}")
+        print(f"[ERROR] Error in sophisticated optimization: {e}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Error running simple optimization: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error running sophisticated optimization: {str(e)}")
 
 @app.get("/simple_optimization_results")
 def get_simple_optimization_results():
@@ -3172,9 +3283,24 @@ def rank_offers_with_budget_constraints(
         # Add missing columns that the optimization expects
         import random
         import subprocess
+        
+        # Initialize partner budget state if not exists
+        if not partner_budget_state:
+            print("[DEBUG] Initializing partner budget state")
+            for partner in offers_subset['partner_name'].unique():
+                partner_offers = offers_subset[offers_subset['partner_name'] == partner]
+                initial_budget = partner_offers['price_per_night'].mean() * random.uniform(20, 100)
+                partner_budget_state[partner] = initial_budget
+                print(f"[DEBUG] Partner {partner}: initial budget = ${initial_budget:.2f}")
+        
+        # Update remaining budgets from state
         if 'remaining_budget' not in offers_subset.columns:
-            # Create a reasonable budget based on partner and hotel characteristics
-            offers_subset['remaining_budget'] = offers_subset['price_per_night'] * random.uniform(10, 50)
+            offers_subset['remaining_budget'] = offers_subset['partner_name'].map(partner_budget_state)
+        else:
+            # Update with current state
+            for partner in offers_subset['partner_name'].unique():
+                partner_mask = offers_subset['partner_name'] == partner
+                offers_subset.loc[partner_mask, 'remaining_budget'] = partner_budget_state.get(partner, 1000)
         
         if 'commission_rate' not in offers_subset.columns:
             # Use a default commission rate
@@ -3206,7 +3332,20 @@ position_ctr = {position_ctr};
         
         # Use PuLP for linear programming optimization
         print(f"[DEBUG] Using PuLP optimization solver")
-        return _pulp_optimization(offers_subset, alpha, beta, gamma, num_positions)
+        result = _pulp_optimization(offers_subset, alpha, beta, gamma, num_positions)
+        
+        # Update partner budgets based on optimization results
+        if 'ranking' in result and not result.get('error'):
+            _update_partner_budgets(offers_subset, result['ranking'])
+        
+        # Save results to simple_optimization_results.json for UI display
+        print("[DEBUG] Saving results from /rank endpoint to simple_optimization_results.json...")
+        results_file = get_data_path('simple_optimization_results.json')
+        with open(results_file, 'w') as f:
+            json.dump(result, f, indent=2, default=str)
+        print("[DEBUG] Results saved successfully from /rank endpoint")
+        
+        return result
             
     except Exception as e:
         print(f"[ERROR] Exception in rank_offers_with_budget_constraints: {e}")
@@ -3565,100 +3704,197 @@ def train_rl_agent():
         return {"error": f"Exception: {str(e)}"}
 
 def _pulp_optimization(offers_df, alpha, beta, gamma, num_positions):
-    """Use PuLP for linear programming optimization"""
+    """
+    Sophisticated multi-objective ranking optimization using PuLP.
+    
+    Mathematical Formulation:
+    Maximize: α * Trivago_Score + β * User_Score + γ * Partner_Score
+    
+    Where:
+    - Trivago_Score = Σ(pClick_ij * pConvert_j * Commission_j * Price_j * X_ij)
+    - User_Score = Σ(pClick_ij * Satisfaction_j * X_ij)  
+    - Partner_Score = Σ(pClick_ij * pConvert_j * Price_j * X_ij)
+    
+    Decision Variables: X_ij (binary) - 1 if offer j is placed in rank i, 0 otherwise
+    """
     try:
         import pulp
+        import numpy as np
+        
+        print(f"[DEBUG] Starting sophisticated multi-objective optimization")
+        print(f"[DEBUG] Parameters: alpha={alpha}, beta={beta}, gamma={gamma}, num_positions={num_positions}")
+        
+        # Prepare data
+        n_offers = len(offers_df)
+        n_positions = num_positions
+        
+        # Ensure we have enough offers
+        if n_offers < n_positions:
+            print(f"[WARNING] Not enough offers ({n_offers}) for positions ({n_positions})")
+            n_positions = n_offers
+        
+        # Calculate position-based click-through rates (decreasing with rank)
+        position_ctr = [1.0 / (1 + 0.5 * i) for i in range(n_positions)]
+        
+        # Extract key data
+        p_click = np.array(position_ctr)  # Click probability for each position
+        p_convert = offers_df['conversion_probability'].values  # Conversion probability for each offer
+        commission = offers_df['commission_rate'].values  # Commission rate for each offer
+        price = offers_df['price_per_night'].values  # Price for each offer
+        satisfaction = offers_df['user_satisfaction_score'].values  # User satisfaction for each offer
+        cpc = offers_df['cost_per_click_bid'].values  # Cost per click for each offer
+        
+        # Partner budget management
+        partner_budgets = {}
+        if 'partner_name' in offers_df.columns and 'remaining_budget' in offers_df.columns:
+            for partner in offers_df['partner_name'].unique():
+                partner_offers = offers_df[offers_df['partner_name'] == partner]
+                partner_budgets[partner] = partner_offers['remaining_budget'].iloc[0]
+        else:
+            # Fallback: assign equal budgets
+            total_budget = offers_df['cost_per_click_bid'].sum() * 10  # 10x total CPC as budget
+            for i in range(n_offers):
+                partner_budgets[f"partner_{i}"] = total_budget / n_offers
         
         # Create optimization problem
-        prob = pulp.LpProblem("Hotel_Ranking_Optimization", pulp.LpMaximize)
+        prob = pulp.LpProblem("Multi_Objective_Hotel_Ranking", pulp.LpMaximize)
         
-        # Decision variables: x[i] = 1 if offer i is selected, 0 otherwise
-        n_offers = len(offers_df)
-        x = pulp.LpVariable.dicts("offer", range(n_offers), cat='Binary')
+        # Decision variables: X[i][j] = 1 if offer j is placed in position i
+        X = pulp.LpVariable.dicts("X", 
+                                 [(i, j) for i in range(n_positions) for j in range(n_offers)], 
+                                 cat='Binary')
         
-        # Objective function: maximize weighted sum of objectives
-        trivago_income = pulp.lpSum([
-            alpha * offers_df.iloc[i]['commission_rate'] * offers_df.iloc[i]['cost_per_click_bid'] * x[i]
-            for i in range(n_offers)
+        # Calculate individual objective scores for normalization
+        print("[DEBUG] Calculating objective normalization factors...")
+        
+        # Trivago Score: Σ(pClick_ij * pConvert_j * Commission_j * Price_j * X_ij)
+        trivago_scores = np.zeros((n_positions, n_offers))
+        for i in range(n_positions):
+            for j in range(n_offers):
+                trivago_scores[i][j] = p_click[i] * p_convert[j] * commission[j] * price[j]
+        
+        # User Score: Σ(pClick_ij * Satisfaction_j * X_ij)
+        user_scores = np.zeros((n_positions, n_offers))
+        for i in range(n_positions):
+            for j in range(n_offers):
+                user_scores[i][j] = p_click[i] * satisfaction[j]
+        
+        # Partner Score: Σ(pClick_ij * pConvert_j * Price_j * X_ij)
+        partner_scores = np.zeros((n_positions, n_offers))
+        for i in range(n_positions):
+            for j in range(n_offers):
+                partner_scores[i][j] = p_click[i] * p_convert[j] * price[j]
+        
+        # Normalize objectives to [0,1] range
+        max_trivago = np.max(trivago_scores) if np.max(trivago_scores) > 0 else 1
+        max_user = np.max(user_scores) if np.max(user_scores) > 0 else 1
+        max_partner = np.max(partner_scores) if np.max(partner_scores) > 0 else 1
+        
+        print(f"[DEBUG] Normalization factors: max_trivago={max_trivago:.4f}, max_user={max_user:.4f}, max_partner={max_partner:.4f}")
+        
+        # Build normalized objective function
+        trivago_objective = pulp.lpSum([
+            alpha * (trivago_scores[i][j] / max_trivago) * X[i, j]
+            for i in range(n_positions) for j in range(n_offers)
         ])
         
-        user_satisfaction = pulp.lpSum([
-            beta * offers_df.iloc[i]['user_satisfaction_score'] * x[i]
-            for i in range(n_offers)
+        user_objective = pulp.lpSum([
+            beta * (user_scores[i][j] / max_user) * X[i, j]
+            for i in range(n_positions) for j in range(n_offers)
         ])
         
-        partner_conversion_value = pulp.lpSum([
-            gamma * offers_df.iloc[i]['conversion_probability'] * offers_df.iloc[i]['price_per_night'] * x[i]
-            for i in range(n_offers)
+        partner_objective = pulp.lpSum([
+            gamma * (partner_scores[i][j] / max_partner) * X[i, j]
+            for i in range(n_positions) for j in range(n_offers)
         ])
         
-        prob += trivago_income + user_satisfaction + partner_conversion_value
+        # Set objective function
+        prob += trivago_objective + user_objective + partner_objective
         
-        # Constraints
-        # 1. Select exactly num_positions offers
-        prob += pulp.lpSum([x[i] for i in range(n_offers)]) == num_positions
+        print("[DEBUG] Adding constraints...")
         
-        # 2. Budget constraints (if available)
-        if 'remaining_budget' in offers_df.columns:
-            prob += pulp.lpSum([
-                offers_df.iloc[i]['cost_per_click_bid'] * x[i]
-                for i in range(n_offers)
-            ]) <= offers_df['remaining_budget'].sum()
+        # Assignment Constraints
+        # 1. Each position can have at most one offer
+        for i in range(n_positions):
+            prob += pulp.lpSum([X[i, j] for j in range(n_offers)]) <= 1
+        
+        # 2. Each offer can be used at most once
+        for j in range(n_offers):
+            prob += pulp.lpSum([X[i, j] for i in range(n_positions)]) <= 1
+        
+        # 3. Exactly num_positions offers must be assigned
+        prob += pulp.lpSum([X[i, j] for i in range(n_positions) for j in range(n_offers)]) == n_positions
+        
+        # Partner Budget Constraints
+        # Σ(pClick_ij * CPC_j * X_ij) ≤ Remaining_Budget_P for each partner P
+        if 'partner_name' in offers_df.columns:
+            for partner in partner_budgets.keys():
+                partner_offers = offers_df[offers_df['partner_name'] == partner].index.tolist()
+                if partner_offers:
+                    budget_constraint = pulp.lpSum([
+                        p_click[i] * cpc[j] * X[i, j]
+                        for i in range(n_positions) for j in partner_offers
+                    ]) <= partner_budgets[partner]
+                    prob += budget_constraint
+        
+        print("[DEBUG] Solving optimization problem...")
         
         # Solve the problem
         prob.solve(pulp.PULP_CBC_CMD(msg=False))
         
         if prob.status != pulp.LpStatusOptimal:
-            print(f"[DEBUG] PuLP optimization failed, using fallback")
+            print(f"[ERROR] PuLP optimization failed with status: {pulp.LpStatus[prob.status]}")
             return _simple_optimization_fallback(offers_df, alpha, beta, gamma, num_positions)
         
+        print("[DEBUG] Optimization completed successfully")
+        
         # Extract solution
-        selected_offers = []
-        for i in range(n_offers):
-            if x[i].value() == 1:
-                selected_offers.append(i)
+        ranking = []
+        for i in range(n_positions):
+            for j in range(n_offers):
+                if X[i, j].value() == 1:
+                    offer = offers_df.iloc[j]
+                    ranking.append({
+                        "position": i + 1,
+                        "offer_id": offer['offer_id'],
+                        "hotel_id": offer.get('hotel_id', f"hotel_{j}"),
+                        "partner_name": offer['partner_name'],
+                        "price_per_night": offer['price_per_night'],
+                        "commission_rate": offer['commission_rate'],
+                        "cost_per_click_bid": offer['cost_per_click_bid'],
+                        "user_satisfaction_score": offer['user_satisfaction_score'],
+                        "conversion_probability": offer['conversion_probability'],
+                        "remaining_budget": offer.get('remaining_budget', 0)
+                    })
+                    break
         
-        # Calculate objectives
-        trivago_income_val = sum([
-            alpha * offers_df.iloc[i]['commission_rate'] * offers_df.iloc[i]['cost_per_click_bid']
-            for i in selected_offers
+        # Calculate actual objective values
+        trivago_score = sum([
+            trivago_scores[item["position"]-1][offers_df[offers_df['offer_id'] == item["offer_id"]].index[0]]
+            for item in ranking
         ])
         
-        user_satisfaction_val = sum([
-            beta * offers_df.iloc[i]['user_satisfaction_score']
-            for i in selected_offers
-        ]) / len(selected_offers) if selected_offers else 0
-        
-        partner_conversion_val = sum([
-            gamma * offers_df.iloc[i]['conversion_probability'] * offers_df.iloc[i]['price_per_night']
-            for i in selected_offers
+        user_score = sum([
+            user_scores[item["position"]-1][offers_df[offers_df['offer_id'] == item["offer_id"]].index[0]]
+            for item in ranking
         ])
         
-        total_objective = trivago_income_val + user_satisfaction_val + partner_conversion_val
+        partner_score = sum([
+            partner_scores[item["position"]-1][offers_df[offers_df['offer_id'] == item["offer_id"]].index[0]]
+            for item in ranking
+        ])
         
-        # Create ranked offers list
-        ranked_offers = []
-        for pos, offer_idx in enumerate(selected_offers):
-            offer = offers_df.iloc[offer_idx]
-            ranked_offers.append({
-                "position": pos + 1,
-                "offer_id": offer['offer_id'],
-                "hotel_id": offer.get('hotel_id', f"hotel_{offer_idx}"),
-                "partner_name": offer['partner_name'],
-                "price_per_night": offer['price_per_night'],
-                "commission_rate": offer['commission_rate'],
-                "cost_per_click_bid": offer['cost_per_click_bid'],
-                "user_satisfaction_score": offer['user_satisfaction_score'],
-                "conversion_probability": offer['conversion_probability'],
-                "remaining_budget": offer.get('remaining_budget', 0)
-            })
+        total_objective = alpha * trivago_score + beta * user_score + gamma * partner_score
+        
+        print(f"[DEBUG] Final scores - Trivago: {trivago_score:.4f}, User: {user_score:.4f}, Partner: {partner_score:.4f}")
+        print(f"[DEBUG] Total objective: {total_objective:.4f}")
         
         return {
-            "ranking": ranked_offers,
+            "ranking": ranking,
             "objectives": {
-                "trivago_income": trivago_income_val,
-                "user_satisfaction": user_satisfaction_val,
-                "partner_conversion_value": partner_conversion_val,
+                "trivago_income": trivago_score,
+                "user_satisfaction": user_score,
+                "partner_conversion_value": partner_score,
                 "total_objective": total_objective
             },
             "weights": {
@@ -3668,13 +3904,61 @@ def _pulp_optimization(offers_df, alpha, beta, gamma, num_positions):
             },
             "parameters": {
                 "n_offers": n_offers,
-                "n_positions": num_positions
+                "n_positions": n_positions,
+                "max_trivago_score": max_trivago,
+                "max_user_score": max_user,
+                "max_partner_score": max_partner
+            },
+            "optimization_details": {
+                "solver_status": pulp.LpStatus[prob.status],
+                "objective_value": pulp.value(prob.objective),
+                "constraints_added": len(prob.constraints)
             }
         }
         
     except Exception as e:
-        print(f"[ERROR] PuLP optimization failed: {e}")
+        print(f"[ERROR] Sophisticated PuLP optimization failed: {e}")
+        import traceback
+        traceback.print_exc()
         return _simple_optimization_fallback(offers_df, alpha, beta, gamma, num_positions)
+
+def _update_partner_budgets(offers_df, ranking):
+    """
+    Update partner marketing budgets based on optimization results.
+    Deducts the expected cost from each partner's budget.
+    """
+    try:
+        print("[DEBUG] Updating partner budgets...")
+        
+        # Calculate position-based click-through rates
+        position_ctr = [1.0 / (1 + 0.5 * i) for i in range(len(ranking))]
+        
+        for item in ranking:
+            partner = item['partner_name']
+            position = item['position'] - 1  # 0-based index
+            offer_id = item['offer_id']
+            
+            # Find the offer in the dataframe
+            offer_mask = offers_df['offer_id'] == offer_id
+            if offer_mask.any():
+                offer = offers_df[offer_mask].iloc[0]
+                cpc = offer['cost_per_click_bid']
+                click_prob = position_ctr[position]
+                
+                # Calculate expected cost for this placement
+                expected_cost = click_prob * cpc
+                
+                # Deduct from partner's budget
+                if partner in partner_budget_state:
+                    partner_budget_state[partner] -= expected_cost
+                    print(f"[DEBUG] Partner {partner}: deducted ${expected_cost:.4f}, remaining: ${partner_budget_state[partner]:.2f}")
+                else:
+                    print(f"[WARNING] Partner {partner} not found in budget state")
+        
+        print("[DEBUG] Partner budget update completed")
+        
+    except Exception as e:
+        print(f"[ERROR] Failed to update partner budgets: {e}")
 
 def _simple_optimization_fallback(offers_df, alpha, beta, gamma, num_positions):
     """Simple optimization fallback when PuLP optimization fails"""
