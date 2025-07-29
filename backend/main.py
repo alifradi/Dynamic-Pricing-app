@@ -1833,8 +1833,8 @@ def run_bandit_simulation():
         total_arms = len(results)
         total_users = len(offers_df['user_id'].unique())
         total_offers = len(offers_df['offer_id'].unique())
-        # Return results (including a sample of the table for preview)
-        return {
+        # Clean the results to ensure JSON serialization
+        cleaned_result = clean_json_data({
             'total_users': total_users,
             'total_offers': total_offers,
             'total_arms': total_arms,
@@ -1842,7 +1842,9 @@ def run_bandit_simulation():
             'csv_path': csv_path,
             'message': f"Bandit simulation completed. Generated {total_arms} arm-bandit results with {clicks_per_arm} clicks each.",
             'sample_table': results[:5]
-        }
+        })
+        
+        return cleaned_result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error running bandit simulation: {str(e)}")
 
@@ -3734,7 +3736,7 @@ def train_rl_agent():
         print(f"[DEBUG] Starting realistic RL training with multiple episodes...")
         
         # Run multiple training episodes
-        num_episodes = 50  # More realistic training
+        num_episodes = 5  # Reduced for faster training
         total_loss = 0
         episode_rewards = []
         
@@ -3787,7 +3789,8 @@ def train_rl_agent():
         print(f"[DEBUG] Final epsilon: {dqn_agent.epsilon:.4f}")
         print(f"[DEBUG] Model saved to: {model_path}")
         
-        return {
+        # Clean the results to ensure JSON serialization
+        cleaned_result = clean_json_data({
             "training_result": {
                 "action_selected": action,
                 "policy_name": policy_weights["name"],
@@ -3797,7 +3800,9 @@ def train_rl_agent():
             },
             "optimization_results": ranking_result,
             "market_state": market_state
-        }
+        })
+        
+        return cleaned_result
         
     except Exception as e:
         print(f"[ERROR] Exception in train_rl_agent: {e}")
