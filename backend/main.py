@@ -11,6 +11,7 @@ from typing import List, Dict, Any, Optional
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query, Form, Request
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import pulp
 import subprocess
@@ -66,6 +67,23 @@ scenarios_cache = {}
 
 # Global storage for partner marketing budgets (session state)
 partner_budget_state = {}
+
+def clean_json_data(data):
+    """
+    Clean data to ensure it's JSON serializable by replacing inf, -inf, and NaN values.
+    """
+    import numpy as np
+    
+    if isinstance(data, dict):
+        return {key: clean_json_data(value) for key, value in data.items()}
+    elif isinstance(data, list):
+        return [clean_json_data(item) for item in data]
+    elif isinstance(data, (int, float)):
+        if np.isnan(data) or np.isinf(data):
+            return 0.0
+        return data
+    else:
+        return data
 
 @app.get("/")
 def read_root():
@@ -2698,6 +2716,42 @@ def run_simple_optimization():
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error running sophisticated optimization: {str(e)}")
 
+@app.get("/optimization_ranking_results")
+def get_optimization_ranking_results():
+    """Get the ranking results as CSV."""
+    try:
+        csv_path = get_data_path('optimization_ranking_results.csv')
+        if os.path.exists(csv_path):
+            return FileResponse(csv_path, media_type='text/csv', filename='optimization_ranking_results.csv')
+        else:
+            return {"error": "No ranking results found"}
+    except Exception as e:
+        return {"error": f"Error reading ranking results: {str(e)}"}
+
+@app.get("/optimization_objectives_results")
+def get_optimization_objectives_results():
+    """Get the objectives results as CSV."""
+    try:
+        csv_path = get_data_path('optimization_objectives_results.csv')
+        if os.path.exists(csv_path):
+            return FileResponse(csv_path, media_type='text/csv', filename='optimization_objectives_results.csv')
+        else:
+            return {"error": "No objectives results found"}
+    except Exception as e:
+        return {"error": f"Error reading objectives results: {str(e)}"}
+
+@app.get("/optimization_weights")
+def get_optimization_weights():
+    """Get the weights as CSV."""
+    try:
+        csv_path = get_data_path('optimization_weights.csv')
+        if os.path.exists(csv_path):
+            return FileResponse(csv_path, media_type='text/csv', filename='optimization_weights.csv')
+        else:
+            return {"error": "No weights found"}
+    except Exception as e:
+        return {"error": f"Error reading weights: {str(e)}"}
+
 @app.get("/simple_optimization_results")
 def get_simple_optimization_results():
     """Get the latest simple optimization results"""
@@ -3338,12 +3392,59 @@ position_ctr = {position_ctr};
         if 'ranking' in result and not result.get('error'):
             _update_partner_budgets(offers_subset, result['ranking'])
         
-        # Save results to simple_optimization_results.json for UI display
-        print("[DEBUG] Saving results from /rank endpoint to simple_optimization_results.json...")
-        results_file = get_data_path('simple_optimization_results.json')
-        with open(results_file, 'w') as f:
-            json.dump(result, f, indent=2, default=str)
-        print("[DEBUG] Results saved successfully from /rank endpoint")
+        # Export results as CSV for UI display
+        print("[DEBUG] Exporting optimization results as CSV...")
+        
+        # Create ranking dataframe
+        ranking_data = []
+        for item in result['ranking']:
+            ranking_data.append({
+                'position': item['position'],
+                'offer_id': item['offer_id'],
+                'hotel_id': item['hotel_id'],
+                'partner_name': item['partner_name'],
+                'price_per_night': item['price_per_night'],
+                'commission_rate': item['commission_rate'],
+                'cost_per_click_bid': item['cost_per_click_bid'],
+                'user_satisfaction_score': item['user_satisfaction_score'],
+                'conversion_probability': item['conversion_probability'],
+                'remaining_budget': item['remaining_budget']
+            })
+        
+        ranking_df = pd.DataFrame(ranking_data)
+        
+        # Create objectives dataframe
+        objectives_data = {
+            'metric': ['Total Objective Value', 'Trivago Income', 'User Satisfaction', 'Partner Conversion Value'],
+            'value': [
+                result['objectives']['total_objective'],
+                result['objectives']['trivago_income'],
+                result['objectives']['user_satisfaction'],
+                result['objectives']['partner_conversion_value']
+            ]
+        }
+        objectives_df = pd.DataFrame(objectives_data)
+        
+        # Save ranking results
+        ranking_csv_path = get_data_path('optimization_ranking_results.csv')
+        ranking_df.to_csv(ranking_csv_path, index=False)
+        print(f"[DEBUG] Ranking results saved to: {ranking_csv_path}")
+        
+        # Save objectives results
+        objectives_csv_path = get_data_path('optimization_objectives_results.csv')
+        objectives_df.to_csv(objectives_csv_path, index=False)
+        print(f"[DEBUG] Objectives results saved to: {objectives_csv_path}")
+        
+        # Save weights info
+        weights_data = {
+            'parameter': ['alpha', 'beta', 'gamma'],
+            'value': [alpha, beta, gamma],
+            'description': ['Trivago weight', 'User weight', 'Partner weight']
+        }
+        weights_df = pd.DataFrame(weights_data)
+        weights_csv_path = get_data_path('optimization_weights.csv')
+        weights_df.to_csv(weights_csv_path, index=False)
+        print(f"[DEBUG] Weights saved to: {weights_csv_path}")
         
         return result
             
@@ -3785,10 +3886,18 @@ def _pulp_optimization(offers_df, alpha, beta, gamma, num_positions):
             for j in range(n_offers):
                 partner_scores[i][j] = p_click[i] * p_convert[j] * price[j]
         
-        # Normalize objectives to [0,1] range
-        max_trivago = np.max(trivago_scores) if np.max(trivago_scores) > 0 else 1
-        max_user = np.max(user_scores) if np.max(user_scores) > 0 else 1
-        max_partner = np.max(partner_scores) if np.max(partner_scores) > 0 else 1
+        # Normalize objectives to [0,1] range with proper handling of invalid values
+        max_trivago = np.max(trivago_scores)
+        max_user = np.max(user_scores)
+        max_partner = np.max(partner_scores)
+        
+        # Handle invalid values (inf, -inf, NaN)
+        if not np.isfinite(max_trivago) or max_trivago <= 0:
+            max_trivago = 1.0
+        if not np.isfinite(max_user) or max_user <= 0:
+            max_user = 1.0
+        if not np.isfinite(max_partner) or max_partner <= 0:
+            max_partner = 1.0
         
         print(f"[DEBUG] Normalization factors: max_trivago={max_trivago:.4f}, max_user={max_user:.4f}, max_partner={max_partner:.4f}")
         

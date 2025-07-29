@@ -621,6 +621,9 @@ server <- function(input, output, session) {
     policy_selection_result = NULL,
     optimization_results = NULL,
     simple_optimization_results = NULL,
+    ranking_results = NULL,
+    objectives_results = NULL,
+    weights_data = NULL,
     ab_test_results = NULL,
     refresh_counter = 0
   )
@@ -971,7 +974,7 @@ server <- function(input, output, session) {
                  ))
       
       if (res$status_code == 200) {
-        optimization_data <- fromJSON(rawToChar(res$content))
+        optimization_data <- fromJSON(rawToChar(res$content), flatten = FALSE)
         rv$optimization_results <- optimization_data
         showNotification("Optimization completed!", type = "message")
       } else {
@@ -1016,28 +1019,39 @@ server <- function(input, output, session) {
       print(paste("Multi-objective optimization response status:", res$status_code))
       
       if (res$status_code == 200) {
-        optimization_data <- fromJSON(rawToChar(res$content))
-        showNotification("Multi-objective optimization completed!", type = "message")
+        # Wait a moment for CSV files to be written
+        Sys.sleep(1)
         
-        # Update the reactive value for optimization results
-        rv$simple_optimization_results <- optimization_data
-        
-        # Show results summary
-        if (!is.null(optimization_data$objectives)) {
-          trivago_score <- optimization_data$objectives$trivago_income
-          user_score <- optimization_data$objectives$user_satisfaction
-          partner_score <- optimization_data$objectives$partner_conversion_value
-          total_objective <- optimization_data$objectives$total_objective
+        # Load the CSV files
+        tryCatch({
+          # Load ranking results
+          ranking_res <- GET(paste0(API_URL, "/optimization_ranking_results"))
+          if (ranking_res$status_code == 200) {
+            ranking_data <- read.csv(text = rawToChar(ranking_res$content))
+            rv$ranking_results <- ranking_data
+            print("Ranking results loaded successfully")
+          }
           
-          showNotification(
-            paste("Multi-objective optimization completed!",
-                  "Trivago Score:", round(trivago_score, 2),
-                  "User Score:", round(user_score, 2),
-                  "Partner Score:", round(partner_score, 2),
-                  "Total Objective:", round(total_objective, 2)), 
-            type = "message"
-          )
-        }
+          # Load objectives results
+          objectives_res <- GET(paste0(API_URL, "/optimization_objectives_results"))
+          if (objectives_res$status_code == 200) {
+            objectives_data <- read.csv(text = rawToChar(objectives_res$content))
+            rv$objectives_results <- objectives_data
+            print("Objectives results loaded successfully")
+          }
+          
+          # Load weights
+          weights_res <- GET(paste0(API_URL, "/optimization_weights"))
+          if (weights_res$status_code == 200) {
+            weights_data <- read.csv(text = rawToChar(weights_res$content))
+            rv$weights_data <- weights_data
+            print("Weights loaded successfully")
+          }
+          
+          showNotification("Multi-objective optimization completed successfully!", type = "success")
+        }, error = function(e) {
+          showNotification(paste("Error loading results:", e$message), type = "error")
+        })
       } else {
         showNotification("Multi-objective optimization failed", type = "error")
       }
@@ -1450,127 +1464,66 @@ server <- function(input, output, session) {
   # Multi-objective optimization results table
   output$simple_optimization_table <- DT::renderDataTable({
     tryCatch({
-      print(paste("[DEBUG] Table render - rv$simple_optimization_results is null:", is.null(rv$simple_optimization_results)))
-      if (!is.null(rv$simple_optimization_results)) {
-        print(paste("[DEBUG] Table render - results type:", class(rv$simple_optimization_results)))
-        print(paste("[DEBUG] Table render - results length:", length(rv$simple_optimization_results)))
-      }
+      print("[DEBUG] Rendering optimization table from CSV data...")
       
-      if (is.null(rv$simple_optimization_results)) {
+      # Check if we have ranking results
+      if (is.null(rv$ranking_results)) {
+        print("[DEBUG] No ranking results available")
         return(data.frame(Message = "Run multi-objective optimization to see results"))
       }
       
-      # Get optimization results
-      results <- rv$simple_optimization_results
+      ranking_data <- rv$ranking_results
+      objectives_data <- rv$objectives_results
+      weights_data <- rv$weights_data
       
-      # Check if results are a JSON string and parse if needed
-      if (is.character(results)) {
-        print("[DEBUG] Results is character string, parsing JSON...")
-        results <- jsonlite::fromJSON(results, simplifyVector = FALSE)
-      }
+      print(paste("[DEBUG] Ranking data rows:", nrow(ranking_data)))
+      print(paste("[DEBUG] Objectives data rows:", ifelse(is.null(objectives_data), 0, nrow(objectives_data))))
       
-      # Ensure we have a list structure
-      if (!is.list(results)) {
-        return(data.frame(Message = "Invalid results format: expected JSON object"))
-      }
-      
-      # Handle case where results might be wrapped in a 'results' key
-      if (!is.null(results$results)) {
-        print("[DEBUG] Results wrapped in 'results' key, extracting...")
-        results <- results$results
-      }
-      
-      if (is.null(results)) {
-        return(data.frame(Message = "No optimization results available"))
-      }
-      
-      # Handle parsed JSON - Check if we have the sophisticated optimization format
-      if ("ranking" %in% names(results) && "objectives" %in% names(results)) {
-        
-        print("[DEBUG] Processing sophisticated optimization format")
-        
-        # Create ranking table
-        ranking_data <- do.call(rbind, lapply(results$ranking, function(item) {
-          data.frame(
-            Position = item$position,
-            Offer_ID = item$offer_id,
-            Hotel_ID = item$hotel_id,
-            Partner = item$partner_name,
-            Price = paste0("$", round(item$price_per_night, 2)),
-            Commission_Rate = paste0(round(item$commission_rate * 100, 1), "%"),
-            CPC_Bid = paste0("$", round(item$cost_per_click_bid, 2)),
-            Satisfaction_Score = round(item$user_satisfaction_score, 3),
-            Conversion_Prob = paste0(round(item$conversion_probability * 100, 1), "%"),
-            Remaining_Budget = paste0("$", round(item$remaining_budget, 2)),
-            stringsAsFactors = FALSE
-          )
-        }))
-        
-        # Create objectives summary table
-        objectives_data <- data.frame(
-          Metric = c("Trivago Income Score", "User Satisfaction Score", "Partner Conversion Score", "Total Objective Value"),
-          Value = c(
-            round(results$objectives$trivago_income, 2),
-            round(results$objectives$user_satisfaction, 2),
-            round(results$objectives$partner_conversion_value, 2),
-            round(results$objectives$total_objective, 2)
-          ),
-          Weight = c(
-            paste0("α = ", results$weights$alpha),
-            paste0("β = ", results$weights$beta),
-            paste0("γ = ", results$weights$gamma),
-            "Combined"
-          ),
-          stringsAsFactors = FALSE
+      # Create the main ranking table
+      if (nrow(ranking_data) > 0) {
+        # Format the ranking data
+        formatted_ranking <- data.frame(
+          Position = ranking_data$position,
+          Offer_ID = ranking_data$offer_id,
+          Hotel_ID = ranking_data$hotel_id,
+          Partner = ranking_data$partner_name,
+          Price_Per_Night = paste0("$", round(ranking_data$price_per_night, 2)),
+          Commission_Rate = paste0(round(ranking_data$commission_rate * 100, 1), "%"),
+          Cost_Per_Click = paste0("$", round(ranking_data$cost_per_click_bid, 2)),
+          User_Satisfaction = round(ranking_data$user_satisfaction_score, 2),
+          Conversion_Probability = paste0(round(ranking_data$conversion_probability * 100, 1), "%"),
+          Remaining_Budget = paste0("$", round(ranking_data$remaining_budget, 2))
         )
         
-        # Return the ranking table as primary display
-        DT::datatable(ranking_data, 
-                      options = list(pageLength = 10, scrollX = TRUE),
-                      rownames = FALSE,
-                      caption = paste("Optimal Ranking with", nrow(ranking_data), "positions. Total Objective:", 
-                                    round(results$objectives$total_objective, 2))) %>%
-          DT::formatStyle(
-            'Position',
-            backgroundColor = DT::styleEqual(1, '#2ecc71')
+        # Add objectives summary at the top if available
+        if (!is.null(objectives_data) && nrow(objectives_data) > 0) {
+          objectives_summary <- data.frame(
+            Position = "OBJECTIVES",
+            Offer_ID = objectives_data$metric,
+            Hotel_ID = "",
+            Partner = "",
+            Price_Per_Night = paste0("$", round(objectives_data$value, 2)),
+            Commission_Rate = "",
+            Cost_Per_Click = "",
+            User_Satisfaction = "",
+            Conversion_Probability = "",
+            Remaining_Budget = ""
           )
+          
+          # Combine objectives and ranking
+          combined_data <- rbind(objectives_summary, formatted_ranking)
+        } else {
+          combined_data <- formatted_ranking
+        }
         
-      } else if ("objective_value" %in% names(results) && "variables" %in% names(results)) {
-        # Handle simple optimization format (2x + y)
-        simple_results <- results
-        
-        # Create table with optimal values
-        optimal_data <- data.frame(
-          Variable = c("x", "y", "Objective Value"),
-          Optimal_Value = c(
-            round(simple_results$variables$x, 4),
-            round(simple_results$variables$y, 4),
-            round(simple_results$objective_value, 4)
-          ),
-          Constraint = c(
-            "0 ≤ x ≤ 3",
-            "0 ≤ y ≤ 2",
-            "2x + y"
-          ),
-          Status = c(
-            ifelse(simple_results$variables$x >= 0 && simple_results$variables$x <= 3, "✅ Feasible", "❌ Infeasible"),
-            ifelse(simple_results$variables$y >= 0 && simple_results$variables$y <= 2, "✅ Feasible", "❌ Infeasible"),
-            "✅ Optimal"
-          ),
-          stringsAsFactors = FALSE
-        )
-        
-        DT::datatable(optimal_data, 
-                      options = list(pageLength = 10, scrollX = TRUE),
-                      rownames = FALSE) %>%
-          DT::formatRound(columns = c("Optimal_Value"), digits = 4)
-        
+        print("[DEBUG] Table data created successfully")
+        return(combined_data)
       } else {
-        # Fallback for unrecognized format
-        return(data.frame(Message = "Optimization completed but results format not recognized"))
+        return(data.frame(Message = "No ranking data available"))
       }
       
     }, error = function(e) {
+      print(paste("[DEBUG] Error in table renderer:", e$message))
       return(data.frame(Message = paste("Error displaying results:", e$message)))
     })
   })
