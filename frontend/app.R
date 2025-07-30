@@ -294,6 +294,38 @@ ui <- dashboardPage(
         ),
         fluidRow(
           box(
+            title = "Market Parameters for Data Generation", status = "info", solidHeader = TRUE, width = 12,
+            fluidRow(
+              column(3,
+                numericInput("num_users_gen", "Number of Users:", value = 80, min = 1, max = 100)
+              ),
+              column(3,
+                numericInput("num_hotels_gen", "Hotels per Destination:", value = 10, min = 1, max = 20)
+              ),
+              column(3,
+                numericInput("num_partners_gen", "Partners per Hotel:", value = 5, min = 1, max = 10)
+              ),
+              column(3,
+                numericInput("min_users_per_destination_gen", "Min Users per Destination:", value = 8, min = 1, max = 20)
+              )
+            ),
+            fluidRow(
+              column(3,
+                numericInput("days_to_go_gen", "Days to Go (target):", value = 30, min = 1, max = 365)
+              ),
+              column(3,
+                numericInput("days_var_gen", "Days Variance:", value = 5, min = 1, max = 30)
+              ),
+              column(6,
+                div(style = "text-align: center; padding: 10px; background-color: #f8f9fa; border-radius: 5px;",
+                    helpText("These parameters control the data generation for the strategic simulation")
+                )
+              )
+            )
+          )
+        ),
+        fluidRow(
+          box(
             title = "Optimization Weights (α, β, γ)", status = "info", solidHeader = TRUE, width = 12,
             fluidRow(
               column(4,
@@ -325,17 +357,20 @@ ui <- dashboardPage(
             title = "Strategic Policy Selection", status = "warning", solidHeader = TRUE, width = 12,
             fluidRow(
               column(6,
-                actionButton("select_policy_btn", "Select Optimal Policy", 
+                actionButton("load_pretrained_policy_btn", "Load Pre-trained Policy", 
                            class = "btn-warning", icon = icon("brain"))
               ),
               column(6,
-                actionButton("train_rl_btn", "Train RL Agent", 
+                actionButton("retrain_rl_btn", "Retrain RL Agent", 
                            class = "btn-info", icon = icon("graduation-cap"))
               )
             ),
             fluidRow(
-              column(12,
+              column(6,
                 verbatimTextOutput("policy_selection_output")
+              ),
+              column(6,
+                verbatimTextOutput("retraining_output")
               )
             )
           )
@@ -344,6 +379,25 @@ ui <- dashboardPage(
           box(
             title = "Simulation Status", status = "success", solidHeader = TRUE, width = 12,
             verbatimTextOutput("simulation_status")
+          )
+        ),
+        fluidRow(
+          box(
+            title = "Generated Data Preview", status = "info", solidHeader = TRUE, width = 12,
+            fluidRow(
+              column(4,
+                h4("Bandit Simulation Results"),
+                DT::dataTableOutput("bandit_preview_table")
+              ),
+              column(4,
+                h4("User Price Sensitivity"),
+                DT::dataTableOutput("dps_preview_table")
+              ),
+              column(4,
+                h4("Conversion Probabilities"),
+                DT::dataTableOutput("conversion_preview_table")
+              )
+            )
           )
         )
       ),
@@ -561,8 +615,9 @@ ui <- dashboardPage(
                 numericInput("days_var_gen", "Days Variance:", value = 5, min = 1, max = 30)
               ),
               column(6,
-                actionButton("generate_data_btn", "Generate Data", 
-                           class = "btn-success btn-block", icon = icon("database"))
+                div(style = "text-align: center; padding: 10px; background-color: #f8f9fa; border-radius: 5px;",
+                    helpText("Data generation is now integrated into the Strategic Simulation")
+                )
               )
             )
           )
@@ -646,10 +701,10 @@ server <- function(input, output, session) {
     }
   })
   
-  # Run strategic simulation
+  # Run strategic simulation (Enhanced)
   observeEvent(input$run_simulation_btn, {
     tryCatch({
-      showNotification("Running strategic simulation...", type = "message")
+      showNotification("Running comprehensive strategic simulation...", type = "message")
       
       # Step 1: Sample data using parameters from Data Generation tab
       res1 <- POST(paste0(API_URL, "/sample_offers_for_users"), 
@@ -667,8 +722,22 @@ server <- function(input, output, session) {
         return()
       }
       
-      # Step 2: Run optimization with current weights
-      res2 <- POST(paste0(API_URL, "/rank"), 
+      # Step 2: Run bandit simulation
+      res2 <- POST(paste0(API_URL, "/run_bandit_simulation"))
+      
+      if (res2$status_code != 200) {
+        showNotification("Error in bandit simulation", type = "error")
+        return()
+      }
+      
+      bandit_data <- fromJSON(rawToChar(res2$content))
+      
+      # Step 3: Generate market analysis CSVs
+      POST(paste0(API_URL, "/user_dynamic_price_sensitivity_csv"))
+      POST(paste0(API_URL, "/conversion_probabilities_csv"))
+      
+      # Step 4: Run optimization with current weights
+      res3 <- POST(paste0(API_URL, "/rank"), 
                  query = list(
                    alpha = input$alpha_weight,
                    beta = input$beta_weight,
@@ -676,39 +745,51 @@ server <- function(input, output, session) {
                    num_positions = 5
                  ))
       
-      if (res2$status_code != 200) {
+      if (res3$status_code != 200) {
         showNotification("Error in optimization", type = "error")
         return()
       }
       
-      optimization_data <- fromJSON(rawToChar(res2$content))
+      optimization_data <- fromJSON(rawToChar(res3$content))
       rv$optimization_results <- optimization_data
       
-      # Step 3: Generate CSVs
-      POST(paste0(API_URL, "/user_dynamic_price_sensitivity_csv"))
-      POST(paste0(API_URL, "/conversion_probabilities_csv"))
-      
+      # Enhanced simulation status with comprehensive market summary
       rv$simulation_message <- paste0(
-        "✅ Strategic simulation completed!\n",
-        "📊 Optimization Results:\n",
+        "✅ Comprehensive Strategic Simulation Completed!\n\n",
+        "📊 Market Summary:\n",
+        "• Total Users: ", bandit_data$total_users, "\n",
+        "• Total Offers: ", bandit_data$total_offers, "\n",
+        "• Total Partners: ", length(unique(bandit_data$sample_table$partner_name)), "\n",
+        "• Market Demand: ", bandit_data$total_users, " users\n",
+        "• Competition Density: ", length(unique(bandit_data$sample_table$partner_name)), " partners\n\n",
+        "🎯 Optimization Results:\n",
         "• Trivago Income: $", round(optimization_data$objectives$trivago_income, 2), "\n",
         "• User Satisfaction: ", round(optimization_data$objectives$user_satisfaction, 2), "\n",
         "• Partner Conversion Value: ", round(optimization_data$objectives$partner_conversion_value, 2), "\n",
         "• Total Objective: ", round(optimization_data$objectives$total_objective, 2), "\n\n",
-        "⚖️ Weights Used: α=", input$alpha_weight, ", β=", input$beta_weight, ", γ=", input$gamma_weight
+        "⚖️ Applied Weights: α=", input$alpha_weight, ", β=", input$beta_weight, ", γ=", input$gamma_weight, "\n\n",
+        "📈 Generated Data Files:\n",
+        "• trial_sampled_offers.csv (", bandit_data$total_offers, " offers)\n",
+        "• user_dynamic_price_sensitivity.csv\n",
+        "• conversion_probabilities.csv\n",
+        "• bandit_simulation_results.csv\n",
+        "• optimization_ranking_results.csv\n",
+        "• optimization_objectives_results.csv\n",
+        "• optimization_weights.csv\n\n",
+        "🎲 Bandit Simulation: ", bandit_data$total_arms, " arms with ", bandit_data$clicks_per_arm, " clicks each"
       )
       
-      showNotification("Strategic simulation completed successfully!", type = "message")
+      showNotification("Comprehensive strategic simulation completed successfully!", type = "message")
       
     }, error = function(e) {
       showNotification(paste("Error:", e$message), type = "error")
     })
   })
   
-  # Select optimal policy
-  observeEvent(input$select_policy_btn, {
+  # Load pre-trained policy (Renamed from "Select Optimal Policy")
+  observeEvent(input$load_pretrained_policy_btn, {
     tryCatch({
-      showNotification("Selecting optimal policy...", type = "message")
+      showNotification("Loading pre-trained RL policy...", type = "message")
       
       res <- POST(paste0(API_URL, "/select_strategic_policy"))
       
@@ -718,21 +799,26 @@ server <- function(input, output, session) {
         
         output$policy_selection_output <- renderText({
           paste0(
-            "🎯 Selected Policy: ", policy_data$selected_policy$policy_name, "\n",
-            "⚖️ Weights: α=", policy_data$selected_policy$weights$alpha, 
+            "🎯 Loaded Pre-trained Policy: ", policy_data$selected_policy$policy_name, "\n",
+            "⚖️ Optimal Weights: α=", policy_data$selected_policy$weights$alpha, 
             ", β=", policy_data$selected_policy$weights$beta,
             ", γ=", policy_data$selected_policy$weights$gamma, "\n",
-            "🧠 Epsilon: ", round(policy_data$epsilon, 4), "\n",
-            "📊 Market State:\n",
-            "• Demand: ", policy_data$market_state$market_demand, "\n",
-            "• Days to Go: ", round(policy_data$market_state$days_to_go, 1), "\n",
-            "• Competition: ", policy_data$market_state$competition_density
+            "🧠 Exploration Rate (Epsilon): ", round(policy_data$epsilon, 4), "\n",
+            "📊 Current Market State:\n",
+            "• Demand: ", policy_data$market_state$market_demand, " users\n",
+            "• Days to Go: ", round(policy_data$market_state$days_to_go, 1), " days\n",
+            "• Competition: ", policy_data$market_state$competition_density, " partners\n",
+            "• Price Volatility: ", round(policy_data$market_state$price_volatility, 3), "\n",
+            "• Budget Utilization: ", round(policy_data$market_state$budget_utilization, 1), "%\n\n",
+            "💡 Policy Description:\n",
+            "This policy was selected by the RL agent based on current market conditions.\n",
+            "The agent learned optimal weight combinations for different market scenarios."
           )
         })
         
-        showNotification("Optimal policy selected!", type = "message")
+        showNotification("Pre-trained policy loaded successfully!", type = "message")
       } else {
-        showNotification("Error selecting policy", type = "error")
+        showNotification("Error loading pre-trained policy", type = "error")
       }
       
     }, error = function(e) {
@@ -740,22 +826,40 @@ server <- function(input, output, session) {
     })
   })
   
-  # Train RL agent
-  observeEvent(input$train_rl_btn, {
+  # Retrain RL agent on newly generated data
+  observeEvent(input$retrain_rl_btn, {
     tryCatch({
-      showNotification("Training RL agent...", type = "message")
+      showNotification("Retraining RL agent on newly generated data...", type = "message")
       
       res <- POST(paste0(API_URL, "/train_rl_agent"))
       
       if (res$status_code == 200) {
         training_data <- fromJSON(rawToChar(res$content))
         
-        showNotification(paste0(
-          "RL Agent trained! Policy: ", training_data$training_result$policy_name,
-          ", Reward: ", round(training_data$training_result$reward, 4)
-        ), type = "message")
+        output$retraining_output <- renderText({
+          paste0(
+            "🔄 RL Agent Retraining Completed!\n\n",
+            "📊 Training Results:\n",
+            "• Selected Policy: ", training_data$training_result$policy_name, "\n",
+            "• Applied Weights: α=", training_data$training_result$weights$alpha,
+            ", β=", training_data$training_result$weights$beta,
+            ", γ=", training_data$training_result$weights$gamma, "\n",
+            "• Average Reward: ", round(training_data$training_result$reward, 4), "\n",
+            "• Training Loss: ", round(training_data$training_result$loss, 4), "\n",
+            "• Final Epsilon: ", round(training_data$training_result$epsilon, 4), "\n\n",
+            "💾 Model Status:\n",
+            "• Model saved to: dqn_model.pth\n",
+            "• Episodes trained: 5\n",
+            "• Market scenarios: Varied demand, competition, and time constraints\n\n",
+            "🎯 What was learned:\n",
+            "The agent learned optimal weight combinations for different market conditions\n",
+            "based on the newly generated data and optimization results."
+          )
+        })
+        
+        showNotification("RL agent retrained successfully on new data!", type = "message")
       } else {
-        showNotification("Error training RL agent", type = "error")
+        showNotification("Error retraining RL agent", type = "error")
       }
       
     }, error = function(e) {
@@ -769,6 +873,52 @@ server <- function(input, output, session) {
       return("Click 'Run Strategic Simulation' to start...")
     }
     rv$simulation_message
+  })
+  
+  # Data preview tables
+  output$bandit_preview_table <- DT::renderDataTable({
+    bandit_data <- get_cached_data("bandit_data", fetch_bandit_data)
+    
+    if (is.null(bandit_data) || length(bandit_data) == 0) {
+      return(data.frame(Message = "No bandit data available"))
+    }
+    
+    df <- as.data.frame(bandit_data)
+    
+    DT::datatable(df, 
+                  options = list(pageLength = 10, scrollX = TRUE),
+                  rownames = FALSE) %>%
+      DT::formatRound(columns = c("probability_of_click", "true_click_prob", "preference_score"), digits = 4)
+  })
+  
+  output$dps_preview_table <- DT::renderDataTable({
+    dps_data <- get_cached_data("dps_data", fetch_dps_data)
+    
+    if (is.null(dps_data) || length(dps_data) == 0) {
+      return(data.frame(Message = "No DPS data available"))
+    }
+    
+    df <- as.data.frame(dps_data)
+    
+    DT::datatable(df, 
+                  options = list(pageLength = 10, scrollX = TRUE),
+                  rownames = FALSE) %>%
+      DT::formatRound(columns = c("base_price_sensitivity", "dynamic_price_sensitivity"), digits = 4)
+  })
+  
+  output$conversion_preview_table <- DT::renderDataTable({
+    conversion_data <- get_cached_data("conversion_data", fetch_conversion_data)
+    
+    if (is.null(conversion_data) || length(conversion_data) == 0) {
+      return(data.frame(Message = "No conversion data available"))
+    }
+    
+    df <- as.data.frame(conversion_data)
+    
+    DT::datatable(df, 
+                  options = list(pageLength = 10, scrollX = TRUE),
+                  rownames = FALSE) %>%
+      DT::formatRound(columns = c("conversion_probability"), digits = 4)
   })
   
   # --- OPTIMIZATION & TRADE-OFFS TAB ---
@@ -1299,36 +1449,7 @@ server <- function(input, output, session) {
   
   # --- DATA GENERATION TAB (Legacy) ---
   
-  # Generate data
-  observeEvent(input$generate_data_btn, {
-    tryCatch({
-      showNotification("Generating data...", type = "message")
-      
-      res1 <- POST(paste0(API_URL, "/sample_offers_for_users"), 
-                 query = list(
-                   num_users = input$num_users_gen,
-                   num_hotels = input$num_hotels_gen,
-                   num_partners = input$num_partners_gen,
-                   days_to_go = input$days_to_go_gen,
-                   days_var = input$days_var_gen,
-                   min_users_per_destination = input$min_users_per_destination_gen
-                 ))
-      
-      if (res1$status_code != 200) {
-        showNotification("Error in data generation", type = "error")
-        return()
-      }
-      
-      # Generate CSVs
-      POST(paste0(API_URL, "/user_dynamic_price_sensitivity_csv"))
-      POST(paste0(API_URL, "/conversion_probabilities_csv"))
-      
-      showNotification("Data generated successfully!", type = "message")
-      
-    }, error = function(e) {
-      showNotification(paste("Error:", e$message), type = "error")
-    })
-  })
+  # Note: Data generation functionality has been moved to Strategic Simulation
   
   # Data tables
   output$bandit_table <- DT::renderDataTable({

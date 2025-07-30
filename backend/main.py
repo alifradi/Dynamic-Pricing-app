@@ -3794,6 +3794,11 @@ def train_rl_agent():
             "training_result": {
                 "action_selected": action,
                 "policy_name": policy_weights["name"],
+                "weights": {
+                    "alpha": policy_weights["alpha"],
+                    "beta": policy_weights["beta"],
+                    "gamma": policy_weights["gamma"]
+                },
                 "reward": avg_reward,
                 "loss": avg_loss,
                 "epsilon": dqn_agent.epsilon
@@ -4222,6 +4227,167 @@ def get_policy_heatmap():
         
     except Exception as e:
         print(f"[ERROR] Exception in get_policy_heatmap: {e}")
+        traceback.print_exc()
+        return {"error": f"Exception: {str(e)}"}
+
+@app.post("/apply_greedy_policy")
+def apply_greedy_policy():
+    """Apply greedy policy (maximize Trivago revenue)"""
+    try:
+        # Greedy policy weights: maximize Trivago revenue
+        alpha, beta, gamma = 0.7, 0.2, 0.1
+        
+        # Run optimization with greedy weights
+        result = rank_offers_with_budget_constraints(
+            alpha=alpha,
+            beta=beta,
+            gamma=gamma,
+            num_positions=10
+        )
+        
+        return {
+            "policy_type": "Greedy",
+            "description": "Maximizes Trivago revenue with minimal consideration for user satisfaction and partner value",
+            "weights": {"alpha": alpha, "beta": beta, "gamma": gamma},
+            "optimization_result": result
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Exception in apply_greedy_policy: {e}")
+        traceback.print_exc()
+        return {"error": f"Exception: {str(e)}"}
+
+@app.post("/apply_user_first_policy")
+def apply_user_first_policy():
+    """Apply user-first policy (maximize user satisfaction)"""
+    try:
+        # User-first policy weights: maximize user satisfaction
+        alpha, beta, gamma = 0.2, 0.7, 0.1
+        
+        # Run optimization with user-first weights
+        result = rank_offers_with_budget_constraints(
+            alpha=alpha,
+            beta=beta,
+            gamma=gamma,
+            num_positions=10
+        )
+        
+        return {
+            "policy_type": "User-First",
+            "description": "Maximizes user satisfaction with minimal consideration for revenue and partner value",
+            "weights": {"alpha": alpha, "beta": beta, "gamma": gamma},
+            "optimization_result": result
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Exception in apply_user_first_policy: {e}")
+        traceback.print_exc()
+        return {"error": f"Exception: {str(e)}"}
+
+@app.post("/apply_custom_policy")
+def apply_custom_policy(
+    alpha: float = Query(0.4, ge=0.0, le=1.0, description="Weight for trivago income"),
+    beta: float = Query(0.3, ge=0.0, le=1.0, description="Weight for user satisfaction"),
+    gamma: float = Query(0.3, ge=0.0, le=1.0, description="Weight for partner conversion value")
+):
+    """Apply custom policy with user-defined weights"""
+    try:
+        # Validate weights sum to 1
+        total_weight = alpha + beta + gamma
+        if abs(total_weight - 1.0) > 0.01:
+            return {"error": f"Weights must sum to 1.0, got {total_weight}"}
+        
+        # Run optimization with custom weights
+        result = rank_offers_with_budget_constraints(
+            alpha=alpha,
+            beta=beta,
+            gamma=gamma,
+            num_positions=10
+        )
+        
+        return {
+            "policy_type": "Custom",
+            "description": f"Custom policy with weights α={alpha}, β={beta}, γ={gamma}",
+            "weights": {"alpha": alpha, "beta": beta, "gamma": gamma},
+            "optimization_result": result
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Exception in apply_custom_policy: {e}")
+        traceback.print_exc()
+        return {"error": f"Exception: {str(e)}"}
+
+@app.post("/compare_policies")
+def compare_policies():
+    """Compare all available policies and return their performance metrics"""
+    try:
+        policies = []
+        
+        # Test Greedy Policy
+        greedy_result = apply_greedy_policy()
+        if "error" not in greedy_result:
+            policies.append({
+                "name": "Greedy Policy",
+                "weights": greedy_result["weights"],
+                "description": greedy_result["description"],
+                "trivago_income": greedy_result["optimization_result"]["objectives"]["trivago_income"],
+                "user_satisfaction": greedy_result["optimization_result"]["objectives"]["user_satisfaction"],
+                "partner_conversion_value": greedy_result["optimization_result"]["objectives"]["partner_conversion_value"],
+                "total_objective": greedy_result["optimization_result"]["objectives"]["total_objective"]
+            })
+        
+        # Test User-First Policy
+        user_first_result = apply_user_first_policy()
+        if "error" not in user_first_result:
+            policies.append({
+                "name": "User-First Policy",
+                "weights": user_first_result["weights"],
+                "description": user_first_result["description"],
+                "trivago_income": user_first_result["optimization_result"]["objectives"]["trivago_income"],
+                "user_satisfaction": user_first_result["optimization_result"]["objectives"]["user_satisfaction"],
+                "partner_conversion_value": user_first_result["optimization_result"]["objectives"]["partner_conversion_value"],
+                "total_objective": user_first_result["optimization_result"]["objectives"]["total_objective"]
+            })
+        
+        # Test Balanced Policy (RL learned)
+        balanced_result = apply_custom_policy(alpha=0.4, beta=0.3, gamma=0.3)
+        if "error" not in balanced_result:
+            policies.append({
+                "name": "Balanced Policy (RL)",
+                "weights": balanced_result["weights"],
+                "description": "RL-learned balanced policy",
+                "trivago_income": balanced_result["optimization_result"]["objectives"]["trivago_income"],
+                "user_satisfaction": balanced_result["optimization_result"]["objectives"]["user_satisfaction"],
+                "partner_conversion_value": balanced_result["optimization_result"]["objectives"]["partner_conversion_value"],
+                "total_objective": balanced_result["optimization_result"]["objectives"]["total_objective"]
+            })
+        
+        # Test High-Trust Policy (RL learned)
+        high_trust_result = apply_custom_policy(alpha=0.2, beta=0.6, gamma=0.2)
+        if "error" not in high_trust_result:
+            policies.append({
+                "name": "High-Trust Policy (RL)",
+                "weights": high_trust_result["weights"],
+                "description": "RL-learned high user trust policy",
+                "trivago_income": high_trust_result["optimization_result"]["objectives"]["trivago_income"],
+                "user_satisfaction": high_trust_result["optimization_result"]["objectives"]["user_satisfaction"],
+                "partner_conversion_value": high_trust_result["optimization_result"]["objectives"]["partner_conversion_value"],
+                "total_objective": high_trust_result["optimization_result"]["objectives"]["total_objective"]
+            })
+        
+        return {
+            "policies": policies,
+            "comparison_summary": {
+                "total_policies": len(policies),
+                "best_trivago_income": max([p["trivago_income"] for p in policies]) if policies else 0,
+                "best_user_satisfaction": max([p["user_satisfaction"] for p in policies]) if policies else 0,
+                "best_partner_value": max([p["partner_conversion_value"] for p in policies]) if policies else 0,
+                "best_total_objective": max([p["total_objective"] for p in policies]) if policies else 0
+            }
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Exception in compare_policies: {e}")
         traceback.print_exc()
         return {"error": f"Exception: {str(e)}"}
 
