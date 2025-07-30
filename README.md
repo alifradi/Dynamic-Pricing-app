@@ -328,34 +328,64 @@ The RL agent analyzes market conditions to select optimal policies:
 
 ### Mathematical Formulation
 
-#### Multi-Objective Optimization Problem
+#### Two-Stage Optimization System
+
+**Stage 1: Optimal Ranking for Click Maximization**
 
 **Primary Objective Function:**
 
-$$\text{Maximize: } \alpha \times \text{Trivago\_Score} + \beta \times \text{User\_Score} + \gamma \times \text{Partner\_Score}$$
+$$\text{Maximize: } \alpha \times \text{Trivago\_Income} + \beta \times \text{User\_Satisfaction} + \gamma \times \text{Partner\_Conversion\_Value}$$
 
 Where:
-- **Trivago_Score**: $\sum_{i,j} (pClick_{ij} \times pConvert_j \times Commission_j \times Price_j \times X_{ij})$
-- **User_Score**: $\sum_{i,j} (pClick_{ij} \times Satisfaction_j \times X_{ij})$
-- **Partner_Score**: $\sum_{i,j} (pClick_{ij} \times pConvert_j \times Price_j \times X_{ij})$
+- **Trivago_Income**: $\sum_{i,j} (\text{CTR}_i \times pConvert_j \times Commission_j \times Price_j \times X_{ij})$
+- **User_Satisfaction**: $\frac{\sum_{i,j} (\text{CTR}_i \times Satisfaction_j \times X_{ij})}{\sum_{i,j} (\text{CTR}_i \times X_{ij})}$ (weighted average, 0-10 scale)
+- **Partner_Conversion_Value**: $\sum_{i,j} (\text{CTR}_i \times pConvert_j \times Price_j \times X_{ij})$
 
-#### Optimization Constraints
+**Stage 1 Constraints:**
 
 **Assignment Constraints:**
 - $\sum_j X_{ij} \leq 1$ for each position $i$ (each position at most one offer)
 - $\sum_i X_{ij} \leq 1$ for each offer $j$ (each offer at most one position)
 
 **Budget Constraints:**
-- $\sum_{i,j} (pClick_{ij} \times CPC_j \times X_{ij}) \leq \text{Remaining\_Budget}_P$ for each partner $P$
+- $\sum_{i,j} (\text{CTR}_i \times \text{CPC}_j \times X_{ij}) \leq \text{Remaining\_Budget}_P$ for each partner $P$
 
 **Weight Constraints:**
 - $\alpha + \beta + \gamma = 1$ (weights sum to unity)
 - $\alpha, \beta, \gamma \geq 0$ (non-negative weights)
 
+**Stage 2: Offer Hiding for Reconversion & Budget Rationalization**
+
+**Hiding Decision Function:**
+- Hide offer $j$ if: $\text{Reconversion\_Probability}_j < \text{Threshold}$ (default: 0.3)
+- Hide offer $j$ if: $\text{Budget\_Utilization} > \text{Target}$ (default: 0.8)
+
+**Budget Utilization Constraint:**
+- $\frac{\sum_{j \in \text{Visible}} (\text{Expected\_Clicks}_j \times \text{CPC}_j)}{\text{Total\_Budget}_P} \leq \text{Target\_Utilization}$
+
 #### Decision Variables
 
-- $X_{ij}$: Binary variable indicating if offer $j$ is placed at position $i$
+**Stage 1 Variables:**
+- $X_{ij}$: Binary variable indicating if offer $j$ is placed at position $i$ for user $u$
 - $\alpha, \beta, \gamma$: Weight parameters for multi-objective optimization
+
+**Stage 2 Variables:**
+- $H_j$: Binary variable indicating if offer $j$ is hidden (1 = hidden, 0 = visible)
+
+#### Position-Based Click-Through Rate
+
+$$\text{CTR}(\text{position}) = \frac{1}{1 + 0.3 \times \text{position}}$$
+
+#### Reconversion Probability
+
+$$\text{Reconversion\_Probability}_j = 0.7 \times \text{Conversion\_Probability}_j$$
+
+#### Final Objective Function Values
+
+**Trivago Income**: Total revenue from commissions and conversions
+**User Satisfaction**: Weighted average satisfaction score (0-10 scale)
+**Partner Conversion Value**: Total value generated for partners
+**Total Objective**: $\alpha \times \text{Trivago\_Income} + \beta \times \text{User\_Satisfaction} + \gamma \times \text{Partner\_Conversion\_Value}$
 
 ## 📊 Data Flow
 
