@@ -344,11 +344,11 @@ Where:
 **Stage 1 Constraints:**
 
 **Assignment Constraints:**
-- $$\sum_j X_{ij} \leq 1$$ for each position $i$ (each position at most one offer)
-- $$\sum_i X_{ij} \leq 1$$ for each offer $j$ (each offer at most one position)
+- $$\sum_j X_{ij} \leq 1$$ for each position $$i$$ (each position at most one offer)
+- $$\sum_i X_{ij} \leq 1$$ for each offer $$j$$ (each offer at most one position)
 
 **Budget Constraints:**
-- $$\sum_{i,j} (\text{CTR}_i \times \text{CPC}_j \times X_{ij}) \leq \text{Remaining\_Budget}_P$$ for each partner $P$
+- $$\sum_{i,j} (\text{CTR}_i \times \text{CPC}_j \times X_{ij}) \leq \text{Remaining\_Budget}_P$$ for each partner $$P$$
 
 **Weight Constraints:**
 - $$\alpha + \beta + \gamma = 1$$ (weights sum to unity)
@@ -357,8 +357,8 @@ Where:
 **Stage 2: Offer Hiding for Reconversion & Budget Rationalization**
 
 **Hiding Decision Function:**
-- Hide offer $j$ if: $$\text{Reconversion\_Probability}_j < \text{Threshold}$$ (default: 0.3)
-- Hide offer $j$ if: $$\text{Budget\_Utilization} > \text{Target}$$ (default: 0.8)
+- Hide offer $$j$$ if: $$\text{Reconversion\_Probability}_j < \text{Threshold}$$ (default: 0.3)
+- Hide offer $$j$$ if: $$\text{Budget\_Utilization} > \text{Target}$$ (default: 0.8)
 
 **Budget Utilization Constraint:**
 - $$\frac{\sum_{j \in \text{Visible}} (\text{Expected\_Clicks}_j \times \text{CPC}_j)}{\text{Total\_Budget}_P} \leq \text{Target\_Utilization}$$
@@ -366,11 +366,11 @@ Where:
 #### Decision Variables
 
 **Stage 1 Variables:**
-- $$X_{ij}$$: Binary variable indicating if offer $j$ is placed at position $i$ for user $u$
+- $$X_{ij}$$: Binary variable indicating if offer $$j$$ is placed at position $$i$$ for user $$u$$
 - $$\alpha, \beta, \gamma$$: Weight parameters for multi-objective optimization
 
 **Stage 2 Variables:**
-- $$H_j$$: Binary variable indicating if offer $j$ is hidden (1 = hidden, 0 = visible)
+- $$H_j$$: Binary variable indicating if offer $$j$$ is hidden (1 = hidden, 0 = visible)
 
 #### Position-Based Click-Through Rate
 
