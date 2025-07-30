@@ -186,12 +186,12 @@ The Q-learning algorithm updates Q-values using the Bellman equation:
 $$Q(s_t, a_t) \leftarrow Q(s_t, a_t) + \alpha \left[ r_t + \gamma \max_{a'} Q(s_{t+1}, a') - Q(s_t, a_t) \right]$$
 
 Where:
-- $s_t$: Current state
-- $a_t$: Selected action
-- $r_t$: Received reward
-- $s_{t+1}$: Next state
-- $\alpha$: Learning rate
-- $\gamma$: Discount factor (0.95)
+- $$s_t$$: Current state
+- $$a_t$$: Selected action
+- $$r_t$$: Received reward
+- $$s_{t+1}$$: Next state
+- $$\alpha$$: Learning rate
+- $$\gamma$$: Discount factor (0.95)
 
 ### Policy Selection Logic
 
@@ -337,40 +337,40 @@ The RL agent analyzes market conditions to select optimal policies:
 $$\text{Maximize: } \alpha \times \text{Trivago\_Income} + \beta \times \text{User\_Satisfaction} + \gamma \times \text{Partner\_Conversion\_Value}$$
 
 Where:
-- **Trivago_Income**: $\sum_{i,j} (\text{CTR}_i \times pConvert_j \times Commission_j \times Price_j \times X_{ij})$
-- **User_Satisfaction**: $\frac{\sum_{i,j} (\text{CTR}_i \times Satisfaction_j \times X_{ij})}{\sum_{i,j} (\text{CTR}_i \times X_{ij})}$ (weighted average, 0-10 scale)
-- **Partner_Conversion_Value**: $\sum_{i,j} (\text{CTR}_i \times pConvert_j \times Price_j \times X_{ij})$
+- **Trivago_Income**: $$\sum_{i,j} (\text{CTR}_i \times pConvert_j \times Commission_j \times Price_j \times X_{ij})$$
+- **User_Satisfaction**: $$\frac{\sum_{i,j} (\text{CTR}_i \times Satisfaction_j \times X_{ij})}{\sum_{i,j} (\text{CTR}_i \times X_{ij})}$$ (weighted average, 0-10 scale)
+- **Partner_Conversion_Value**: $$\sum_{i,j} (\text{CTR}_i \times pConvert_j \times Price_j \times X_{ij})$$
 
 **Stage 1 Constraints:**
 
 **Assignment Constraints:**
-- $\sum_j X_{ij} \leq 1$ for each position $i$ (each position at most one offer)
-- $\sum_i X_{ij} \leq 1$ for each offer $j$ (each offer at most one position)
+- $$\sum_j X_{ij} \leq 1$$ for each position $i$ (each position at most one offer)
+- $$\sum_i X_{ij} \leq 1$$ for each offer $j$ (each offer at most one position)
 
 **Budget Constraints:**
-- $\sum_{i,j} (\text{CTR}_i \times \text{CPC}_j \times X_{ij}) \leq \text{Remaining\_Budget}_P$ for each partner $P$
+- $$\sum_{i,j} (\text{CTR}_i \times \text{CPC}_j \times X_{ij}) \leq \text{Remaining\_Budget}_P$$ for each partner $P$
 
 **Weight Constraints:**
-- $\alpha + \beta + \gamma = 1$ (weights sum to unity)
-- $\alpha, \beta, \gamma \geq 0$ (non-negative weights)
+- $$\alpha + \beta + \gamma = 1$$ (weights sum to unity)
+- $$\alpha, \beta, \gamma \geq 0$$ (non-negative weights)
 
 **Stage 2: Offer Hiding for Reconversion & Budget Rationalization**
 
 **Hiding Decision Function:**
-- Hide offer $j$ if: $\text{Reconversion\_Probability}_j < \text{Threshold}$ (default: 0.3)
-- Hide offer $j$ if: $\text{Budget\_Utilization} > \text{Target}$ (default: 0.8)
+- Hide offer $j$ if: $$\text{Reconversion\_Probability}_j < \text{Threshold}$$ (default: 0.3)
+- Hide offer $j$ if: $$\text{Budget\_Utilization} > \text{Target}$$ (default: 0.8)
 
 **Budget Utilization Constraint:**
-- $\frac{\sum_{j \in \text{Visible}} (\text{Expected\_Clicks}_j \times \text{CPC}_j)}{\text{Total\_Budget}_P} \leq \text{Target\_Utilization}$
+- $$\frac{\sum_{j \in \text{Visible}} (\text{Expected\_Clicks}_j \times \text{CPC}_j)}{\text{Total\_Budget}_P} \leq \text{Target\_Utilization}$$
 
 #### Decision Variables
 
 **Stage 1 Variables:**
-- $X_{ij}$: Binary variable indicating if offer $j$ is placed at position $i$ for user $u$
-- $\alpha, \beta, \gamma$: Weight parameters for multi-objective optimization
+- $$X_{ij}$$: Binary variable indicating if offer $j$ is placed at position $i$ for user $u$
+- $$\alpha, \beta, \gamma$$: Weight parameters for multi-objective optimization
 
 **Stage 2 Variables:**
-- $H_j$: Binary variable indicating if offer $j$ is hidden (1 = hidden, 0 = visible)
+- $$H_j$$: Binary variable indicating if offer $j$ is hidden (1 = hidden, 0 = visible)
 
 #### Position-Based Click-Through Rate
 
@@ -385,7 +385,7 @@ $$\text{Reconversion\_Probability}_j = 0.7 \times \text{Conversion\_Probability}
 **Trivago Income**: Total revenue from commissions and conversions
 **User Satisfaction**: Weighted average satisfaction score (0-10 scale)
 **Partner Conversion Value**: Total value generated for partners
-**Total Objective**: $\alpha \times \text{Trivago\_Income} + \beta \times \text{User\_Satisfaction} + \gamma \times \text{Partner\_Conversion\_Value}$
+**Total Objective**: $$\alpha \times \text{Trivago\_Income} + \beta \times \text{User\_Satisfaction} + \gamma \times \text{Partner\_Conversion\_Value}$$
 
 ## 📊 Data Flow
 
