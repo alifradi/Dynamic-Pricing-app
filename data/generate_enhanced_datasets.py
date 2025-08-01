@@ -209,7 +209,6 @@ class HotelDatasetGenerator:
                 "cost_per_click_bid": cost_per_click_bid,
                 "commission_rate": round(np.random.uniform(0.08, 0.20), 3),
                 "partner_marketing_budget": partner_marketing_budget,
-                "remaining_budget": partner_marketing_budget,  # Will be updated during simulation
                 "cancellation_policy": np.random.choice(["Free", "Non-refundable", "Partial"], 
                                                       p=[0.6, 0.25, 0.15]),
                 "breakfast_included": random.choice([True, False]),
@@ -441,9 +440,9 @@ def main():
                        help='Maximum number of user profiles in the pool for dynamic sampling')
     args = parser.parse_args()
 
-    # Ensure data directory exists (relative to script location)
+    # Ensure data directory exists (use current directory for host machine)
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    data_dir = os.path.join(script_dir, 'data')
+    data_dir = script_dir  # Save in the same directory as the script
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
 
@@ -464,7 +463,7 @@ def main():
     offers_path = os.path.join(data_dir, "enhanced_partner_offers.csv")
     offers_df.to_csv(offers_path, index=False)
     print(f"✅ Partner Offers dataset saved: {len(offers_df)} rows, {len(offers_df.columns)} columns")
-    print(f"   💰 Added partner_marketing_budget and remaining_budget columns for budget constraints")
+    print(f"   💰 Added partner_marketing_budget column for budget constraints")
     
     print(f"\U0001F465 Generating User Profiles dataset (pool size: {args.users} rows)...")
     users_df = generator.generate_user_profiles(args.users)
@@ -487,7 +486,7 @@ def main():
     print("\n🎉 All datasets generated successfully!")
     print("Files created:")
     print("- enhanced_hotels.csv")
-    print("- enhanced_partner_offers.csv (with budget constraints)")
+    print("- enhanced_partner_offers.csv (with marketing budget)")
     print("- enhanced_user_profiles.csv")
     print("\n💡 These datasets are now ready for dynamic sampling in the trivago simulation.")
 

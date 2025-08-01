@@ -1,4 +1,4 @@
 parameter,value,description
-alpha,0.4,Trivago weight
-beta,0.3,User weight
-gamma,0.3,Partner weight
+alpha,0.6,Trivago weight
+beta,0.2,User weight
+gamma,0.2,Partner weight

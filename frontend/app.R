@@ -297,24 +297,24 @@ ui <- dashboardPage(
             title = "Market Parameters for Data Generation", status = "info", solidHeader = TRUE, width = 12,
             fluidRow(
               column(3,
-                numericInput("num_users_gen", "Number of Users:", value = 80, min = 1, max = 100)
+                numericInput("num_users_gen", "Number of Users:", value = 30, min = 1, max = 100)
               ),
               column(3,
-                numericInput("num_hotels_gen", "Hotels per Destination:", value = 10, min = 1, max = 20)
+                numericInput("num_hotels_gen", "Hotels per Destination:", value = 5, min = 1, max = 20)
               ),
               column(3,
-                numericInput("num_partners_gen", "Partners per Hotel:", value = 5, min = 1, max = 10)
+                numericInput("num_partners_gen", "Partners per Hotel:", value = 3, min = 1, max = 10)
               ),
               column(3,
-                numericInput("min_users_per_destination_gen", "Min Users per Destination:", value = 8, min = 1, max = 20)
+                numericInput("min_users_per_destination_gen", "Min Users per Destination:", value = 6, min = 1, max = 20)
               )
             ),
             fluidRow(
               column(3,
-                numericInput("days_to_go_gen", "Days to Go (target):", value = 30, min = 1, max = 365)
+                numericInput("days_to_go_gen", "Days to Go (target):", value = 5, min = 1, max = 365)
               ),
               column(3,
-                numericInput("days_var_gen", "Days Variance:", value = 5, min = 1, max = 30)
+                numericInput("days_var_gen", "Days Variance:", value = 20, min = 1, max = 30)
               ),
               column(6,
                 div(style = "text-align: center; padding: 10px; background-color: #f8f9fa; border-radius: 5px;",
@@ -417,33 +417,64 @@ ui <- dashboardPage(
         ),
         fluidRow(
           box(
-            title = "Optimization Results", status = "primary", solidHeader = TRUE, width = 12,
+            title = "Two-Stage Optimization System", status = "primary", solidHeader = TRUE, width = 12,
             fluidRow(
-                           column(12,
-               actionButton("run_simple_optimization", "Run Multi-Objective Ranking Optimization", 
-                          class = "btn-success btn-lg", icon = icon("calculator"),
-                          style = "width: 100%; height: 60px; font-size: 18px;")
-             )
+              column(12,
+                actionButton("run_two_stage_optimization", "Run Two-Stage Optimization", 
+                           class = "btn-primary btn-lg", icon = icon("layer-group"),
+                           style = "width: 100%; height: 60px; font-size: 16px;")
+              )
             ),
             fluidRow(
               column(12,
-                               div(style = "text-align: center; padding: 10px; background-color: #f8f9fa; border-radius: 5px; margin-top: 10px;",
-                 helpText("Sophisticated Multi-Objective Model: Maximize α×Trivago_Score + β×User_Score + γ×Partner_Score")
-               )
+                div(style = "text-align: center; padding: 10px; background-color: #f8f9fa; border-radius: 5px; margin-top: 10px;",
+                  helpText("Two-Stage System: Stage 1 (Ranking) + Stage 2 (Hiding) for Maximum Customer Satisfaction, Partner Conversions, and Trivago Gains")
+                )
               )
             ),
-
             br(), br(),
-
-
             fluidRow(
               column(12,
-                               box(
-                 title = "Multi-Objective Ranking Optimization Results", status = "success", solidHeader = TRUE, width = 12,
-                 DT::dataTableOutput("simple_optimization_table")
-               )
+                box(
+                  title = "Objective Function Values", status = "success", solidHeader = TRUE, width = 12,
+                  fluidRow(
+                    column(3,
+                      div(class = "metric-box",
+                        div(class = "metric-value", textOutput("trivago_income_value")),
+                        div(class = "metric-label", "Trivago Income")
+                      )
+                    ),
+                    column(3,
+                      div(class = "metric-box",
+                        div(class = "metric-value", textOutput("user_satisfaction_value")),
+                        div(class = "metric-label", "User Satisfaction")
+                      )
+                    ),
+                    column(3,
+                      div(class = "metric-box",
+                        div(class = "metric-value", textOutput("partner_conversion_value")),
+                        div(class = "metric-label", "Partner Conversion Value")
+                      )
+                    ),
+                    column(3,
+                      div(class = "metric-box",
+                        div(class = "metric-value", textOutput("total_objective_value")),
+                        div(class = "metric-label", "Total Objective")
+                      )
+                    )
+                  )
+                )
               )
-            )
+            ),
+            fluidRow(
+              column(12,
+                box(
+                  title = "Two-Stage Optimization Results Table", status = "info", solidHeader = TRUE, width = 12,
+                  DT::dataTableOutput("two_stage_optimization_table")
+                )
+              )
+            ),
+
           )
         ),
         fluidRow(
@@ -452,16 +483,22 @@ ui <- dashboardPage(
             withMathJax(
               div(style = "font-family: 'Times New Roman', serif; font-size: 14px; line-height: 1.8;",
                 tags$div(style = "margin-bottom: 20px; overflow-x: auto;",
-                  helpText("Multi-Objective Function:"),
-                  "$$\\text{Total Objective} = \\alpha \\cdot \\text{Trivago Income} + \\beta \\cdot \\text{User Satisfaction} + \\gamma \\cdot \\text{Partner Conversion Value}$$"
+                  helpText("Two-Stage Optimization System:"),
+                  tags$h4("Stage 1: Optimal Ranking for Click Maximization"),
+                  "$$\\text{Maximize: } \\alpha \\cdot \\text{Trivago\\_Income} + \\beta \\cdot \\text{User\\_Satisfaction} + \\gamma \\cdot \\text{Partner\\_Conversion\\_Value}$$",
+                  tags$p("Subject to:"),
+                  "$$\\sum_j X_{ij} \\leq 1 \\quad \\forall i \\in \\text{Positions}$$",
+                  "$$\\sum_i X_{ij} \\leq 1 \\quad \\forall j \\in \\text{Offers}$$",
+                  "$$\\sum_{i,j} \\text{CTR}_i \\cdot \\text{CPC}_j \\cdot X_{ij} \\leq \\text{Budget}_P \\quad \\forall P \\in \\text{Partners}$$"
                 ),
                 tags$div(style = "margin-bottom: 20px;",
-                  helpText("Budget Constraint:"),
-                  "$$\\sum_{i \\in P} \\text{cost\\_per\\_click\\_bid}_i \\leq \\text{remaining\\_budget}_P \\quad \\forall P \\in \\text{Partners}$$"
+                  helpText("Stage 2: Offer Hiding for Reconversion & Budget Rationalization"),
+                  "$$\\text{Hide offers where: } \\text{Reconversion\\_Probability} < \\text{Threshold}$$",
+                  "$$\\text{Budget\\_Utilization} \\leq \\text{Target\\_Utilization}$$"
                 ),
                 tags$div(style = "margin-bottom: 20px;",
                   helpText("Position-based CTR:"),
-                  "$$\\text{CTR}(\\text{position}) = \\frac{1}{1 + 0.5 \\cdot \\text{position}}$$"
+                  "$$\\text{CTR}(\\text{position}) = \\frac{1}{1 + 0.3 \\cdot \\text{position}}$$"
                 )
               )
             )
@@ -718,7 +755,7 @@ server <- function(input, output, session) {
                  ))
       
       if (res1$status_code != 200) {
-        showNotification("Error in data sampling", type = "error")
+                  showNotification("Error in data sampling", type = "error", duration = 5)
         return()
       }
       
@@ -726,7 +763,7 @@ server <- function(input, output, session) {
       res2 <- POST(paste0(API_URL, "/run_bandit_simulation"))
       
       if (res2$status_code != 200) {
-        showNotification("Error in bandit simulation", type = "error")
+                  showNotification("Error in bandit simulation", type = "error", duration = 5)
         return()
       }
       
@@ -745,10 +782,10 @@ server <- function(input, output, session) {
                    num_positions = 5
                  ))
       
-      if (res3$status_code != 200) {
-        showNotification("Error in optimization", type = "error")
-        return()
-      }
+              if (res3$status_code != 200) {
+          showNotification("Error in optimization", type = "error", duration = 5)
+          return()
+        }
       
       optimization_data <- fromJSON(rawToChar(res3$content))
       rv$optimization_results <- optimization_data
@@ -818,7 +855,7 @@ server <- function(input, output, session) {
         
         showNotification("Pre-trained policy loaded successfully!", type = "message")
       } else {
-        showNotification("Error loading pre-trained policy", type = "error")
+        showNotification("Error loading pre-trained policy", type = "error", duration = 5)
       }
       
     }, error = function(e) {
@@ -859,7 +896,7 @@ server <- function(input, output, session) {
         
         showNotification("RL agent retrained successfully on new data!", type = "message")
       } else {
-        showNotification("Error retraining RL agent", type = "error")
+        showNotification("Error retraining RL agent", type = "error", duration = 5)
       }
       
     }, error = function(e) {
@@ -1128,7 +1165,7 @@ server <- function(input, output, session) {
         rv$optimization_results <- optimization_data
         showNotification("Optimization completed!", type = "message")
       } else {
-        showNotification("Error in optimization", type = "error")
+        showNotification("Error in optimization", type = "error", duration = 5)
       }
       
     }, error = function(e) {
@@ -1148,67 +1185,115 @@ server <- function(input, output, session) {
   
 
   
-  # Sophisticated multi-objective optimization handler
-  observeEvent(input$run_simple_optimization, {
+
+  
+  # Reactive values for optimization parameters
+  optimization_params <- reactive({
+    list(
+      alpha = ifelse(is.null(input$alpha), 0.4, input$alpha),
+      beta = ifelse(is.null(input$beta), 0.3, input$beta),
+      gamma = ifelse(is.null(input$gamma), 0.3, input$gamma),
+      num_positions = ifelse(is.null(input$num_positions), 5, input$num_positions),
+      reconversion_threshold = ifelse(is.null(input$reconversion_threshold), 0.3, input$reconversion_threshold),
+      budget_utilization_target = ifelse(is.null(input$budget_utilization_target), 0.8, input$budget_utilization_target)
+    )
+  })
+  
+  # Clear optimization results when parameters change
+  observe({
+    optimization_params()
+    # Clear previous results when parameters change
+    rv$two_stage_optimization_table <- NULL
+    rv$trivago_income_value <- NULL
+    rv$user_satisfaction_value <- NULL
+    rv$partner_conversion_value <- NULL
+    rv$total_objective_value <- NULL
+  })
+  
+  # Two-stage optimization handler
+  observeEvent(input$run_two_stage_optimization, {
     tryCatch({
-      print("=== SOPHISTICATED MULTI-OBJECTIVE OPTIMIZATION BUTTON CLICKED ===")
-      showNotification("Running sophisticated multi-objective ranking optimization...", type = "message")
+      print("=== TWO-STAGE OPTIMIZATION BUTTON CLICKED ===")
+      showNotification("Running two-stage optimization...", type = "message", duration = 3)
       
-      print(paste("Multi-objective optimization API URL:", API_URL))
+      print(paste("Two-stage optimization API URL:", API_URL))
       
-      # Make API call for sophisticated multi-objective optimization
-      print("Making multi-objective optimization API call...")
-      showNotification("Multi-objective optimization is running...", type = "message")
+      # Get current parameters from reactive values
+      params <- optimization_params()
+      alpha <- params$alpha
+      beta <- params$beta
+      gamma <- params$gamma
+      num_positions <- params$num_positions
+      reconversion_threshold <- params$reconversion_threshold
+      budget_utilization_target <- params$budget_utilization_target
       
-      # Call the /rank endpoint with default weights
-      res <- POST(
-        paste0(API_URL, "/rank?alpha=0.4&beta=0.3&gamma=0.3&num_positions=5"),
-        timeout(120)  # 2 minute timeout for complex optimization
-      )
+      # Call backend two-stage optimization
+      res <- POST(paste0(API_URL, "/run_two_stage_optimization"), 
+                 query = list(
+                   alpha = alpha,
+                   beta = beta,
+                   gamma = gamma,
+                   num_positions = num_positions,
+                   reconversion_threshold = reconversion_threshold,
+                   budget_utilization_target = budget_utilization_target
+                 ),
+                 timeout(180))  # 3 minute timeout for complex two-stage optimization
       
-      print(paste("Multi-objective optimization response status:", res$status_code))
+      print(paste("Two-stage optimization response status:", res$status_code))
       
       if (res$status_code == 200) {
-        # Wait a moment for CSV files to be written
-        Sys.sleep(1)
+        print("Two-stage optimization API call successful")
         
-        # Load the CSV files
+        # Wait a moment for CSV files to be written
+        Sys.sleep(2)
+        
+        # Load the two-stage optimization table
         tryCatch({
-          # Load ranking results
-          ranking_res <- GET(paste0(API_URL, "/optimization_ranking_results"))
-          if (ranking_res$status_code == 200) {
-            ranking_data <- read.csv(text = rawToChar(ranking_res$content))
-            rv$ranking_results <- ranking_data
-            print("Ranking results loaded successfully")
+          print("Attempting to load two-stage optimization table...")
+          table_res <- GET(paste0(API_URL, "/two_stage_optimization_table_csv"))
+          print(paste("Table response status:", table_res$status_code))
+          
+          if (table_res$status_code == 200) {
+            # Read CSV content directly
+            csv_content <- rawToChar(table_res$content)
+            print(paste("CSV content length:", nchar(csv_content)))
+            
+            table_data <- read.csv(text = csv_content, stringsAsFactors = FALSE)
+            print(paste("Table data loaded with", nrow(table_data), "rows and", ncol(table_data), "columns"))
+            
+            rv$two_stage_optimization_table <- table_data
+            print("Two-stage optimization table loaded successfully")
+            
+            # Extract objective values for display boxes
+            if (nrow(table_data) > 0) {
+              # Calculate objective values from the table data
+              rv$trivago_income_value <- sum(as.numeric(table_data$trivago_income), na.rm = TRUE)
+              rv$user_satisfaction_value <- mean(as.numeric(table_data$user_satisfaction), na.rm = TRUE)
+              rv$partner_conversion_value <- sum(as.numeric(table_data$partner_conversion_value), na.rm = TRUE)
+              rv$total_objective_value <- sum(as.numeric(table_data$total_objective), na.rm = TRUE)
+              
+              print(paste("Objective values extracted - Trivago:", rv$trivago_income_value, 
+                         "User:", rv$user_satisfaction_value, 
+                         "Partner:", rv$partner_conversion_value, 
+                         "Total:", rv$total_objective_value))
+            } else {
+              print("Warning: Table data has 0 rows")
+            }
+          } else {
+            print(paste("Table response failed with status:", table_res$status_code))
           }
           
-          # Load objectives results
-          objectives_res <- GET(paste0(API_URL, "/optimization_objectives_results"))
-          if (objectives_res$status_code == 200) {
-            objectives_data <- read.csv(text = rawToChar(objectives_res$content))
-            rv$objectives_results <- objectives_data
-            print("Objectives results loaded successfully")
-          }
-          
-          # Load weights
-          weights_res <- GET(paste0(API_URL, "/optimization_weights"))
-          if (weights_res$status_code == 200) {
-            weights_data <- read.csv(text = rawToChar(weights_res$content))
-            rv$weights_data <- weights_data
-            print("Weights loaded successfully")
-          }
-          
-          showNotification("Multi-objective optimization completed successfully!", type = "success")
+          showNotification("Two-stage optimization completed successfully!", type = "success", duration = 5)
         }, error = function(e) {
-          showNotification(paste("Error loading results:", e$message), type = "error")
+          showNotification(paste("Error loading two-stage results:", e$message), type = "error", duration = 5)
         })
       } else {
-        showNotification("Multi-objective optimization failed", type = "error")
+        showNotification("Two-stage optimization failed", type = "error", duration = 5)
       }
       
     }, error = function(e) {
       error_msg <- e$message
-      showNotification(paste("Error in multi-objective optimization:", error_msg), type = "error")
+      showNotification(paste("Error in two-stage optimization:", error_msg), type = "error", duration = 5)
     })
   })
   
@@ -1303,7 +1388,7 @@ server <- function(input, output, session) {
         data_cache$last_shapley_update <- Sys.time()
         showNotification("Shapley values calculated!", type = "message")
       } else {
-        showNotification("Error calculating Shapley values", type = "error")
+        showNotification("Error calculating Shapley values", type = "error", duration = 5)
       }
       
     }, error = function(e) {
@@ -1523,7 +1608,7 @@ server <- function(input, output, session) {
         data_status_rv(status_data)
         showNotification("Data status refreshed!", type = "message")
       } else {
-        showNotification("Error fetching data status", type = "error")
+        showNotification("Error fetching data status", type = "error", duration = 5)
       }
     }, error = function(e) {
       showNotification(paste("Error:", e$message), type = "error")
@@ -1582,70 +1667,85 @@ server <- function(input, output, session) {
     )
   })
   
-  # Multi-objective optimization results table
-  output$simple_optimization_table <- DT::renderDataTable({
+
+  
+  # Objective function value renderers
+  output$trivago_income_value <- renderText({
+    if (is.null(rv$trivago_income_value)) {
+      return("N/A")
+    }
+    paste0("$", format(round(rv$trivago_income_value, 2), nsmall = 2))
+  })
+  
+  output$user_satisfaction_value <- renderText({
+    if (is.null(rv$user_satisfaction_value)) {
+      return("N/A")
+    }
+    paste0(round(rv$user_satisfaction_value, 2), "/10")
+  })
+  
+  output$partner_conversion_value <- renderText({
+    if (is.null(rv$partner_conversion_value)) {
+      return("N/A")
+    }
+    paste0("$", format(round(rv$partner_conversion_value, 2), nsmall = 2))
+  })
+  
+  output$total_objective_value <- renderText({
+    if (is.null(rv$total_objective_value)) {
+      return("N/A")
+    }
+    paste0(format(round(rv$total_objective_value, 2), nsmall = 2))
+  })
+  
+  # Two-stage optimization results table
+  output$two_stage_optimization_table <- DT::renderDataTable({
     tryCatch({
-      print("[DEBUG] Rendering optimization table from CSV data...")
+      print("[DEBUG] Rendering two-stage optimization table...")
       
-      # Check if we have ranking results
-      if (is.null(rv$ranking_results)) {
-        print("[DEBUG] No ranking results available")
-        return(data.frame(Message = "Run multi-objective optimization to see results"))
+      # Check if we have two-stage optimization results
+      if (is.null(rv$two_stage_optimization_table)) {
+        print("[DEBUG] No two-stage optimization results available")
+        return(data.frame(Message = "Run two-stage optimization to see results"))
       }
       
-      ranking_data <- rv$ranking_results
-      objectives_data <- rv$objectives_results
-      weights_data <- rv$weights_data
+      table_data <- rv$two_stage_optimization_table
       
-      print(paste("[DEBUG] Ranking data rows:", nrow(ranking_data)))
-      print(paste("[DEBUG] Objectives data rows:", ifelse(is.null(objectives_data), 0, nrow(objectives_data))))
+      print(paste("[DEBUG] Two-stage table data rows:", nrow(table_data)))
       
-      # Create the main ranking table
-      if (nrow(ranking_data) > 0) {
-        # Format the ranking data
-        formatted_ranking <- data.frame(
-          Position = ranking_data$position,
-          Offer_ID = ranking_data$offer_id,
-          Hotel_ID = ranking_data$hotel_id,
-          Partner = ranking_data$partner_name,
-          Price_Per_Night = paste0("$", round(ranking_data$price_per_night, 2)),
-          Commission_Rate = paste0(round(ranking_data$commission_rate * 100, 1), "%"),
-          Cost_Per_Click = paste0("$", round(ranking_data$cost_per_click_bid, 2)),
-          User_Satisfaction = round(ranking_data$user_satisfaction_score, 2),
-          Conversion_Probability = paste0(round(ranking_data$conversion_probability * 100, 1), "%"),
-          Remaining_Budget = paste0("$", round(ranking_data$remaining_budget, 2))
+      # Create comprehensive two-stage optimization table
+      if (nrow(table_data) > 0) {
+        # Format the data for display (without objective function values)
+        display_df <- data.frame(
+          User_ID = table_data$user_id,
+          Offer_ID = table_data$offer_id,
+          Hotel = table_data$hotel_name,
+          Partner = table_data$partner_name,
+          Optimal_Rank = table_data$optimal_rank,
+          Is_Hidden = ifelse(table_data$is_hidden, "Yes", "No"),
+          Expected_Clicks = round(table_data$expected_clicks, 3),
+          Conversion_Prob = paste0(round(table_data$conversion_probability * 100, 1), "%"),
+          Reconversion_Prob = paste0(round(table_data$reconversion_probability * 100, 1), "%"),
+          Price = paste0("$", table_data$price_per_night),
+          Satisfaction = round(table_data$user_satisfaction_score, 2)
         )
         
-        # Add objectives summary at the top if available
-        if (!is.null(objectives_data) && nrow(objectives_data) > 0) {
-          objectives_summary <- data.frame(
-            Position = "OBJECTIVES",
-            Offer_ID = objectives_data$metric,
-            Hotel_ID = "",
-            Partner = "",
-            Price_Per_Night = paste0("$", round(objectives_data$value, 2)),
-            Commission_Rate = "",
-            Cost_Per_Click = "",
-            User_Satisfaction = "",
-            Conversion_Probability = "",
-            Remaining_Budget = ""
-          )
-          
-          # Combine objectives and ranking
-          combined_data <- rbind(objectives_summary, formatted_ranking)
-        } else {
-          combined_data <- formatted_ranking
-        }
+        print("[DEBUG] Two-stage table data created successfully")
         
-        print("[DEBUG] Table data created successfully")
-        return(combined_data)
+        DT::datatable(display_df,
+                     options = list(pageLength = 15, scrollX = TRUE, 
+                                  dom = 'Bfrtip',
+                                  buttons = c("copy", "csv", "excel")),
+                     caption = "Two-Stage Optimization Results: User-Offer-Rank-Hide Table",
+                     filter = "top",
+                     extensions = c("Buttons", "ColReorder"))
       } else {
-        return(data.frame(Message = "No ranking data available"))
+        return(data.frame(Message = "No two-stage optimization data available"))
       }
       
     }, error = function(e) {
-      print(paste("[DEBUG] Error in table renderer:", e$message))
-      return(data.frame(Message = paste("Error displaying results:", e$message)))
+      print(paste("[DEBUG] Error in two-stage table renderer:", e$message))
+      return(data.frame(Message = paste("Error displaying two-stage results:", e$message)))
     })
   })
 }

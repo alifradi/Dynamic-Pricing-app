@@ -11,7 +11,7 @@ from typing import List, Dict, Any, Optional
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query, Form, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 import pulp
 import subprocess
@@ -4390,6 +4390,496 @@ def compare_policies():
         print(f"[ERROR] Exception in compare_policies: {e}")
         traceback.print_exc()
         return {"error": f"Exception: {str(e)}"}
+
+@app.post("/run_two_stage_optimization")
+def run_two_stage_optimization(
+    alpha: float = Query(0.4, ge=0.0, le=1.0, description="Weight for trivago income"),
+    beta: float = Query(0.3, ge=0.0, le=1.0, description="Weight for user satisfaction"),
+    gamma: float = Query(0.3, ge=0.0, le=1.0, description="Weight for partner conversion value"),
+    num_positions: int = Query(10, ge=1, le=50, description="Number of ranking positions"),
+    reconversion_threshold: float = Query(0.3, ge=0.0, le=1.0, description="Threshold for hiding offers in stage 2"),
+    budget_utilization_target: float = Query(0.8, ge=0.5, le=1.0, description="Target budget utilization percentage")
+):
+    """
+    Comprehensive Two-Stage Optimization System
+    
+    Stage 1: Optimal Ranking for Click Maximization
+    - Determine optimal rank for each offer for each user
+    - Maximize click-through rates and initial conversions
+    - Use RL model weights for multi-objective optimization
+    
+    Stage 2: Offer Hiding for Reconversion & Budget Rationalization
+    - Hide offers with low reconversion probability
+    - Rationalize partner marketing budgets
+    - Ensure budget utilization targets are met
+    
+    Constraints:
+    - Each offer can only be in one rank per user
+    - Budget constraints for each partner
+    - Reconversion probability thresholds
+    """
+    try:
+        print(f"[DEBUG] Starting Two-Stage Optimization")
+        print(f"[DEBUG] Parameters: alpha={alpha}, beta={beta}, gamma={gamma}")
+        print(f"[DEBUG] Positions: {num_positions}, Reconversion threshold: {reconversion_threshold}")
+        
+        # Load sampled data
+        offers_file = get_data_path("trial_sampled_offers.csv")
+        if not os.path.exists(offers_file):
+            raise HTTPException(status_code=404, detail="Sampled offers data not found. Please run Strategic Simulation first.")
+        
+        offers_df = pd.read_csv(offers_file)
+        print(f"[DEBUG] Loaded {len(offers_df)} offers for {offers_df['user_id'].nunique()} users")
+        
+        # Load additional data files and merge
+        conversion_file = get_data_path("conversion_probabilities.csv")
+        if os.path.exists(conversion_file):
+            conversion_df = pd.read_csv(conversion_file)
+            print(f"[DEBUG] Loaded conversion probabilities for {len(conversion_df)} user-offer pairs")
+            # Merge conversion probabilities
+            offers_df = offers_df.merge(conversion_df[['user_id', 'offer_id', 'conversion_probability']], 
+                                      on=['user_id', 'offer_id'], how='left')
+        else:
+            print("[WARNING] Conversion probabilities file not found, using defaults")
+            offers_df['conversion_probability'] = 0.3  # Default conversion probability
+        
+        # Load user dynamic price sensitivity data
+        dps_file = get_data_path("user_dynamic_price_sensitivity.csv")
+        if os.path.exists(dps_file):
+            dps_df = pd.read_csv(dps_file)
+            print(f"[DEBUG] Loaded DPS data for {len(dps_df)} users")
+            # Create satisfaction score from dynamic price sensitivity (inverse relationship)
+            # Higher price sensitivity = lower satisfaction, so we invert and scale
+            dps_df['user_satisfaction_score'] = 10 - (dps_df['dynamic_price_sensitivity'] * 5)
+            dps_df['user_satisfaction_score'] = dps_df['user_satisfaction_score'].clip(1, 10)
+            # Merge satisfaction scores
+            offers_df = offers_df.merge(dps_df[['user_id', 'user_satisfaction_score']], 
+                                      on='user_id', how='left')
+        else:
+            print("[WARNING] User DPS file not found, using defaults")
+            offers_df['user_satisfaction_score'] = 7.0  # Default satisfaction score
+        
+        # Ensure we have required columns with reasonable defaults
+        if 'reconversion_probability' not in offers_df.columns:
+            offers_df['reconversion_probability'] = offers_df['conversion_probability'] * 0.7  # 70% of conversion prob
+        
+        if 'remaining_budget' not in offers_df.columns:
+            offers_df['remaining_budget'] = offers_df['cost_per_click_bid'] * 100  # 100x CPC as budget
+        
+        if 'hotel_name' not in offers_df.columns:
+            offers_df['hotel_name'] = offers_df['name']  # Use 'name' column as hotel_name
+        
+        print(f"[DEBUG] Final dataset has {len(offers_df)} offers with all required columns")
+        print(f"[DEBUG] Columns: {list(offers_df.columns)}")
+        
+        # Stage 1: Optimal Ranking for Click Maximization
+        print("[DEBUG] Starting Stage 1: Optimal Ranking")
+        stage1_results = _stage1_ranking_optimization(offers_df, alpha, beta, gamma, num_positions)
+        
+        # Stage 2: Offer Hiding for Reconversion & Budget Rationalization
+        print("[DEBUG] Starting Stage 2: Offer Hiding")
+        stage2_results = _stage2_hiding_optimization(
+            stage1_results['ranked_offers'], 
+            reconversion_threshold, 
+            budget_utilization_target
+        )
+        
+        # Calculate final objective function values
+        final_objectives = _calculate_final_objectives(stage2_results['final_offers'], alpha, beta, gamma)
+        
+        # Prepare comprehensive results
+        optimization_results = {
+            "stage1_results": stage1_results,
+            "stage2_results": stage2_results,
+            "final_objectives": final_objectives,
+            "optimization_summary": {
+                "total_users": offers_df['user_id'].nunique(),
+                "total_offers": len(offers_df),
+                "positions_optimized": num_positions,
+                "offers_hidden": stage2_results['hidden_count'],
+                "budget_utilization": stage2_results['budget_utilization'],
+                "expected_clicks": stage1_results['expected_clicks'],
+                "expected_conversions": stage1_results['expected_conversions'],
+                "expected_reconversions": stage2_results['expected_reconversions']
+            }
+        }
+        
+        # Save results to CSV for UI display
+        _save_two_stage_optimization_results(optimization_results)
+        
+        return {
+            "status": "success",
+            "message": "Two-stage optimization completed successfully",
+            "results": clean_json_data(optimization_results)
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Two-stage optimization failed: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Two-stage optimization failed: {str(e)}")
+
+def _stage1_ranking_optimization(offers_df, alpha, beta, gamma, num_positions):
+    """
+    Stage 1: Optimal ranking to maximize clicks and initial conversions
+    """
+    try:
+        import pulp
+        import numpy as np
+        
+        print(f"[DEBUG] Stage 1: Ranking optimization for {len(offers_df)} offers")
+        
+        # Group by user for per-user optimization
+        users = offers_df['user_id'].unique()
+        all_rankings = []
+        total_expected_clicks = 0
+        total_expected_conversions = 0
+        
+        for user_id in users:
+            user_offers = offers_df[offers_df['user_id'] == user_id].copy()
+            n_offers = len(user_offers)
+            n_positions = min(num_positions, n_offers)
+            
+            if n_offers == 0:
+                continue
+                
+            # Create optimization problem for this user
+            prob = pulp.LpProblem(f"User_{user_id}_Ranking", pulp.LpMaximize)
+            
+            # Decision variables: X[i][j] = 1 if offer j is placed in position i
+            X = pulp.LpVariable.dicts("X", 
+                                     [(i, j) for i in range(n_positions) for j in range(n_offers)], 
+                                     cat='Binary')
+            
+            # Position-based click-through rates (decreasing with rank)
+            position_ctr = [1.0 / (1 + 0.3 * i) for i in range(n_positions)]
+            
+            # Extract offer data
+            p_convert = user_offers['conversion_probability'].values
+            commission = user_offers['commission_rate'].values
+            price = user_offers['price_per_night'].values
+            satisfaction = user_offers['user_satisfaction_score'].values
+            preference = user_offers['preference_score'].values
+            cpc = user_offers['cost_per_click_bid'].values
+            
+            # Calculate objective components
+            trivago_scores = np.zeros((n_positions, n_offers))
+            user_scores = np.zeros((n_positions, n_offers))
+            partner_scores = np.zeros((n_positions, n_offers))
+            
+            for i in range(n_positions):
+                for j in range(n_offers):
+                    # Trivago Income: CTR_i × pConvert_j × Commission_j × Price_j
+                    trivago_scores[i][j] = position_ctr[i] * p_convert[j] * commission[j] * price[j]
+                    # User Satisfaction: CTR_i × Satisfaction_j (will be normalized to weighted average)
+                    user_scores[i][j] = position_ctr[i] * satisfaction[j]
+                    # Partner Conversion Value: CTR_i × pConvert_j × Price_j
+                    partner_scores[i][j] = position_ctr[i] * p_convert[j] * price[j]
+            
+            # Normalize objectives
+            max_trivago = np.max(trivago_scores) if np.max(trivago_scores) > 0 else 1.0
+            max_user = np.max(user_scores) if np.max(user_scores) > 0 else 1.0
+            max_partner = np.max(partner_scores) if np.max(partner_scores) > 0 else 1.0
+            
+            # Build objective function
+            objective = pulp.lpSum([
+                alpha * (trivago_scores[i][j] / max_trivago) * X[i, j] +
+                beta * (user_scores[i][j] / max_user) * X[i, j] +
+                gamma * (partner_scores[i][j] / max_partner) * X[i, j]
+                for i in range(n_positions) for j in range(n_offers)
+            ])
+            
+            prob += objective
+            
+            # Constraints
+            # Each position can have at most one offer
+            for i in range(n_positions):
+                prob += pulp.lpSum(X[i, j] for j in range(n_offers)) <= 1
+            
+            # Each offer can be placed in at most one position
+            for j in range(n_offers):
+                prob += pulp.lpSum(X[i, j] for i in range(n_positions)) <= 1
+            
+            # Budget constraints for each partner
+            if 'partner_name' in user_offers.columns and 'remaining_budget' in user_offers.columns:
+                for partner in user_offers['partner_name'].unique():
+                    partner_offers = user_offers[user_offers['partner_name'] == partner]
+                    partner_budget = partner_offers['remaining_budget'].iloc[0]
+                    partner_indices = partner_offers.index.tolist()
+                    
+                    prob += pulp.lpSum([
+                        position_ctr[i] * cpc[j] * X[i, j]
+                        for i in range(n_positions) 
+                        for j in range(n_offers) 
+                        if user_offers.iloc[j]['partner_name'] == partner
+                    ]) <= partner_budget
+            
+            # Solve optimization
+            prob.solve(pulp.PULP_CBC_CMD(msg=False))
+            
+            if prob.status == pulp.LpStatusOptimal:
+                # Extract results
+                user_rankings = []
+                user_expected_clicks = 0
+                user_expected_conversions = 0
+                
+                for i in range(n_positions):
+                    for j in range(n_offers):
+                        if X[i, j].value() == 1:
+                            offer_data = user_offers.iloc[j].to_dict()
+                            offer_data['optimal_rank'] = i + 1
+                            offer_data['expected_clicks'] = position_ctr[i]
+                            offer_data['expected_conversions'] = position_ctr[i] * p_convert[j]
+                            offer_data['is_hidden'] = False  # Will be determined in stage 2
+                            user_rankings.append(offer_data)
+                            
+                            user_expected_clicks += position_ctr[i]
+                            user_expected_conversions += position_ctr[i] * p_convert[j]
+                
+                all_rankings.extend(user_rankings)
+                total_expected_clicks += user_expected_clicks
+                total_expected_conversions += user_expected_conversions
+                
+                print(f"[DEBUG] User {user_id}: {len(user_rankings)} offers ranked")
+            else:
+                print(f"[WARNING] No optimal solution found for user {user_id}")
+        
+        return {
+            "ranked_offers": all_rankings,
+            "expected_clicks": total_expected_clicks,
+            "expected_conversions": total_expected_conversions
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Stage 1 optimization failed: {str(e)}")
+        raise e
+
+def _stage2_hiding_optimization(ranked_offers, reconversion_threshold, budget_utilization_target):
+    """
+    Stage 2: Offer hiding for reconversion maximization and budget rationalization
+    """
+    try:
+        print(f"[DEBUG] Stage 2: Hiding optimization for {len(ranked_offers)} ranked offers")
+        
+        # Convert to DataFrame for easier manipulation
+        offers_df = pd.DataFrame(ranked_offers)
+        
+        # Calculate reconversion probability (if not available, use 70% of conversion probability)
+        if 'reconversion_probability' not in offers_df.columns:
+            offers_df['reconversion_probability'] = offers_df['conversion_probability'] * 0.7
+        
+        # Hide offers with low reconversion probability
+        offers_df['is_hidden'] = offers_df['reconversion_probability'] < reconversion_threshold
+        
+        # Budget rationalization: hide offers to meet budget utilization target
+        if 'partner_name' in offers_df.columns and 'remaining_budget' in offers_df.columns:
+            for partner in offers_df['partner_name'].unique():
+                partner_offers = offers_df[offers_df['partner_name'] == partner]
+                total_budget = partner_offers['remaining_budget'].iloc[0]
+                
+                # Calculate current budget usage
+                visible_offers = partner_offers[~partner_offers['is_hidden']]
+                current_usage = visible_offers['expected_clicks'].sum() * visible_offers['cost_per_click_bid'].sum()
+                current_utilization = current_usage / total_budget if total_budget > 0 else 0
+                
+                # If utilization is too high, hide some offers
+                if current_utilization > budget_utilization_target:
+                    # Sort by reconversion probability (hide lowest first)
+                    partner_offers_sorted = partner_offers.sort_values('reconversion_probability', ascending=True)
+                    
+                    for idx, offer in partner_offers_sorted.iterrows():
+                        if not offer['is_hidden']:
+                            # Calculate new utilization if we hide this offer
+                            offer_cost = offer['expected_clicks'] * offer['cost_per_click_bid']
+                            new_usage = current_usage - offer_cost
+                            new_utilization = new_usage / total_budget if total_budget > 0 else 0
+                            
+                            if new_utilization <= budget_utilization_target:
+                                offers_df.loc[idx, 'is_hidden'] = True
+                                current_usage = new_usage
+                                current_utilization = new_utilization
+                                break
+        
+        # Calculate final metrics
+        visible_offers = offers_df[~offers_df['is_hidden']]
+        hidden_count = len(offers_df[offers_df['is_hidden']])
+        
+        # Calculate expected reconversions
+        expected_reconversions = visible_offers['expected_clicks'].sum() * visible_offers['reconversion_probability'].sum()
+        
+        # Calculate budget utilization
+        total_budget = offers_df['remaining_budget'].sum() if 'remaining_budget' in offers_df.columns else 1000
+        used_budget = visible_offers['expected_clicks'].sum() * visible_offers['cost_per_click_bid'].sum()
+        budget_utilization = used_budget / total_budget if total_budget > 0 else 0
+        
+        return {
+            "final_offers": offers_df.to_dict('records'),
+            "hidden_count": hidden_count,
+            "visible_count": len(visible_offers),
+            "expected_reconversions": expected_reconversions,
+            "budget_utilization": budget_utilization
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Stage 2 optimization failed: {str(e)}")
+        raise e
+
+def _calculate_final_objectives(final_offers, alpha, beta, gamma):
+    """
+    Calculate final objective function values for all parties
+    """
+    try:
+        offers_df = pd.DataFrame(final_offers)
+        visible_offers = offers_df[~offers_df['is_hidden']]
+        
+        # Calculate objective components
+        trivago_income = (visible_offers['expected_clicks'] * 
+                         visible_offers['conversion_probability'] * 
+                         visible_offers['commission_rate'] * 
+                         visible_offers['price_per_night']).sum()
+        
+        # Calculate weighted average user satisfaction (0-10 scale) as per README specification
+        # User_Satisfaction = Σ(CTR_i × Satisfaction_j × X_ij) / Σ(CTR_i × X_ij)
+        total_clicks = visible_offers['expected_clicks'].sum()
+        if total_clicks > 0:
+            user_satisfaction = (visible_offers['expected_clicks'] * 
+                               visible_offers['user_satisfaction_score']).sum() / total_clicks
+        else:
+            user_satisfaction = visible_offers['user_satisfaction_score'].mean()
+        
+        partner_conversion_value = (visible_offers['expected_clicks'] * 
+                                  visible_offers['conversion_probability'] * 
+                                  visible_offers['price_per_night']).sum()
+        
+        # Calculate weighted objective
+        total_objective = (alpha * trivago_income + 
+                          beta * user_satisfaction + 
+                          gamma * partner_conversion_value)
+        
+        return {
+            "trivago_income": trivago_income,
+            "user_satisfaction": user_satisfaction,
+            "partner_conversion_value": partner_conversion_value,
+            "total_objective": total_objective,
+            "weights": {
+                "alpha": alpha,
+                "beta": beta,
+                "gamma": gamma
+            }
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Final objectives calculation failed: {str(e)}")
+        raise e
+
+def _save_two_stage_optimization_results(optimization_results):
+    """
+    Save optimization results to CSV files for UI display
+    """
+    try:
+        # Save comprehensive results
+        results_file = get_data_path("two_stage_optimization_results.json")
+        with open(results_file, 'w') as f:
+            json.dump(clean_json_data(optimization_results), f, indent=2)
+        
+        # Save user-offer-rank-hide table
+        final_offers = optimization_results['stage2_results']['final_offers']
+        results_df = pd.DataFrame(final_offers)
+        
+        # Create comprehensive display table
+        display_table = results_df[[
+            'user_id', 'offer_id', 'hotel_name', 'partner_name', 
+            'optimal_rank', 'is_hidden', 'expected_clicks', 
+            'conversion_probability', 'reconversion_probability',
+            'price_per_night', 'user_satisfaction_score'
+        ]].copy()
+        
+        # Calculate objective function values for each row as per README specification
+        # Use a default commission rate of 0.1 (10%) since it's not in the display table
+        commission_rate = 0.1
+        
+        # Trivago Income: CTR_i × pConvert_j × Commission_j × Price_j
+        display_table['trivago_income'] = (display_table['expected_clicks'] * 
+                                          display_table['conversion_probability'] * 
+                                          commission_rate * 
+                                          display_table['price_per_night'])
+        
+        # User Satisfaction: Satisfaction_j (individual scores, not weighted average)
+        display_table['user_satisfaction'] = display_table['user_satisfaction_score']
+        
+        # Partner Conversion Value: CTR_i × pConvert_j × Price_j
+        display_table['partner_conversion_value'] = (display_table['expected_clicks'] * 
+                                                   display_table['conversion_probability'] * 
+                                                   display_table['price_per_night'])
+        
+        # Calculate total objective using weights from the optimization
+        alpha = 0.4  # Default weights
+        beta = 0.3
+        gamma = 0.3
+        display_table['total_objective'] = (alpha * display_table['trivago_income'] + 
+                                           beta * display_table['user_satisfaction'] + 
+                                           gamma * display_table['partner_conversion_value'])
+        
+        # Save to CSV
+        csv_file = get_data_path("two_stage_optimization_table.csv")
+        display_table.to_csv(csv_file, index=False)
+        
+        print(f"[DEBUG] Saved optimization results to {results_file} and {csv_file}")
+        
+    except Exception as e:
+        print(f"[ERROR] Failed to save optimization results: {str(e)}")
+        raise e
+
+@app.get("/two_stage_optimization_results")
+def get_two_stage_optimization_results():
+    """
+    Get the results of the two-stage optimization
+    """
+    try:
+        results_file = get_data_path("two_stage_optimization_results.json")
+        if not os.path.exists(results_file):
+            raise HTTPException(status_code=404, detail="Two-stage optimization results not found")
+        
+        with open(results_file, 'r') as f:
+            results = json.load(f)
+        
+        return {"results": results}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load optimization results: {str(e)}")
+
+@app.get("/two_stage_optimization_table")
+def get_two_stage_optimization_table():
+    """
+    Get the comprehensive optimization table for UI display
+    """
+    try:
+        csv_file = get_data_path("two_stage_optimization_table.csv")
+        if not os.path.exists(csv_file):
+            raise HTTPException(status_code=404, detail="Optimization table not found")
+        
+        df = pd.read_csv(csv_file)
+        return {"data": df.to_dict('records')}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load optimization table: {str(e)}")
+
+@app.get("/two_stage_optimization_table_csv")
+def get_two_stage_optimization_table_csv():
+    """
+    Get the CSV file directly for UI display
+    """
+    try:
+        csv_file = get_data_path("two_stage_optimization_table.csv")
+        if not os.path.exists(csv_file):
+            raise HTTPException(status_code=404, detail="Optimization table not found")
+        
+        with open(csv_file, 'r') as f:
+            csv_content = f.read()
+        
+        return Response(content=csv_content, media_type="text/csv")
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load optimization table: {str(e)}")
 
 if __name__ == "__main__":
     import sys
