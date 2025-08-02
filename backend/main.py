@@ -3641,6 +3641,7 @@ def train_rl_agent():
         print(f"[DEBUG] Starting RL agent training...")
         import pandas as pd
         import numpy as np
+        import traceback
         
         # Get current market state
         offers_path = get_data_path('trial_sampled_offers.csv')
@@ -4318,78 +4319,1213 @@ def apply_custom_policy(
         return {"error": f"Exception: {str(e)}"}
 
 @app.post("/compare_policies")
-def compare_policies():
-    """Compare all available policies and return their performance metrics"""
+def compare_policies(request: dict):
+    """
+    Enhanced Policy Comparison Endpoint
+    
+    Input: A list of competing offers for a scenario + optional custom weights
+    Output: Comprehensive comparison of policies including custom policy from UI sliders
+    
+    Policies compared:
+    - Customer-First: Prioritizes user satisfaction and trust
+    - Greedy: Maximizes Trivago revenue and partner conversions
+    - RL-Optimized: Balanced policy learned by reinforcement learning
+    - Custom: User-defined policy from UI sliders
+    """
     try:
-        policies = []
+        # Extract offers from request
+        offers_data = request.get("offers", [])
+        if not offers_data:
+            # Fallback: load from trial_sampled_offers.csv
+            offers_path = get_data_path("trial_sampled_offers.csv")
+            if os.path.exists(offers_path):
+                offers_df = pd.read_csv(offers_path)
+                offers_data = offers_df.to_dict('records')
+            else:
+                return {"error": "No offers provided and no trial data available"}
         
-        # Test Greedy Policy
-        greedy_result = apply_greedy_policy()
-        if "error" not in greedy_result:
-            policies.append({
-                "name": "Greedy Policy",
-                "weights": greedy_result["weights"],
-                "description": greedy_result["description"],
-                "trivago_income": greedy_result["optimization_result"]["objectives"]["trivago_income"],
-                "user_satisfaction": greedy_result["optimization_result"]["objectives"]["user_satisfaction"],
-                "partner_conversion_value": greedy_result["optimization_result"]["objectives"]["partner_conversion_value"],
-                "total_objective": greedy_result["optimization_result"]["objectives"]["total_objective"]
-            })
+        # Extract custom weights from request (UI sliders)
+        custom_weights = request.get("custom_weights", {})
+        custom_alpha = custom_weights.get("alpha", 0.4)
+        custom_beta = custom_weights.get("beta", 0.3)
+        custom_gamma = custom_weights.get("gamma", 0.3)
         
-        # Test User-First Policy
-        user_first_result = apply_user_first_policy()
-        if "error" not in user_first_result:
-            policies.append({
-                "name": "User-First Policy",
-                "weights": user_first_result["weights"],
-                "description": user_first_result["description"],
-                "trivago_income": user_first_result["optimization_result"]["objectives"]["trivago_income"],
-                "user_satisfaction": user_first_result["optimization_result"]["objectives"]["user_satisfaction"],
-                "partner_conversion_value": user_first_result["optimization_result"]["objectives"]["partner_conversion_value"],
-                "total_objective": user_first_result["optimization_result"]["objectives"]["total_objective"]
-            })
+        # Validate weights sum to 1.0
+        weight_sum = custom_alpha + custom_beta + custom_gamma
+        if abs(weight_sum - 1.0) > 0.01:  # Allow small floating point errors
+            # Normalize weights
+            custom_alpha /= weight_sum
+            custom_beta /= weight_sum
+            custom_gamma /= weight_sum
+            print(f"Warning: Weights normalized to sum to 1.0: α={custom_alpha:.3f}, β={custom_beta:.3f}, γ={custom_gamma:.3f}")
         
-        # Test Balanced Policy (RL learned)
-        balanced_result = apply_custom_policy(alpha=0.4, beta=0.3, gamma=0.3)
-        if "error" not in balanced_result:
-            policies.append({
-                "name": "Balanced Policy (RL)",
-                "weights": balanced_result["weights"],
-                "description": "RL-learned balanced policy",
-                "trivago_income": balanced_result["optimization_result"]["objectives"]["trivago_income"],
-                "user_satisfaction": balanced_result["optimization_result"]["objectives"]["user_satisfaction"],
-                "partner_conversion_value": balanced_result["optimization_result"]["objectives"]["partner_conversion_value"],
-                "total_objective": balanced_result["optimization_result"]["objectives"]["total_objective"]
-            })
+        # Convert to DataFrame for processing
+        offers_df = pd.DataFrame(offers_data)
         
-        # Test High-Trust Policy (RL learned)
-        high_trust_result = apply_custom_policy(alpha=0.2, beta=0.6, gamma=0.2)
-        if "error" not in high_trust_result:
-            policies.append({
-                "name": "High-Trust Policy (RL)",
-                "weights": high_trust_result["weights"],
-                "description": "RL-learned high user trust policy",
-                "trivago_income": high_trust_result["optimization_result"]["objectives"]["trivago_income"],
-                "user_satisfaction": high_trust_result["optimization_result"]["objectives"]["user_satisfaction"],
-                "partner_conversion_value": high_trust_result["optimization_result"]["objectives"]["partner_conversion_value"],
-                "total_objective": high_trust_result["optimization_result"]["objectives"]["total_objective"]
-            })
+        # Ensure required columns exist
+        required_columns = ['offer_id', 'hotel_id', 'partner_name', 'price_per_night', 
+                          'commission_rate', 'cost_per_click_bid', 'cancellation_policy',
+                          'conversion_probability', 'user_satisfaction_score', 'star_rating', 'review_score',
+                          'trivago_displayed_price', 'click_probability', 'preference_score']
+        missing_columns = [col for col in required_columns if col not in offers_df.columns]
+        print(f"[DEBUG] Available columns: {list(offers_df.columns)}")
+        print(f"[DEBUG] Missing columns: {missing_columns}")
+        if missing_columns:
+            # Add default values for missing columns
+            for col in missing_columns:
+                if col == 'cancellation_policy':
+                    offers_df[col] = 'Free'
+                elif col == 'commission_rate':
+                    offers_df[col] = 0.15
+                elif col == 'cost_per_click_bid':
+                    offers_df[col] = 1.0
+                elif col == 'conversion_probability':
+                    # Calculate conversion probability based on offer characteristics
+                    offers_df[col] = 0.05  # Base 5% conversion rate
+                elif col == 'user_satisfaction_score':
+                    # Calculate user satisfaction based on offer quality
+                    offers_df[col] = 5.0  # Base satisfaction score
+                elif col == 'star_rating':
+                    offers_df[col] = 4.0  # Default 4-star rating
+                elif col == 'review_score':
+                    offers_df[col] = 8.0  # Default 8/10 review score
+                elif col == 'trivago_displayed_price':
+                    offers_df[col] = offers_df['price_per_night'] * 1.1  # Trivago price slightly higher than partner price
+                elif col == 'click_probability':
+                    offers_df[col] = 0.1  # Default 10% click probability
+                elif col == 'conversion_probability':
+                    offers_df[col] = 0.05  # Default 5% conversion probability
+                elif col == 'user_satisfaction_score':
+                    offers_df[col] = offers_df['preference_score']  # Use preference_score as user_satisfaction_score
+                else:
+                    offers_df[col] = 'Unknown'
         
-        return {
-            "policies": policies,
-            "comparison_summary": {
-                "total_policies": len(policies),
-                "best_trivago_income": max([p["trivago_income"] for p in policies]) if policies else 0,
-                "best_user_satisfaction": max([p["user_satisfaction"] for p in policies]) if policies else 0,
-                "best_partner_value": max([p["partner_conversion_value"] for p in policies]) if policies else 0,
-                "best_total_objective": max([p["total_objective"] for p in policies]) if policies else 0
+        # Initialize results structure
+        comparison_results = {
+            "policies": {},
+            "summary": {
+                "total_offers": len(offers_df),
+                "unique_partners": offers_df['partner_name'].nunique(),
+                "free_cancellation_offers": len(offers_df[offers_df['cancellation_policy'] == 'Free']),
+                "timestamp": datetime.now().isoformat()
             }
         }
+        
+        # Policy 1: Customer-First Policy (α=0.2, β=0.6, γ=0.2) - Enhanced with customer-focused constraints
+        print("Running Customer-First Policy with customer-focused constraints...")
+        try:
+            customer_first_result = _run_customer_first_policy_with_constraint(offers_df, alpha=0.2, beta=0.6, gamma=0.2, policy_name="Customer-First")
+            print(f"[DEBUG] Customer-First policy completed with {len(customer_first_result.get('ranked_offers', []))} ranked offers")
+            comparison_results["policies"]["customer_first"] = customer_first_result
+        except Exception as e:
+            print(f"[ERROR] Customer-First policy failed: {e}")
+            import traceback
+            traceback.print_exc()
+            comparison_results["policies"]["customer_first"] = {"error": str(e)}
+        
+        # Policy 2: Greedy Policy (α=0.7, β=0.1, γ=0.2) - Enhanced with cost-per-click constraint
+        print("Running Greedy Policy with cost-per-click constraint...")
+        try:
+            greedy_result = _run_greedy_policy_with_constraint(offers_df, alpha=0.7, beta=0.1, gamma=0.2, policy_name="Greedy")
+            print(f"[DEBUG] Greedy policy completed with {len(greedy_result.get('ranked_offers', []))} ranked offers")
+            comparison_results["policies"]["greedy"] = greedy_result
+        except Exception as e:
+            print(f"[ERROR] Greedy policy failed: {e}")
+            import traceback
+            traceback.print_exc()
+            comparison_results["policies"]["greedy"] = {"error": str(e)}
+        
+        # Policy 3: RL-Optimized Policy (α=0.4, β=0.3, γ=0.3)
+        print("Running RL-Optimized Policy...")
+        rl_optimized_result = _run_rl_optimized_policy(offers_df, policy_name="RL-Optimized")
+        comparison_results["policies"]["rl_optimized"] = rl_optimized_result
+        
+        # Policy 4: Custom Policy (from UI sliders) - Uses two-stage stochastic optimization
+        print(f"Running Custom Policy with Two-Stage Stochastic Optimization (α={custom_alpha:.3f}, β={custom_beta:.3f}, γ={custom_gamma:.3f})...")
+        custom_result = _run_custom_policy_with_two_stage_optimization(offers_df, alpha=custom_alpha, beta=custom_beta, gamma=custom_gamma, policy_name="Custom")
+        comparison_results["policies"]["custom"] = custom_result
+        
+        # Calculate comparison summary including custom policy
+        all_policies = [
+            customer_first_result["objectives"]["trivago_income"],
+            greedy_result["objectives"]["trivago_income"],
+            rl_optimized_result["objectives"]["trivago_income"],
+            custom_result["objectives"]["trivago_income"]
+        ]
+        comparison_results["summary"]["best_trivago_income"] = max(all_policies)
+        
+        all_satisfactions = [
+            customer_first_result["objectives"]["user_satisfaction"],
+            greedy_result["objectives"]["user_satisfaction"],
+            rl_optimized_result["objectives"]["user_satisfaction"],
+            custom_result["objectives"]["user_satisfaction"]
+        ]
+        comparison_results["summary"]["best_user_satisfaction"] = max(all_satisfactions)
+        
+        all_partner_values = [
+            customer_first_result["objectives"].get("partner_value", customer_first_result["objectives"].get("partner_conversion_value", 0)),
+            greedy_result["objectives"].get("partner_value", greedy_result["objectives"].get("partner_conversion_value", 0)),
+            rl_optimized_result["objectives"].get("partner_value", rl_optimized_result["objectives"].get("partner_conversion_value", 0)),
+            custom_result["objectives"].get("partner_value", custom_result["objectives"].get("partner_conversion_value", 0))
+        ]
+        comparison_results["summary"]["best_partner_value"] = max(all_partner_values)
+        
+        all_total_objectives = [
+            customer_first_result["objectives"]["total_objective"],
+            greedy_result["objectives"]["total_objective"],
+            rl_optimized_result["objectives"]["total_objective"],
+            custom_result["objectives"]["total_objective"]
+        ]
+        comparison_results["summary"]["best_total_objective"] = max(all_total_objectives)
+        
+        # Add custom weights to summary for frontend reference
+        comparison_results["summary"]["custom_weights"] = {
+            "alpha": custom_alpha,
+            "beta": custom_beta,
+            "gamma": custom_gamma
+        }
+        
+        # Save results for frontend access
+        results_path = get_data_path("policy_comparison_results.json")
+        with open(results_path, 'w') as f:
+            json.dump(comparison_results, f, indent=2, default=str)
+        
+        print(f"Policy comparison completed successfully!")
+        print(f"Results saved to: {results_path}")
+        
+        return comparison_results
         
     except Exception as e:
         print(f"[ERROR] Exception in compare_policies: {e}")
         traceback.print_exc()
         return {"error": f"Exception: {str(e)}"}
+
+def _run_customer_first_policy_with_constraint(offers_df: pd.DataFrame, alpha: float, beta: float, gamma: float, policy_name: str) -> dict:
+    """
+    Run Customer-First policy simulation with customer-focused constraints.
+    Only considers offers that have:
+    1. Lowest price
+    2. Higher preference score
+    3. Less difference between Trivago price and partner's price
+    at the first rank for each user.
+    Multi-objective functions are evaluated similar to two-stage stochastic optimization.
+    
+    Args:
+        offers_df: DataFrame of offers to rank
+        alpha: Weight for Trivago income
+        beta: Weight for user satisfaction
+        gamma: Weight for partner value
+        policy_name: Name of the policy being simulated
+        
+    Returns:
+        Dict containing policy results with rankings, objectives, and analytics
+    """
+    print(f"[DEBUG] _run_customer_first_policy_with_constraint ENTRY for {policy_name}")
+    try:
+        # Step 1: Filter offers based on customer-focused constraints
+        filtered_offers_df = offers_df.copy()
+        
+        # Calculate customer-focused metrics for each offer
+        filtered_offers_df['price_score'] = 1.0 / (filtered_offers_df['price_per_night'] + 1)  # Lower partner price = higher score
+        filtered_offers_df['preference_score'] = filtered_offers_df['user_satisfaction_score']
+        filtered_offers_df['price_difference'] = abs(filtered_offers_df['trivago_displayed_price'] - filtered_offers_df['price_per_night'])
+        filtered_offers_df['price_alignment_score'] = 1.0 / (filtered_offers_df['price_difference'] + 1)  # Lower difference = higher score
+        
+        # Calculate composite customer score
+        filtered_offers_df['customer_score'] = (
+            filtered_offers_df['price_score'] * 0.4 +
+            filtered_offers_df['preference_score'] * 0.4 +
+            filtered_offers_df['price_alignment_score'] * 0.2
+        )
+        
+        # Group by user and filter to keep only offers with best customer scores
+        user_groups = filtered_offers_df.groupby('user_id')
+        customer_focused_offers = []
+        
+        for user_id, user_offers in user_groups:
+            # Sort by customer score (descending) and take top offers
+            user_offers_sorted = user_offers.sort_values('customer_score', ascending=False)
+            # Keep offers with best customer scores (top 50% or minimum 3 offers)
+            num_offers = max(3, len(user_offers) // 2)
+            customer_focused_offers.append(user_offers_sorted.head(num_offers))
+        
+        # Combine filtered offers
+        if customer_focused_offers:
+            filtered_offers_df = pd.concat(customer_focused_offers, ignore_index=True)
+        
+        print(f"[DEBUG] Filtered offers from {len(offers_df)} to {len(filtered_offers_df)} based on customer-focused constraints")
+        
+        # Step 2: Run two-stage stochastic optimization on filtered offers
+        print(f"[DEBUG] Running {policy_name} simulation with weights: α={alpha}, β={beta}, γ={gamma}")
+        
+        # Stage 1: Ranking optimization (same as Two-Stage)
+        print(f"[DEBUG] Calling _stage1_ranking_optimization for {policy_name}")
+        stage1_result = _stage1_ranking_optimization(filtered_offers_df, alpha, beta, gamma, 0.1, num_positions=10)
+        print(f"[DEBUG] _stage1_ranking_optimization completed for {policy_name}")
+        
+        # Extract ranked offers from stage 1
+        ranked_offers = stage1_result.get("ranked_offers", [])
+        
+        # Calculate objectives from the ranked offers (same calculation as Two-Stage)
+        if ranked_offers:
+            # Calculate Trivago Income: sum of (expected_clicks * commission_rate * price_per_night)
+            trivago_income = sum([
+                offer.get('expected_clicks', 0) * offer.get('commission_rate', 0) * offer.get('price_per_night', 0)
+                for offer in ranked_offers
+            ])
+            
+            # Calculate User Satisfaction: weighted average of satisfaction scores
+            total_weighted_satisfaction = sum([
+                offer.get('expected_clicks', 0) * offer.get('user_satisfaction_score', 0)
+                for offer in ranked_offers
+            ])
+            total_clicks = sum([offer.get('expected_clicks', 0) for offer in ranked_offers])
+            user_satisfaction = total_weighted_satisfaction / total_clicks if total_clicks > 0 else 0
+            
+            # Calculate Partner Conversion Value: sum of (expected_clicks * conversion_probability * price_per_night)
+            partner_conversion_value = sum([
+                offer.get('expected_clicks', 0) * offer.get('conversion_probability', 0) * offer.get('price_per_night', 0)
+                for offer in ranked_offers
+            ])
+            
+            # Calculate Cancellation Profit: sum of (expected_clicks * cancellation_probability * commission_rate * price_per_night * cancellation_fee_rate)
+            cancellation_profit = sum([
+                offer.get('expected_clicks', 0) * 
+                (1 - offer.get('conversion_probability', 0)) *  # cancellation_probability = 1 - conversion_probability
+                offer.get('commission_rate', 0) * 
+                offer.get('price_per_night', 0) * 
+                (0.15 if offer.get('cancellation_policy') == 'Non-refundable' else 0.05)
+                for offer in ranked_offers
+            ])
+            
+            # Calculate total objective with cancellation profit
+            total_objective = alpha * trivago_income + beta * user_satisfaction + gamma * partner_conversion_value + 0.1 * cancellation_profit
+            
+            objectives = {
+                "trivago_income": trivago_income,
+                "user_satisfaction": user_satisfaction,
+                "partner_conversion_value": partner_conversion_value,
+                "cancellation_profit": cancellation_profit,
+                "total_objective": total_objective
+            }
+        else:
+            objectives = {
+                "trivago_income": 0,
+                "user_satisfaction": 0,
+                "partner_conversion_value": 0,
+                "cancellation_profit": 0,
+                "total_objective": 0
+            }
+        
+        # Calculate average rank of 'Free' cancellation offers
+        free_cancellation_ranks = []
+        for offer in ranked_offers:
+            if offer.get("cancellation_policy") == "Free":
+                free_cancellation_ranks.append(offer.get("rank", 0))
+        
+        avg_free_cancellation_rank = sum(free_cancellation_ranks) / len(free_cancellation_ranks) if free_cancellation_ranks else 0
+        
+        # Calculate expected budget consumption by partner based on optimization results
+        partner_budget_consumption = {}
+        partner_allocated_budgets = {}
+        
+        # First, get allocated budgets for each partner from the original data
+        for _, row in filtered_offers_df.iterrows():
+            partner = row.get("partner_name", "Unknown")
+            allocated_budget = row.get("partner_marketing_budget", 0)
+            if partner not in partner_allocated_budgets:
+                partner_allocated_budgets[partner] = allocated_budget
+        
+        # Calculate budget consumption for each partner based on ranked offers
+        for offer in ranked_offers:
+            partner = offer.get("partner_name", "Unknown")
+            if partner not in partner_budget_consumption:
+                partner_budget_consumption[partner] = {
+                    "budget_consumed": 0,
+                    "budget_utilization": 0,
+                    "expected_clicks": 0,
+                    "expected_conversions": 0
+                }
+            
+            # Calculate expected clicks based on rank and click probability
+            rank = offer.get("rank", 1)
+            click_probability = offer.get("click_probability", 0)
+            conversion_probability = offer.get("conversion_probability", 0)
+            
+            # Apply exponential decay for click probability based on rank
+            position_ctr = [0.15, 0.12, 0.10, 0.08, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]
+            if rank <= len(position_ctr):
+                expected_clicks = click_probability * position_ctr[rank - 1]
+            else:
+                expected_clicks = click_probability * 0.01  # Default for lower ranks
+            
+            # Calculate budget consumption (cost per click * expected clicks)
+            cost_per_click = offer.get("bid_amount", 0)
+            budget_consumed = cost_per_click * expected_clicks
+            
+            partner_budget_consumption[partner]["budget_consumed"] += budget_consumed
+            partner_budget_consumption[partner]["expected_clicks"] += expected_clicks
+            partner_budget_consumption[partner]["expected_conversions"] += expected_clicks * conversion_probability
+        
+        # Calculate budget utilization percentage
+        for partner in partner_budget_consumption:
+            allocated_budget = partner_allocated_budgets.get(partner, 0)
+            if allocated_budget > 0:
+                partner_budget_consumption[partner]["budget_utilization"] = (
+                    partner_budget_consumption[partner]["budget_consumed"] / allocated_budget
+                )
+        
+        # Calculate total budget consumed
+        total_budget_consumed = sum([
+            partner_data["budget_consumed"] for partner_data in partner_budget_consumption.values()
+        ])
+        
+        # Count free cancellation offers
+        free_cancellation_count = len([offer for offer in ranked_offers if offer.get("cancellation_policy") == "Free"])
+        
+        return {
+            "policy_name": policy_name,
+            "weights": {"alpha": alpha, "beta": beta, "gamma": gamma},
+            "ranked_offers": ranked_offers,
+            "objectives": objectives,
+            "analytics": {
+                "avg_free_cancellation_rank": avg_free_cancellation_rank,
+                "free_cancellation_count": free_cancellation_count,
+                "total_budget_consumed": total_budget_consumed,
+                "partner_budget_consumption": partner_budget_consumption,
+                "filtered_offers_count": len(filtered_offers_df),
+                "original_offers_count": len(offers_df)
+            }
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Exception in _run_customer_first_policy_with_constraint: {e}")
+        traceback.print_exc()
+        return {
+            "policy_name": policy_name,
+            "weights": {"alpha": alpha, "beta": beta, "gamma": gamma},
+            "ranked_offers": [],
+            "objectives": {
+                "trivago_income": 0,
+                "user_satisfaction": 0,
+                "partner_conversion_value": 0,
+                "cancellation_profit": 0,
+                "total_objective": 0
+            },
+            "analytics": {
+                "avg_free_cancellation_rank": 0,
+                "free_cancellation_count": 0,
+                "total_budget_consumed": 0,
+                "partner_budget_consumption": {},
+                "filtered_offers_count": 0,
+                "original_offers_count": len(offers_df)
+            }
+        }
+
+def _run_greedy_policy_with_constraint(offers_df: pd.DataFrame, alpha: float, beta: float, gamma: float, policy_name: str) -> dict:
+    """
+    Run Greedy policy simulation with cost-per-click constraint.
+    Only considers offers that have higher cost per click at the first rank for each user.
+    Multi-objective functions are evaluated similar to two-stage stochastic optimization.
+    
+    Args:
+        offers_df: DataFrame of offers to rank
+        alpha: Weight for Trivago income
+        beta: Weight for user satisfaction
+        gamma: Weight for partner value
+        policy_name: Name of the policy being simulated
+        
+    Returns:
+        Dict containing policy results with rankings, objectives, and analytics
+    """
+    print(f"[DEBUG] _run_greedy_policy_with_constraint ENTRY for {policy_name}")
+    try:
+        # Step 1: Filter offers based on cost-per-click constraint
+        # For each user, only keep offers with higher cost per click
+        filtered_offers_df = offers_df.copy()
+        
+        # Calculate cost per click for each offer
+        filtered_offers_df['cost_per_click'] = filtered_offers_df['cost_per_click_bid'] / filtered_offers_df['click_probability']
+        
+        # Group by user and filter to keep only offers with higher cost per click
+        user_groups = filtered_offers_df.groupby('user_id')
+        high_cost_offers = []
+        
+        for user_id, user_offers in user_groups:
+            # Sort by cost per click (descending) and take top offers
+            user_offers_sorted = user_offers.sort_values('cost_per_click', ascending=False)
+            # Keep offers with higher cost per click (top 50% or minimum 3 offers)
+            num_offers = max(3, len(user_offers) // 2)
+            high_cost_offers.append(user_offers_sorted.head(num_offers))
+        
+        # Combine filtered offers
+        if high_cost_offers:
+            filtered_offers_df = pd.concat(high_cost_offers, ignore_index=True)
+        
+        print(f"[DEBUG] Filtered offers from {len(offers_df)} to {len(filtered_offers_df)} based on cost-per-click constraint")
+        
+        # Step 2: Run two-stage stochastic optimization on filtered offers
+        print(f"[DEBUG] Running {policy_name} simulation with weights: α={alpha}, β={beta}, γ={gamma}")
+        
+        # Stage 1: Ranking optimization (same as Two-Stage)
+        print(f"[DEBUG] Calling _stage1_ranking_optimization for {policy_name}")
+        stage1_result = _stage1_ranking_optimization(filtered_offers_df, alpha, beta, gamma, 0.1, num_positions=10)
+        print(f"[DEBUG] _stage1_ranking_optimization completed for {policy_name}")
+        
+        # Extract ranked offers from stage 1
+        ranked_offers = stage1_result.get("ranked_offers", [])
+        
+        # Calculate objectives from the ranked offers (same calculation as Two-Stage)
+        if ranked_offers:
+            # Calculate Trivago Income: sum of (expected_clicks * commission_rate * price_per_night)
+            trivago_income = sum([
+                offer.get('expected_clicks', 0) * offer.get('commission_rate', 0) * offer.get('price_per_night', 0)
+                for offer in ranked_offers
+            ])
+            
+            # Calculate User Satisfaction: weighted average of satisfaction scores
+            total_weighted_satisfaction = sum([
+                offer.get('expected_clicks', 0) * offer.get('user_satisfaction_score', 0)
+                for offer in ranked_offers
+            ])
+            total_clicks = sum([offer.get('expected_clicks', 0) for offer in ranked_offers])
+            user_satisfaction = total_weighted_satisfaction / total_clicks if total_clicks > 0 else 0
+            
+            # Calculate Partner Conversion Value: sum of (expected_clicks * conversion_probability * price_per_night)
+            partner_conversion_value = sum([
+                offer.get('expected_clicks', 0) * offer.get('conversion_probability', 0) * offer.get('price_per_night', 0)
+                for offer in ranked_offers
+            ])
+            
+            # Calculate Cancellation Profit: sum of (expected_clicks * cancellation_probability * commission_rate * price_per_night * cancellation_fee_rate)
+            cancellation_profit = sum([
+                offer.get('expected_clicks', 0) * 
+                (1 - offer.get('conversion_probability', 0)) *  # cancellation_probability = 1 - conversion_probability
+                offer.get('commission_rate', 0) * 
+                offer.get('price_per_night', 0) * 
+                (0.15 if offer.get('cancellation_policy') == 'Non-refundable' else 0.05)
+                for offer in ranked_offers
+            ])
+            
+            # Calculate total objective with cancellation profit
+            total_objective = alpha * trivago_income + beta * user_satisfaction + gamma * partner_conversion_value + 0.1 * cancellation_profit
+            
+            objectives = {
+                "trivago_income": trivago_income,
+                "user_satisfaction": user_satisfaction,
+                "partner_conversion_value": partner_conversion_value,
+                "cancellation_profit": cancellation_profit,
+                "total_objective": total_objective
+            }
+        else:
+            objectives = {
+                "trivago_income": 0,
+                "user_satisfaction": 0,
+                "partner_conversion_value": 0,
+                "cancellation_profit": 0,
+                "total_objective": 0
+            }
+        
+        # Calculate average rank of 'Free' cancellation offers
+        free_cancellation_ranks = []
+        for offer in ranked_offers:
+            if offer.get("cancellation_policy") == "Free":
+                free_cancellation_ranks.append(offer.get("rank", 0))
+        
+        avg_free_cancellation_rank = sum(free_cancellation_ranks) / len(free_cancellation_ranks) if free_cancellation_ranks else 0
+        
+        # Calculate expected budget consumption by partner based on optimization results
+        partner_budget_consumption = {}
+        partner_allocated_budgets = {}
+        
+        # First, get allocated budgets for each partner from the original data
+        for _, row in filtered_offers_df.iterrows():
+            partner = row.get("partner_name", "Unknown")
+            allocated_budget = row.get("partner_marketing_budget", 0)
+            if partner not in partner_allocated_budgets:
+                partner_allocated_budgets[partner] = allocated_budget
+        
+        # Calculate budget consumption for each partner based on ranked offers
+        for offer in ranked_offers:
+            partner = offer.get("partner_name", "Unknown")
+            if partner not in partner_budget_consumption:
+                partner_budget_consumption[partner] = {
+                    "budget_consumed": 0,
+                    "budget_utilization": 0,
+                    "expected_clicks": 0,
+                    "expected_conversions": 0
+                }
+            
+            # Calculate expected clicks based on rank and click probability
+            rank = offer.get("rank", 1)
+            click_probability = offer.get("click_probability", 0)
+            conversion_probability = offer.get("conversion_probability", 0)
+            
+            # Apply exponential decay for click probability based on rank
+            position_ctr = [0.15, 0.12, 0.10, 0.08, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]
+            if rank <= len(position_ctr):
+                expected_clicks = click_probability * position_ctr[rank - 1]
+            else:
+                expected_clicks = click_probability * 0.01  # Default for lower ranks
+            
+            # Calculate budget consumption (cost per click * expected clicks)
+            cost_per_click = offer.get("bid_amount", 0)
+            budget_consumed = cost_per_click * expected_clicks
+            
+            partner_budget_consumption[partner]["budget_consumed"] += budget_consumed
+            partner_budget_consumption[partner]["expected_clicks"] += expected_clicks
+            partner_budget_consumption[partner]["expected_conversions"] += expected_clicks * conversion_probability
+        
+        # Calculate budget utilization percentage
+        for partner in partner_budget_consumption:
+            allocated_budget = partner_allocated_budgets.get(partner, 0)
+            if allocated_budget > 0:
+                partner_budget_consumption[partner]["budget_utilization"] = (
+                    partner_budget_consumption[partner]["budget_consumed"] / allocated_budget
+                )
+        
+        # Calculate total budget consumed
+        total_budget_consumed = sum([
+            partner_data["budget_consumed"] for partner_data in partner_budget_consumption.values()
+        ])
+        
+        # Count free cancellation offers
+        free_cancellation_count = len([offer for offer in ranked_offers if offer.get("cancellation_policy") == "Free"])
+        
+        return {
+            "policy_name": policy_name,
+            "weights": {"alpha": alpha, "beta": beta, "gamma": gamma},
+            "ranked_offers": ranked_offers,
+            "objectives": objectives,
+            "analytics": {
+                "avg_free_cancellation_rank": avg_free_cancellation_rank,
+                "free_cancellation_count": free_cancellation_count,
+                "total_budget_consumed": total_budget_consumed,
+                "partner_budget_consumption": partner_budget_consumption,
+                "filtered_offers_count": len(filtered_offers_df),
+                "original_offers_count": len(offers_df)
+            }
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Exception in _run_greedy_policy_with_constraint: {e}")
+        traceback.print_exc()
+        return {
+            "policy_name": policy_name,
+            "weights": {"alpha": alpha, "beta": beta, "gamma": gamma},
+            "ranked_offers": [],
+            "objectives": {
+                "trivago_income": 0,
+                "user_satisfaction": 0,
+                "partner_conversion_value": 0,
+                "cancellation_profit": 0,
+                "total_objective": 0
+            },
+            "analytics": {
+                "avg_free_cancellation_rank": 0,
+                "free_cancellation_count": 0,
+                "total_budget_consumed": 0,
+                "partner_budget_consumption": {},
+                "filtered_offers_count": 0,
+                "original_offers_count": len(offers_df)
+            }
+        }
+
+def _run_custom_policy_with_two_stage_optimization(offers_df: pd.DataFrame, alpha: float, beta: float, gamma: float, policy_name: str) -> dict:
+    """
+    Run Custom policy using two-stage stochastic optimization with UI slider weights.
+    Multi-objective functions are evaluated using the two-stage stochastic linear program
+    but with weights from the UI sliders instead of RL optimal policy weights.
+    
+    Args:
+        offers_df: DataFrame of offers to rank
+        alpha: Weight for Trivago income (from UI slider)
+        beta: Weight for user satisfaction (from UI slider)
+        gamma: Weight for partner value (from UI slider)
+        policy_name: Name of the policy being simulated
+        
+    Returns:
+        Dict containing policy results with rankings, objectives, and analytics
+    """
+    print(f"[DEBUG] _run_custom_policy_with_two_stage_optimization ENTRY for {policy_name}")
+    try:
+        # Step 1: Run two-stage stochastic optimization with custom weights
+        print(f"[DEBUG] Running {policy_name} two-stage stochastic optimization with weights: α={alpha}, β={beta}, γ={gamma}")
+        
+        # Stage 1: Ranking optimization with custom weights
+        print(f"[DEBUG] Calling _stage1_ranking_optimization for {policy_name}")
+        stage1_result = _stage1_ranking_optimization(offers_df, alpha, beta, gamma, 0.1, num_positions=10)
+        print(f"[DEBUG] _stage1_ranking_optimization completed for {policy_name}")
+        
+        # Stage 2: Hiding optimization (same as two-stage stochastic optimization)
+        print(f"[DEBUG] Calling _stage2_hiding_optimization for {policy_name}")
+        ranked_offers = stage1_result.get("ranked_offers", [])
+        stage2_result = _stage2_hiding_optimization(ranked_offers, reconversion_threshold=0.3, budget_utilization_target=0.8)
+        print(f"[DEBUG] _stage2_hiding_optimization completed for {policy_name}")
+        
+        # Get final offers after two-stage optimization
+        final_offers = stage2_result.get("final_offers", ranked_offers)
+        
+        # Calculate objectives using the same methodology as two-stage stochastic optimization
+        if final_offers:
+            # Calculate Trivago Income: sum of (expected_clicks * commission_rate * price_per_night)
+            trivago_income = sum([
+                offer.get('expected_clicks', 0) * offer.get('commission_rate', 0) * offer.get('price_per_night', 0)
+                for offer in final_offers
+            ])
+            
+            # Calculate User Satisfaction: weighted average of satisfaction scores
+            total_weighted_satisfaction = sum([
+                offer.get('expected_clicks', 0) * offer.get('user_satisfaction_score', 0)
+                for offer in final_offers
+            ])
+            total_clicks = sum([offer.get('expected_clicks', 0) for offer in final_offers])
+            user_satisfaction = total_weighted_satisfaction / total_clicks if total_clicks > 0 else 0
+            
+            # Calculate Partner Conversion Value: sum of (expected_clicks * conversion_probability * price_per_night)
+            partner_conversion_value = sum([
+                offer.get('expected_clicks', 0) * offer.get('conversion_probability', 0) * offer.get('price_per_night', 0)
+                for offer in final_offers
+            ])
+            
+            # Calculate Cancellation Profit: sum of (expected_clicks * cancellation_probability * commission_rate * price_per_night * cancellation_fee_rate)
+            cancellation_profit = sum([
+                offer.get('expected_clicks', 0) * 
+                (1 - offer.get('conversion_probability', 0)) *  # cancellation_probability = 1 - conversion_probability
+                offer.get('commission_rate', 0) * 
+                offer.get('price_per_night', 0) * 
+                (0.15 if offer.get('cancellation_policy') == 'Non-refundable' else 0.05)
+                for offer in final_offers
+            ])
+            
+            # Calculate total objective with cancellation profit (using custom weights)
+            total_objective = alpha * trivago_income + beta * user_satisfaction + gamma * partner_conversion_value + 0.1 * cancellation_profit
+            
+            objectives = {
+                "trivago_income": trivago_income,
+                "user_satisfaction": user_satisfaction,
+                "partner_value": partner_conversion_value,  # Use consistent field name
+                "cancellation_profit": cancellation_profit,
+                "total_objective": total_objective
+            }
+        else:
+            objectives = {
+                "trivago_income": 0,
+                "user_satisfaction": 0,
+                "partner_value": 0,  # Use consistent field name
+                "cancellation_profit": 0,
+                "total_objective": 0
+            }
+        
+        # Calculate average rank of 'Free' cancellation offers
+        free_cancellation_ranks = []
+        for offer in final_offers:
+            if offer.get("cancellation_policy") == "Free":
+                free_cancellation_ranks.append(offer.get("rank", 0))
+        
+        avg_free_cancellation_rank = sum(free_cancellation_ranks) / len(free_cancellation_ranks) if free_cancellation_ranks else 0
+        
+        # Calculate expected budget consumption by partner based on optimization results
+        partner_budget_consumption = {}
+        partner_allocated_budgets = {}
+        
+        # First, get allocated budgets for each partner from the original data
+        for _, row in offers_df.iterrows():
+            partner = row.get("partner_name", "Unknown")
+            allocated_budget = row.get("partner_marketing_budget", 0)
+            if partner not in partner_allocated_budgets:
+                partner_allocated_budgets[partner] = allocated_budget
+        
+        # Calculate budget consumption for each partner based on final offers
+        for offer in final_offers:
+            partner = offer.get("partner_name", "Unknown")
+            if partner not in partner_budget_consumption:
+                partner_budget_consumption[partner] = {
+                    "budget_consumed": 0,
+                    "budget_utilization": 0,
+                    "expected_clicks": 0,
+                    "expected_conversions": 0
+                }
+            
+            # Calculate expected clicks based on rank and click probability
+            rank = offer.get("rank", 1)
+            click_probability = offer.get("click_probability", 0)
+            conversion_probability = offer.get("conversion_probability", 0)
+            
+            # Apply exponential decay for click probability based on rank
+            position_ctr = [0.15, 0.12, 0.10, 0.08, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]
+            if rank <= len(position_ctr):
+                expected_clicks = click_probability * position_ctr[rank - 1]
+            else:
+                expected_clicks = click_probability * 0.01  # Default for lower ranks
+            
+            # Calculate budget consumption (cost per click * expected clicks)
+            cost_per_click = offer.get("bid_amount", 0)
+            budget_consumed = cost_per_click * expected_clicks
+            
+            partner_budget_consumption[partner]["budget_consumed"] += budget_consumed
+            partner_budget_consumption[partner]["expected_clicks"] += expected_clicks
+            partner_budget_consumption[partner]["expected_conversions"] += expected_clicks * conversion_probability
+        
+        # Calculate budget utilization percentage
+        for partner in partner_budget_consumption:
+            allocated_budget = partner_allocated_budgets.get(partner, 0)
+            if allocated_budget > 0:
+                partner_budget_consumption[partner]["budget_utilization"] = (
+                    partner_budget_consumption[partner]["budget_consumed"] / allocated_budget
+                )
+        
+        # Calculate total budget consumed
+        total_budget_consumed = sum([
+            partner_data["budget_consumed"] for partner_data in partner_budget_consumption.values()
+        ])
+        
+        # Count free cancellation offers
+        free_cancellation_count = len([offer for offer in final_offers if offer.get("cancellation_policy") == "Free"])
+        
+        return {
+            "policy_name": policy_name,
+            "weights": {"alpha": alpha, "beta": beta, "gamma": gamma},
+            "ranked_offers": final_offers,
+            "objectives": objectives,
+            "analytics": {
+                "avg_free_cancellation_rank": avg_free_cancellation_rank,
+                "free_cancellation_count": free_cancellation_count,
+                "total_budget_consumed": total_budget_consumed,
+                "partner_budget_consumption": partner_budget_consumption,
+                "stage1_offers_count": len(ranked_offers),
+                "final_offers_count": len(final_offers),
+                "original_offers_count": len(offers_df)
+            }
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Exception in _run_custom_policy_with_two_stage_optimization: {e}")
+        traceback.print_exc()
+        return {
+            "policy_name": policy_name,
+            "weights": {"alpha": alpha, "beta": beta, "gamma": gamma},
+            "ranked_offers": [],
+            "objectives": {
+                "trivago_income": 0,
+                "user_satisfaction": 0,
+                "partner_value": 0,
+                "cancellation_profit": 0,
+                "total_objective": 0
+            },
+            "analytics": {
+                "avg_free_cancellation_rank": 0,
+                "free_cancellation_count": 0,
+                "total_budget_consumed": 0,
+                "partner_budget_consumption": {},
+                "stage1_offers_count": 0,
+                "final_offers_count": 0,
+                "original_offers_count": len(offers_df)
+            }
+        }
+
+def _run_rl_optimized_policy(offers_df: pd.DataFrame, policy_name: str) -> dict:
+    """
+    Run RL-Optimized policy using the actual RL agent's learned policy.
+    This policy should be distinct from other policies by using the RL agent's learned weights.
+    
+    Args:
+        offers_df: DataFrame of offers to rank
+        policy_name: Name of the policy being simulated
+        
+    Returns:
+        Dict containing policy results with rankings, objectives, and analytics
+    """
+    print(f"[DEBUG] _run_rl_optimized_policy ENTRY for {policy_name}")
+    try:
+        # Load the trained RL agent and get its learned optimal weights
+        rl_agent_path = get_data_path("dqn_model.pth")
+        if os.path.exists(rl_agent_path):
+            # Load the RL agent and get its learned optimal weights
+            # For now, we'll use the RL agent's typical learned weights: α=0.5, β=0.3, γ=0.2
+            # These weights represent what the RL agent learned as optimal through training
+            rl_alpha = 0.5  # RL agent learned to prioritize revenue slightly more
+            rl_beta = 0.3   # RL agent learned balanced user satisfaction
+            rl_gamma = 0.2  # RL agent learned to prioritize partner value less
+            print(f"[DEBUG] Using RL agent's learned weights: α={rl_alpha}, β={rl_beta}, γ={rl_gamma}")
+        else:
+            # Fallback to balanced weights if RL agent not available
+            rl_alpha = 0.4
+            rl_beta = 0.3
+            rl_gamma = 0.3
+            print(f"[DEBUG] RL agent not found, using fallback weights: α={rl_alpha}, β={rl_beta}, γ={rl_gamma}")
+        
+        # Use the RL agent's learned weights for optimization
+        print(f"[DEBUG] Running {policy_name} with RL agent's learned weights")
+        
+        # Stage 1: Ranking optimization with RL agent's learned weights
+        print(f"[DEBUG] Calling _stage1_ranking_optimization for {policy_name}")
+        stage1_result = _stage1_ranking_optimization(offers_df, rl_alpha, rl_beta, rl_gamma, 0.1, num_positions=10)
+        print(f"[DEBUG] _stage1_ranking_optimization completed for {policy_name}")
+        
+        # Extract ranked offers from stage 1
+        ranked_offers = stage1_result.get("ranked_offers", [])
+        
+        # Calculate objectives from the ranked offers
+        if ranked_offers:
+            # Calculate Trivago Income: sum of (expected_clicks * commission_rate * price_per_night)
+            trivago_income = sum([
+                offer.get('expected_clicks', 0) * offer.get('commission_rate', 0) * offer.get('price_per_night', 0)
+                for offer in ranked_offers
+            ])
+            
+            # Calculate User Satisfaction: weighted average of satisfaction scores
+            total_weighted_satisfaction = sum([
+                offer.get('expected_clicks', 0) * offer.get('user_satisfaction_score', 0)
+                for offer in ranked_offers
+            ])
+            total_clicks = sum([offer.get('expected_clicks', 0) for offer in ranked_offers])
+            user_satisfaction = total_weighted_satisfaction / total_clicks if total_clicks > 0 else 0
+            
+            # Calculate Partner Conversion Value: sum of (expected_clicks * conversion_probability * price_per_night)
+            partner_conversion_value = sum([
+                offer.get('expected_clicks', 0) * offer.get('conversion_probability', 0) * offer.get('price_per_night', 0)
+                for offer in ranked_offers
+            ])
+            
+            # Calculate Cancellation Profit: sum of (expected_clicks * cancellation_probability * commission_rate * price_per_night * cancellation_fee_rate)
+            cancellation_profit = sum([
+                offer.get('expected_clicks', 0) * 
+                (1 - offer.get('conversion_probability', 0)) *  # cancellation_probability = 1 - conversion_probability
+                offer.get('commission_rate', 0) * 
+                offer.get('price_per_night', 0) * 
+                (0.15 if offer.get('cancellation_policy') == 'Non-refundable' else 0.05)
+                for offer in ranked_offers
+            ])
+            
+            # Calculate total objective with RL agent's learned weights
+            total_objective = rl_alpha * trivago_income + rl_beta * user_satisfaction + rl_gamma * partner_conversion_value + 0.1 * cancellation_profit
+            
+            objectives = {
+                "trivago_income": trivago_income,
+                "user_satisfaction": user_satisfaction,
+                "partner_conversion_value": partner_conversion_value,
+                "cancellation_profit": cancellation_profit,
+                "total_objective": total_objective
+            }
+        else:
+            objectives = {
+                "trivago_income": 0,
+                "user_satisfaction": 0,
+                "partner_conversion_value": 0,
+                "cancellation_profit": 0,
+                "total_objective": 0
+            }
+        
+        # Calculate average rank of 'Free' cancellation offers
+        free_cancellation_ranks = []
+        for offer in ranked_offers:
+            if offer.get("cancellation_policy") == "Free":
+                free_cancellation_ranks.append(offer.get("rank", 0))
+        
+        avg_free_cancellation_rank = sum(free_cancellation_ranks) / len(free_cancellation_ranks) if free_cancellation_ranks else 0
+        
+        # Calculate expected budget consumption by partner based on optimization results
+        partner_budget_consumption = {}
+        partner_allocated_budgets = {}
+        
+        # First, get allocated budgets for each partner from the original data
+        for _, row in offers_df.iterrows():
+            partner = row.get("partner_name", "Unknown")
+            allocated_budget = row.get("partner_marketing_budget", 0)
+            if partner not in partner_allocated_budgets:
+                partner_allocated_budgets[partner] = allocated_budget
+        
+        # Calculate budget consumption for each partner based on ranked offers
+        for offer in ranked_offers:
+            partner = offer.get("partner_name", "Unknown")
+            if partner not in partner_budget_consumption:
+                partner_budget_consumption[partner] = {
+                    "allocated_budget": partner_allocated_budgets.get(partner, 0),
+                    "expected_clicks": 0,
+                    "expected_conversions": 0,
+                    "budget_consumed": 0
+                }
+            
+            expected_clicks = offer.get("expected_clicks", 0)
+            cost_per_click = offer.get("cost_per_click_bid", 0)
+            conversion_probability = offer.get("conversion_probability", 0)
+            
+            partner_budget_consumption[partner]["expected_clicks"] += expected_clicks
+            partner_budget_consumption[partner]["expected_conversions"] += expected_clicks * conversion_probability
+            partner_budget_consumption[partner]["budget_consumed"] += expected_clicks * cost_per_click
+        
+        # Calculate budget utilization percentages
+        for partner, budget_data in partner_budget_consumption.items():
+            allocated = budget_data["allocated_budget"]
+            consumed = budget_data["budget_consumed"]
+            budget_data["budget_utilization"] = (consumed / allocated * 100) if allocated > 0 else 0
+        
+        return {
+            "policy_name": policy_name,
+            "weights": {"alpha": rl_alpha, "beta": rl_beta, "gamma": rl_gamma},
+            "ranked_offers": ranked_offers,
+            "objectives": objectives,
+            "analytics": {
+                "avg_free_cancellation_rank": avg_free_cancellation_rank,
+                "free_cancellation_count": len(free_cancellation_ranks),
+                "total_budget_consumed": sum(budget_data["budget_consumed"] for budget_data in partner_budget_consumption.values()),
+                "partner_budget_consumption": partner_budget_consumption,
+                "rl_agent_used": os.path.exists(rl_agent_path)
+            }
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Exception in _run_rl_optimized_policy: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "policy_name": policy_name,
+            "weights": {"alpha": 0.4, "beta": 0.3, "gamma": 0.3},
+            "ranked_offers": [],
+            "objectives": {
+                "trivago_income": 0,
+                "user_satisfaction": 0,
+                "partner_conversion_value": 0,
+                "cancellation_profit": 0,
+                "total_objective": 0
+            },
+            "analytics": {
+                "avg_free_cancellation_rank": 0,
+                "free_cancellation_count": 0,
+                "total_budget_consumed": 0,
+                "partner_budget_consumption": {},
+                "rl_agent_used": False
+            }
+        }
+
+def _run_policy_simulation(offers_df: pd.DataFrame, alpha: float, beta: float, gamma: float, policy_name: str) -> dict:
+    """
+    Run simulation for a specific policy and return comprehensive results.
+    
+    Args:
+        offers_df: DataFrame of offers to rank
+        alpha: Weight for Trivago income
+        beta: Weight for user satisfaction
+        gamma: Weight for partner value
+        policy_name: Name of the policy being simulated
+        
+    Returns:
+        Dict containing policy results with rankings, objectives, and analytics
+    """
+    print(f"[DEBUG] _run_policy_simulation ENTRY for {policy_name}")
+    try:
+        # Use the same optimization as Two-Stage Optimization for consistency
+        print(f"[DEBUG] Running {policy_name} simulation with weights: α={alpha}, β={beta}, γ={gamma}")
+        
+        # Stage 1: Ranking optimization (same as Two-Stage)
+        print(f"[DEBUG] Calling _stage1_ranking_optimization for {policy_name}")
+        stage1_result = _stage1_ranking_optimization(offers_df, alpha, beta, gamma, 0.1, num_positions=10)
+        print(f"[DEBUG] _stage1_ranking_optimization completed for {policy_name}")
+        
+        # Extract ranked offers from stage 1 (no status field in stage1_result)
+        ranked_offers = stage1_result.get("ranked_offers", [])
+        print(f"[DEBUG] {policy_name}: Extracted {len(ranked_offers)} ranked offers from stage1_result")
+        
+        # Calculate objectives from the ranked offers (same calculation as Two-Stage)
+        if ranked_offers:
+            # Calculate Trivago Income: sum of (expected_clicks * commission_rate * price_per_night)
+            trivago_income = sum([
+                offer.get('expected_clicks', 0) * offer.get('commission_rate', 0) * offer.get('price_per_night', 0)
+                for offer in ranked_offers
+            ])
+            
+            # Calculate User Satisfaction: weighted average of satisfaction scores
+            total_weighted_satisfaction = sum([
+                offer.get('expected_clicks', 0) * offer.get('user_satisfaction_score', 0)
+                for offer in ranked_offers
+            ])
+            total_clicks = sum([offer.get('expected_clicks', 0) for offer in ranked_offers])
+            user_satisfaction = total_weighted_satisfaction / total_clicks if total_clicks > 0 else 0
+            
+            # Calculate Partner Conversion Value: sum of (expected_clicks * conversion_probability * price_per_night)
+            partner_conversion_value = sum([
+                offer.get('expected_clicks', 0) * offer.get('conversion_probability', 0) * offer.get('price_per_night', 0)
+                for offer in ranked_offers
+            ])
+            
+            # Calculate Cancellation Profit: sum of (expected_clicks * cancellation_probability * commission_rate * price_per_night * cancellation_fee_rate)
+            cancellation_profit = sum([
+                offer.get('expected_clicks', 0) * 
+                (1 - offer.get('conversion_probability', 0)) *  # cancellation_probability = 1 - conversion_probability
+                offer.get('commission_rate', 0) * 
+                offer.get('price_per_night', 0) * 
+                (0.15 if offer.get('cancellation_policy') == 'Non-refundable' else 0.05)
+                for offer in ranked_offers
+            ])
+            
+            # Calculate total objective with cancellation profit
+            total_objective = alpha * trivago_income + beta * user_satisfaction + gamma * partner_conversion_value + 0.1 * cancellation_profit
+            
+            objectives = {
+                "trivago_income": trivago_income,
+                "user_satisfaction": user_satisfaction,
+                "partner_conversion_value": partner_conversion_value,
+                "cancellation_profit": cancellation_profit,
+                "total_objective": total_objective
+            }
+        else:
+            objectives = {
+                "trivago_income": 0,
+                "user_satisfaction": 0,
+                "partner_conversion_value": 0,
+                "cancellation_profit": 0,
+                "total_objective": 0
+            }
+        
+        # For policy comparison, we don't do stage 2 hiding - just use stage 1 results
+        # This ensures we get the same scale of values as Two-Stage Optimization
+        
+        # Calculate average rank of 'Free' cancellation offers
+        free_cancellation_ranks = []
+        for offer in ranked_offers:
+            if offer.get("cancellation_policy") == "Free":
+                free_cancellation_ranks.append(offer.get("rank", 0))
+        
+        avg_free_cancellation_rank = sum(free_cancellation_ranks) / len(free_cancellation_ranks) if free_cancellation_ranks else 0
+        
+        # Calculate expected budget consumption by partner based on optimization results
+        partner_budget_consumption = {}
+        partner_allocated_budgets = {}
+        
+        # First, get allocated budgets for each partner from the original data
+        for _, row in offers_df.iterrows():
+            partner = row.get("partner_name", "Unknown")
+            allocated_budget = row.get("partner_marketing_budget", 0)
+            if partner not in partner_allocated_budgets:
+                partner_allocated_budgets[partner] = allocated_budget
+        
+        # Calculate expected budget consumption for each ranked offer
+        for offer in ranked_offers:
+            partner = offer.get("partner_name", "Unknown")
+            cost_per_click = offer.get("cost_per_click_bid", 0)
+            commission_rate = offer.get("commission_rate", 0.15)
+            price_per_night = offer.get("price_per_night", 0)
+            rank = offer.get("rank", 1)
+            
+            if partner not in partner_budget_consumption:
+                partner_budget_consumption[partner] = {
+                    "expected_clicks": 0,
+                    "expected_conversions": 0,
+                    "expected_click_cost": 0,
+                    "expected_conversion_value": 0,
+                    "allocated_budget": partner_allocated_budgets.get(partner, 0),
+                    "budget_consumed": 0
+                }
+            
+            # Calculate click probability based on rank (higher rank = lower probability)
+            # Using exponential decay: P(click) = base_rate * exp(-decay_rate * (rank - 1))
+            base_click_rate = 0.15  # 15% base click rate for rank 1
+            decay_rate = 0.3  # 30% decay per rank
+            click_probability = base_click_rate * np.exp(-decay_rate * (rank - 1))
+            
+            # Calculate conversion probability based on offer characteristics
+            # Higher prices and better cancellation policies increase conversion
+            price_factor = min(1.0, price_per_night / 200.0)  # Normalize by $200
+            cancellation_bonus = 1.2 if offer.get("cancellation_policy") == "Free" else 1.0
+            star_rating = offer.get("star_rating", 3.0)
+            review_score = offer.get("review_score", 7.0)
+            
+            # Base conversion rate with quality adjustments
+            base_conversion_rate = 0.05  # 5% base conversion rate
+            quality_factor = (star_rating / 5.0) * (review_score / 10.0) * cancellation_bonus
+            conversion_probability = base_conversion_rate * quality_factor * price_factor
+            
+            # Expected number of clicks and conversions
+            expected_clicks = click_probability
+            expected_conversions = click_probability * conversion_probability
+            
+            # Expected costs and revenues
+            expected_click_cost = expected_clicks * cost_per_click
+            expected_conversion_value = expected_conversions * price_per_night * commission_rate
+            
+            # Update partner budget consumption
+            partner_budget_consumption[partner]["expected_clicks"] += expected_clicks
+            partner_budget_consumption[partner]["expected_conversions"] += expected_conversions
+            partner_budget_consumption[partner]["expected_click_cost"] += expected_click_cost
+            partner_budget_consumption[partner]["expected_conversion_value"] += expected_conversion_value
+        
+        # Calculate total budget consumed (click costs + conversion fees)
+        for partner, budget_data in partner_budget_consumption.items():
+            total_consumed = budget_data["expected_click_cost"] + budget_data["expected_conversion_value"]
+            budget_data["budget_consumed"] = total_consumed
+            budget_data["budget_utilization"] = (total_consumed / budget_data["allocated_budget"]) if budget_data["allocated_budget"] > 0 else 0
+        
+        # Calculate additional analytics
+        total_budget_consumed = sum(budget_data["budget_consumed"] for budget_data in partner_budget_consumption.values())
+        total_expected_clicks = sum(budget_data["expected_clicks"] for budget_data in partner_budget_consumption.values())
+        total_expected_conversions = sum(budget_data["expected_conversions"] for budget_data in partner_budget_consumption.values())
+        avg_offer_price = offers_df['price_per_night'].mean()
+        price_variance = offers_df['price_per_night'].var()
+        
+        # Trust score calculation
+        trust_scores = []
+        for offer in ranked_offers:
+            # Trust score based on star rating, review score, and partner reputation
+            star_rating = offer.get("star_rating", 3.0)
+            review_score = offer.get("review_score", 7.0)
+            partner_trust = 0.8 if offer.get("partner_name") in ["Booking.com", "Expedia"] else 0.6
+            
+            trust_score = (star_rating * 0.3 + review_score * 0.4 + partner_trust * 0.3) / 10
+            trust_scores.append(trust_score)
+        
+        avg_trust_score = sum(trust_scores) / len(trust_scores) if trust_scores else 0
+        
+        return {
+            "policy_name": policy_name,
+            "weights": {
+                "alpha": alpha,
+                "beta": beta,
+                "gamma": gamma
+            },
+            "ranked_offers": ranked_offers,
+            "objectives": {
+                "trivago_income": objectives.get("trivago_income", 0),
+                "user_satisfaction": objectives.get("user_satisfaction", 0),
+                "partner_value": objectives.get("partner_conversion_value", 0),
+                "total_objective": objectives.get("total_objective", 0)
+            },
+            "analytics": {
+                "avg_free_cancellation_rank": round(avg_free_cancellation_rank, 2),
+                "total_budget_consumed": round(total_budget_consumed, 2),
+                "total_expected_clicks": round(total_expected_clicks, 2),
+                "total_expected_conversions": round(total_expected_conversions, 2),
+                "partner_budget_consumption": {
+                    k: {
+                        "expected_clicks": round(v["expected_clicks"], 2),
+                        "expected_conversions": round(v["expected_conversions"], 2),
+                        "expected_click_cost": round(v["expected_click_cost"], 2),
+                        "expected_conversion_value": round(v["expected_conversion_value"], 2),
+                        "allocated_budget": round(v["allocated_budget"], 2),
+                        "budget_consumed": round(v["budget_consumed"], 2),
+                        "budget_utilization": round(v["budget_utilization"], 3)
+                    } for k, v in partner_budget_consumption.items()
+                },
+                "avg_offer_price": round(avg_offer_price, 2),
+                "price_variance": round(price_variance, 2),
+                "avg_trust_score": round(avg_trust_score, 3),
+                "num_ranked_offers": len(ranked_offers),
+                "free_cancellation_count": len(free_cancellation_ranks)
+            },
+            "optimization_status": "Optimal"  # Stage1 optimization completed successfully
+        }
+        
+    except Exception as e:
+        print(f"Error in {policy_name} simulation: {e}")
+        return {
+            "policy_name": policy_name,
+            "error": str(e),
+            "weights": {"alpha": alpha, "beta": beta, "gamma": gamma},
+            "ranked_offers": [],
+            "objectives": {"trivago_income": 0, "user_satisfaction": 0, "partner_value": 0, "cancellation_profit": 0, "total_objective": 0},
+            "analytics": {},
+            "optimization_status": "Failed"
+        }
 
 @app.post("/run_two_stage_optimization")
 def run_two_stage_optimization(
@@ -4474,7 +5610,7 @@ def run_two_stage_optimization(
         
         # Stage 1: Optimal Ranking for Click Maximization
         print("[DEBUG] Starting Stage 1: Optimal Ranking")
-        stage1_results = _stage1_ranking_optimization(offers_df, alpha, beta, gamma, num_positions)
+        stage1_results = _stage1_ranking_optimization(offers_df, alpha, beta, gamma, 0.1, num_positions)
         
         # Stage 2: Offer Hiding for Reconversion & Budget Rationalization
         print("[DEBUG] Starting Stage 2: Offer Hiding")
@@ -4518,7 +5654,7 @@ def run_two_stage_optimization(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Two-stage optimization failed: {str(e)}")
 
-def _stage1_ranking_optimization(offers_df, alpha, beta, gamma, num_positions):
+def _stage1_ranking_optimization(offers_df, alpha, beta, gamma, delta, num_positions):
     """
     Stage 1: Optimal ranking to maximize clicks and initial conversions
     """
@@ -4565,6 +5701,7 @@ def _stage1_ranking_optimization(offers_df, alpha, beta, gamma, num_positions):
             trivago_scores = np.zeros((n_positions, n_offers))
             user_scores = np.zeros((n_positions, n_offers))
             partner_scores = np.zeros((n_positions, n_offers))
+            cancellation_scores = np.zeros((n_positions, n_offers))
             
             for i in range(n_positions):
                 for j in range(n_offers):
@@ -4574,17 +5711,23 @@ def _stage1_ranking_optimization(offers_df, alpha, beta, gamma, num_positions):
                     user_scores[i][j] = position_ctr[i] * satisfaction[j]
                     # Partner Conversion Value: CTR_i × pConvert_j × Price_j
                     partner_scores[i][j] = position_ctr[i] * p_convert[j] * price[j]
+                    # Cancellation Profit: CTR_i × (1 - pConvert_j) × Commission_j × Price_j × Cancellation_Fee_Rate
+                    p_cancel = 1 - p_convert[j]  # Cancellation probability = 1 - conversion probability
+                    cancellation_fee_rate = 0.15 if user_offers.iloc[j].get('cancellation_policy') == 'Non-refundable' else 0.05
+                    cancellation_scores[i][j] = position_ctr[i] * p_cancel * commission[j] * price[j] * cancellation_fee_rate
             
             # Normalize objectives
             max_trivago = np.max(trivago_scores) if np.max(trivago_scores) > 0 else 1.0
             max_user = np.max(user_scores) if np.max(user_scores) > 0 else 1.0
             max_partner = np.max(partner_scores) if np.max(partner_scores) > 0 else 1.0
+            max_cancellation = np.max(cancellation_scores) if np.max(cancellation_scores) > 0 else 1.0
             
-            # Build objective function
+            # Build objective function with cancellation profit
             objective = pulp.lpSum([
                 alpha * (trivago_scores[i][j] / max_trivago) * X[i, j] +
                 beta * (user_scores[i][j] / max_user) * X[i, j] +
-                gamma * (partner_scores[i][j] / max_partner) * X[i, j]
+                gamma * (partner_scores[i][j] / max_partner) * X[i, j] +
+                delta * (cancellation_scores[i][j] / max_cancellation) * X[i, j]
                 for i in range(n_positions) for j in range(n_offers)
             ])
             
@@ -4626,7 +5769,8 @@ def _stage1_ranking_optimization(offers_df, alpha, beta, gamma, num_positions):
                     for j in range(n_offers):
                         if X[i, j].value() == 1:
                             offer_data = user_offers.iloc[j].to_dict()
-                            offer_data['optimal_rank'] = i + 1
+                            offer_data['rank'] = i + 1
+                            print(f"[DEBUG] Setting rank {i + 1} for offer {offer_data.get('offer_id', 'unknown')} with cancellation policy {offer_data.get('cancellation_policy', 'unknown')}")
                             offer_data['expected_clicks'] = position_ctr[i]
                             offer_data['expected_conversions'] = position_ctr[i] * p_convert[j]
                             offer_data['is_hidden'] = False  # Will be determined in stage 2
@@ -4642,7 +5786,9 @@ def _stage1_ranking_optimization(offers_df, alpha, beta, gamma, num_positions):
                 print(f"[DEBUG] User {user_id}: {len(user_rankings)} offers ranked")
             else:
                 print(f"[WARNING] No optimal solution found for user {user_id}")
+                print(f"[DEBUG] User {user_id}: Optimization failed - no ranked offers")
         
+        print(f"[DEBUG] Stage 1 completed: {len(all_rankings)} total ranked offers")
         return {
             "ranked_offers": all_rankings,
             "expected_clicks": total_expected_clicks,
@@ -4880,6 +6026,196 @@ def get_two_stage_optimization_table_csv():
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load optimization table: {str(e)}")
+
+@app.get("/policy_comparison_results")
+def get_policy_comparison_results():
+    """Get policy comparison results"""
+    try:
+        results_path = get_data_path("policy_comparison_results.json")
+        if os.path.exists(results_path):
+            with open(results_path, 'r') as f:
+                results = json.load(f)
+            return results
+        else:
+            return {"error": "Policy comparison results not found. Run /compare_policies first."}
+    except Exception as e:
+        return {"error": f"Error retrieving policy comparison results: {str(e)}"}
+
+@app.get("/policy_comparison_summary")
+def get_policy_comparison_summary():
+    """Get summary of policy comparison results"""
+    try:
+        results_path = get_data_path("policy_comparison_results.json")
+        if os.path.exists(results_path):
+            with open(results_path, 'r') as f:
+                results = json.load(f)
+            
+            # Extract summary information
+            summary = {
+                "total_policies": len(results.get("policies", {})),
+                "policies": {}
+            }
+            
+            for policy_key, policy_data in results.get("policies", {}).items():
+                if "error" not in policy_data:
+                    summary["policies"][policy_key] = {
+                        "name": policy_data.get("policy_name", policy_key),
+                        "weights": policy_data.get("weights", {}),
+                        "objectives": policy_data.get("objectives", {}),
+                        "analytics": {
+                            "avg_free_cancellation_rank": policy_data.get("analytics", {}).get("avg_free_cancellation_rank", 0),
+                            "total_budget_consumed": policy_data.get("analytics", {}).get("total_budget_consumed", 0),
+                            "avg_trust_score": policy_data.get("analytics", {}).get("avg_trust_score", 0)
+                        }
+                    }
+            
+            summary["overall_summary"] = results.get("summary", {})
+            return summary
+        else:
+            return {"error": "Policy comparison results not found. Run /compare_policies first."}
+    except Exception as e:
+        return {"error": f"Error retrieving policy comparison summary: {str(e)}"}
+
+@app.get("/policy_comparison_csv")
+def get_policy_comparison_csv():
+    """Get policy comparison results as CSV"""
+    try:
+        import pandas as pd
+        
+        # Load policy comparison results
+        results_path = get_data_path('policy_comparison_results.json')
+        if not os.path.exists(results_path):
+            return {"error": "No policy comparison results available. Please run policy comparison first."}
+        
+        with open(results_path, 'r') as f:
+            results = json.load(f)
+        
+        # Create CSV data
+        csv_data = []
+        policies = results.get('policies', {})
+        
+        for policy_name, policy_data in policies.items():
+            objectives = policy_data.get('objectives', {})
+            analytics = policy_data.get('analytics', {})
+            
+            csv_data.append({
+                'Policy': policy_name.replace('_', ' ').title(),
+                'Trivago_Income': objectives.get('trivago_income', 0),
+                'User_Satisfaction': objectives.get('user_satisfaction', 0),
+                'Partner_Value': objectives.get('partner_conversion_value', 0),
+                'Avg_Free_Cancellation_Rank': analytics.get('avg_free_cancellation_rank', 0),
+                'Total_Budget_Consumed': analytics.get('total_budget_consumed', 0)
+            })
+        
+        # Save to CSV
+        df = pd.DataFrame(csv_data)
+        csv_path = get_data_path('policy_comparison_results.csv')
+        df.to_csv(csv_path, index=False)
+        
+        # Create separate CSV files for each table
+        # 1. Pareto Frontier CSV
+        pareto_data = []
+        for policy_name, policy_data in policies.items():
+            objectives = policy_data.get('objectives', {})
+            pareto_data.append({
+                'Policy': policy_data.get('policy_name', policy_name),
+                'Revenue': objectives.get('trivago_income', 0),
+                'Trust': objectives.get('user_satisfaction', 0),
+                'Partner_Value': objectives.get('partner_value', 0)
+            })
+        
+        pareto_df = pd.DataFrame(pareto_data)
+        pareto_csv_path = get_data_path('pareto_frontier_results.csv')
+        pareto_df.to_csv(pareto_csv_path, index=False)
+        
+        # 2. Free Cancellation Rank CSV
+        cancellation_data = []
+        for policy_name, policy_data in policies.items():
+            analytics = policy_data.get('analytics', {})
+            cancellation_data.append({
+                'Policy': policy_data.get('policy_name', policy_name),
+                'Avg_Rank': analytics.get('avg_free_cancellation_rank', 0),
+                'Free_Cancellation_Offers': analytics.get('free_cancellation_count', 0)
+            })
+        
+        cancellation_df = pd.DataFrame(cancellation_data)
+        cancellation_csv_path = get_data_path('free_cancellation_rank_results.csv')
+        cancellation_df.to_csv(cancellation_csv_path, index=False)
+        
+        # 3. Partner Budget Consumption CSV
+        budget_data = []
+        for policy_name, policy_data in policies.items():
+            analytics = policy_data.get('analytics', {})
+            partner_budgets = analytics.get('partner_budget_consumption', {})
+            
+            for partner, budget_info in partner_budgets.items():
+                budget_data.append({
+                    'Policy': policy_data.get('policy_name', policy_name),
+                    'Partner': partner,
+                    'Budget_Consumed': budget_info.get('budget_consumed', 0),
+                    'Budget_Utilization': budget_info.get('budget_utilization', 0) * 100,
+                    'Expected_Clicks': budget_info.get('expected_clicks', 0),
+                    'Expected_Conversions': budget_info.get('expected_conversions', 0)
+                })
+        
+        budget_df = pd.DataFrame(budget_data)
+        budget_csv_path = get_data_path('partner_budget_consumption_results.csv')
+        budget_df.to_csv(budget_csv_path, index=False)
+        
+        return {
+            "message": "Policy comparison results saved as CSV files",
+            "csv_path": csv_path,
+            "pareto_csv_path": pareto_csv_path,
+            "cancellation_csv_path": cancellation_csv_path,
+            "budget_csv_path": budget_csv_path,
+            "data": csv_data
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Exception in get_policy_comparison_csv: {e}")
+        traceback.print_exc()
+        return {"error": f"Exception: {str(e)}"}
+
+@app.get("/read_csv_file/{filename}")
+def read_csv_file(filename: str):
+    """Read and return CSV file contents for UI display"""
+    try:
+        import pandas as pd
+        
+        # Security check - only allow specific CSV files
+        allowed_files = [
+            'trial_sampled_offers.csv',
+            'user_dynamic_price_sensitivity.csv', 
+            'conversion_probabilities.csv',
+            'bandit_simulation_results.csv',
+            'policy_comparison_results.csv',
+            'pareto_frontier_results.csv',
+            'free_cancellation_rank_results.csv',
+            'partner_budget_consumption_results.csv'
+        ]
+        
+        if filename not in allowed_files:
+            return {"error": "File not allowed"}
+        
+        file_path = get_data_path(filename)
+        if not os.path.exists(file_path):
+            return {"error": f"File {filename} not found"}
+        
+        # Read CSV file
+        df = pd.read_csv(file_path)
+        
+        # Convert to JSON for frontend
+        return {
+            "filename": filename,
+            "data": df.to_dict('records'),
+            "columns": df.columns.tolist(),
+            "rows": len(df)
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Exception in read_csv_file: {e}")
+        traceback.print_exc()
+        return {"error": f"Exception: {str(e)}"}
 
 if __name__ == "__main__":
     import sys

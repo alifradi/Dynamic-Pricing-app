@@ -164,12 +164,8 @@ ui <- dashboardPage(
   
   dashboardSidebar(
     sidebarMenu(
-      menuItem("Strategic Levers", tabName = "strategic_levers", icon = icon("sliders-h")),
-      menuItem("Optimization & Trade-offs", tabName = "optimization", icon = icon("balance-scale")),
-      menuItem("Ecosystem Health", tabName = "ecosystem", icon = icon("heartbeat")),
-      menuItem("Causal Impact (A/B Test)", tabName = "causal_impact", icon = icon("flask")),
-      menuItem("Data Generation", tabName = "data_generation", icon = icon("database")),
-      menuItem("Data Status", tabName = "data_status", icon = icon("folder-open"))
+      menuItem("Strategic Simulation & Impact", tabName = "strategic_simulation", icon = icon("chart-line")),
+      menuItem("Causal Inference & Deep Dive", tabName = "causal_inference", icon = icon("microscope"))
     )
   ),
   
@@ -279,22 +275,12 @@ ui <- dashboardPage(
     ),
 
     tabItems(
-      # --- TAB 1: STRATEGIC LEVERS ---
-      tabItem(tabName = "strategic_levers",
+      # --- TAB 1: STRATEGIC SIMULATION & IMPACT ---
+      tabItem(tabName = "strategic_simulation",
+        # Controls Section
         fluidRow(
           box(
             title = "Strategic Simulation Control", status = "primary", solidHeader = TRUE, width = 12,
-            fluidRow(
-              column(12,
-                actionButton("run_simulation_btn", "Run Strategic Simulation", 
-                           class = "btn-success btn-block", icon = icon("play"))
-              )
-            )
-          )
-        ),
-        fluidRow(
-          box(
-            title = "Market Parameters for Data Generation", status = "info", solidHeader = TRUE, width = 12,
             fluidRow(
               column(3,
                 numericInput("num_users_gen", "Number of Users:", value = 30, min = 1, max = 100)
@@ -316,20 +302,27 @@ ui <- dashboardPage(
               column(3,
                 numericInput("days_var_gen", "Days Variance:", value = 20, min = 1, max = 30)
               ),
-              column(6,
+              column(3,
                 div(style = "text-align: center; padding: 10px; background-color: #f8f9fa; border-radius: 5px;",
-                    helpText("These parameters control the data generation for the strategic simulation")
+                    helpText("Market parameters for data generation")
                 )
+              ),
+              column(3,
+                actionButton("sample_data_btn", "Sample Data", 
+                           class = "btn-info btn-block", icon = icon("database"),
+                           style = "margin-top: 10px; height: 40px;")
               )
             )
           )
         ),
+        
+        # Optimization Weights Section
         fluidRow(
           box(
             title = "Optimization Weights (α, β, γ)", status = "info", solidHeader = TRUE, width = 12,
             fluidRow(
               column(4,
-                sliderInput("alpha_weight", "α - trivago Income Weight", 
+                sliderInput("alpha_weight", "α - Trivago Income Weight", 
                            min = 0, max = 1, value = 0.4, step = 0.1)
               ),
               column(4,
@@ -352,227 +345,178 @@ ui <- dashboardPage(
             )
           )
         ),
+        
+        # Main Action Buttons (Reordered)
         fluidRow(
           box(
-            title = "Strategic Policy Selection", status = "warning", solidHeader = TRUE, width = 12,
+            title = "Strategic Policy Actions", status = "success", solidHeader = TRUE, width = 12,
             fluidRow(
-              column(6,
+              column(3,
                 actionButton("load_pretrained_policy_btn", "Load Pre-trained Policy", 
-                           class = "btn-warning", icon = icon("brain"))
+                           class = "btn-warning btn-block", icon = icon("brain"))
               ),
-              column(6,
+              column(3,
                 actionButton("retrain_rl_btn", "Retrain RL Agent", 
-                           class = "btn-info", icon = icon("graduation-cap"))
-              )
-            ),
-            fluidRow(
-              column(6,
-                verbatimTextOutput("policy_selection_output")
+                           class = "btn-info btn-block", icon = icon("graduation-cap"))
               ),
-              column(6,
-                verbatimTextOutput("retraining_output")
-              )
-            )
-          )
-        ),
-        fluidRow(
-          box(
-            title = "Simulation Status", status = "success", solidHeader = TRUE, width = 12,
-            verbatimTextOutput("simulation_status")
-          )
-        ),
-        fluidRow(
-          box(
-            title = "Generated Data Preview", status = "info", solidHeader = TRUE, width = 12,
-            fluidRow(
-              column(4,
-                h4("Bandit Simulation Results"),
-                DT::dataTableOutput("bandit_preview_table")
-              ),
-              column(4,
-                h4("User Price Sensitivity"),
-                DT::dataTableOutput("dps_preview_table")
-              ),
-              column(4,
-                h4("Conversion Probabilities"),
-                DT::dataTableOutput("conversion_preview_table")
-              )
-            )
-          )
-        )
-      ),
-      
-      # --- TAB 2: OPTIMIZATION & TRADE-OFFS ---
-      tabItem(tabName = "optimization",
-        fluidRow(
-          box(
-            title = "Pareto Frontier: Revenue vs. User Trust", status = "success", solidHeader = TRUE, width = 6,
-            plotlyOutput("pareto_frontier_plot")
-          ),
-          box(
-            title = "Learned RL Policy Table", status = "info", solidHeader = TRUE, width = 6,
-            textOutput("test_connection"),
-            DTOutput("policy_table")
-          )
-        ),
-        fluidRow(
-          box(
-            title = "Two-Stage Optimization System", status = "primary", solidHeader = TRUE, width = 12,
-            fluidRow(
-              column(12,
+              column(3,
                 actionButton("run_two_stage_optimization", "Run Two-Stage Optimization", 
-                           class = "btn-primary btn-lg", icon = icon("layer-group"),
-                           style = "width: 100%; height: 60px; font-size: 16px;")
+                           class = "btn-primary btn-block", icon = icon("layer-group"))
+              ),
+              column(3,
+                actionButton("run_policy_comparison_btn", "Run Policy Comparison", 
+                           class = "btn-success btn-block", icon = icon("play"))
+              ),
+              column(3,
+                actionButton("download_policy_csv_btn", "Download CSV", 
+                           class = "btn-warning btn-block", icon = icon("download"))
               )
             ),
             fluidRow(
               column(12,
                 div(style = "text-align: center; padding: 10px; background-color: #f8f9fa; border-radius: 5px; margin-top: 10px;",
-                  helpText("Two-Stage System: Stage 1 (Ranking) + Stage 2 (Hiding) for Maximum Customer Satisfaction, Partner Conversions, and Trivago Gains")
+                  helpText("Step 1: Load/Retrain Policy → Step 2: Two-Stage Optimization → Step 3: Policy Comparison")
                 )
               )
-            ),
-            br(), br(),
-            fluidRow(
-              column(12,
-                box(
-                  title = "Objective Function Values", status = "success", solidHeader = TRUE, width = 12,
-                  fluidRow(
-                    column(3,
-                      div(class = "metric-box",
-                        div(class = "metric-value", textOutput("trivago_income_value")),
-                        div(class = "metric-label", "Trivago Income")
-                      )
-                    ),
-                    column(3,
-                      div(class = "metric-box",
-                        div(class = "metric-value", textOutput("user_satisfaction_value")),
-                        div(class = "metric-label", "User Satisfaction")
-                      )
-                    ),
-                    column(3,
-                      div(class = "metric-box",
-                        div(class = "metric-value", textOutput("partner_conversion_value")),
-                        div(class = "metric-label", "Partner Conversion Value")
-                      )
-                    ),
-                    column(3,
-                      div(class = "metric-box",
-                        div(class = "metric-value", textOutput("total_objective_value")),
-                        div(class = "metric-label", "Total Objective")
-                      )
-                    )
-                  )
-                )
-              )
-            ),
-            fluidRow(
-              column(12,
-                box(
-                  title = "Two-Stage Optimization Results Table", status = "info", solidHeader = TRUE, width = 12,
-                  DT::dataTableOutput("two_stage_optimization_table")
-                )
-              )
-            ),
+            )
+          )
+        ),
+        
 
+        
+        # Data Tables Section
+        fluidRow(
+          # Table 1: Pareto Frontier Data
+          box(
+            title = "Pareto Frontier: Revenue vs. User Trust", status = "success", solidHeader = TRUE, width = 6,
+            DT::dataTableOutput("pareto_frontier_table")
+          ),
+          # Table 2: Free Cancellation Ranks
+          box(
+            title = "Average Rank of 'Free Cancellation' Offers", status = "info", solidHeader = TRUE, width = 6,
+            DT::dataTableOutput("free_cancellation_rank_table")
           )
         ),
+        
         fluidRow(
+          # Table 3: Budget Consumption
           box(
-            title = "Mathematical Foundation", status = "warning", solidHeader = TRUE, width = 12,
-            withMathJax(
-              div(style = "font-family: 'Times New Roman', serif; font-size: 14px; line-height: 1.8;",
-                tags$div(style = "margin-bottom: 20px; overflow-x: auto;",
-                  helpText("Two-Stage Optimization System:"),
-                  tags$h4("Stage 1: Optimal Ranking for Click Maximization"),
-                  "$$\\text{Maximize: } \\alpha \\cdot \\text{Trivago\\_Income} + \\beta \\cdot \\text{User\\_Satisfaction} + \\gamma \\cdot \\text{Partner\\_Conversion\\_Value}$$",
-                  tags$p("Subject to:"),
-                  "$$\\sum_j X_{ij} \\leq 1 \\quad \\forall i \\in \\text{Positions}$$",
-                  "$$\\sum_i X_{ij} \\leq 1 \\quad \\forall j \\in \\text{Offers}$$",
-                  "$$\\sum_{i,j} \\text{CTR}_i \\cdot \\text{CPC}_j \\cdot X_{ij} \\leq \\text{Budget}_P \\quad \\forall P \\in \\text{Partners}$$"
-                ),
-                tags$div(style = "margin-bottom: 20px;",
-                  helpText("Stage 2: Offer Hiding for Reconversion & Budget Rationalization"),
-                  "$$\\text{Hide offers where: } \\text{Reconversion\\_Probability} < \\text{Threshold}$$",
-                  "$$\\text{Budget\\_Utilization} \\leq \\text{Target\\_Utilization}$$"
-                ),
-                tags$div(style = "margin-bottom: 20px;",
-                  helpText("Position-based CTR:"),
-                  "$$\\text{CTR}(\\text{position}) = \\frac{1}{1 + 0.3 \\cdot \\text{position}}$$"
-                )
-              )
+            title = "Partner Budget Consumption by Policy", status = "warning", solidHeader = TRUE, width = 6,
+            DT::dataTableOutput("budget_consumption_policy_table")
+          ),
+          # Table 4: Objective Functions Comparison
+          box(
+            title = "Objective Functions Comparison", status = "primary", solidHeader = TRUE, width = 6,
+            plotlyOutput("objective_comparison_table")
+          )
+        ),
+        
+        # Policy Outputs
+        fluidRow(
+          column(6,
+            box(
+              title = "Pre-trained Policy Output", status = "warning", solidHeader = TRUE, width = 12,
+              verbatimTextOutput("policy_selection_output")
+            )
+          ),
+          column(6,
+            box(
+              title = "RL Training Output", status = "info", solidHeader = TRUE, width = 12,
+              verbatimTextOutput("retraining_output")
             )
           )
-        )
-      ),
-      
-      # --- TAB 3: ECOSYSTEM HEALTH ---
-      tabItem(tabName = "ecosystem",
-        fluidRow(
-          box(
-            title = "Partner Budget Consumption", status = "warning", solidHeader = TRUE, width = 6,
-            plotlyOutput("budget_consumption_plot")
-          ),
-          box(
-            title = "Partner Contribution (Shapley Values)", status = "success", solidHeader = TRUE, width = 6,
-            plotlyOutput("shapley_values_plot")
-          )
         ),
+        
+
+        
+        # Two-Stage Optimization Results
         fluidRow(
           box(
-            title = "Ecosystem Metrics", status = "info", solidHeader = TRUE, width = 12,
+            title = "Two-Stage Optimization Results", status = "primary", solidHeader = TRUE, width = 12,
             fluidRow(
               column(3,
                 div(class = "metric-box",
-                  div(class = "metric-value", textOutput("total_revenue")),
-                  div(class = "metric-label", "Total Revenue")
+                  div(class = "metric-value", textOutput("trivago_income_value")),
+                  div(class = "metric-label", "Trivago Income")
                 )
               ),
               column(3,
                 div(class = "metric-box",
-                  div(class = "metric-value", textOutput("avg_satisfaction")),
-                  div(class = "metric-label", "Avg Satisfaction")
+                  div(class = "metric-value", textOutput("user_satisfaction_value")),
+                  div(class = "metric-label", "User Satisfaction")
                 )
               ),
               column(3,
                 div(class = "metric-box",
-                  div(class = "metric-value", textOutput("conversion_rate")),
-                  div(class = "metric-label", "Conversion Rate")
+                  div(class = "metric-value", textOutput("partner_conversion_value")),
+                  div(class = "metric-label", "Partner Conversion Value")
                 )
               ),
               column(3,
                 div(class = "metric-box",
-                  div(class = "metric-value", textOutput("budget_utilization")),
-                  div(class = "metric-label", "Budget Utilization")
+                  div(class = "metric-value", textOutput("total_objective_value")),
+                  div(class = "metric-label", "Total Objective")
                 )
+              )
+            ),
+            fluidRow(
+              column(12,
+                DT::dataTableOutput("two_stage_optimization_table")
               )
             )
           )
         ),
+        
+        # Data Preview Tables
         fluidRow(
           box(
-            title = "Partner Performance Details", status = "primary", solidHeader = TRUE, width = 12,
-            actionButton("calculate_shapley_btn", "Calculate Shapley Values", 
-                       class = "btn-primary", icon = icon("calculator")),
-            br(), br(),
-            DT::dataTableOutput("partner_performance_table")
+            title = "Sampled Data Preview", status = "success", solidHeader = TRUE, width = 12,
+            tabsetPanel(
+              tabPanel("User-Offer Matches", 
+                DT::dataTableOutput("sample_table", height = "400px")
+              ),
+              tabPanel("Bandit Results", 
+                DT::dataTableOutput("bandit_table", height = "400px")
+              ),
+              tabPanel("User DPS", 
+                DT::dataTableOutput("dps_table", height = "400px")
+              ),
+              tabPanel("Conversion Probs", 
+                DT::dataTableOutput("conversion_table", height = "400px")
+              ),
+              tabPanel("Greedy Rankings", 
+                DT::dataTableOutput("greedy_ranking_table", height = "400px")
+              ),
+              tabPanel("Customer-First Rankings", 
+                DT::dataTableOutput("customer_first_ranking_table", height = "400px")
+              )
+            )
+          )
+        ),
+        
+        # Simulation Status
+        fluidRow(
+          box(
+            title = "Simulation Status", status = "info", solidHeader = TRUE, width = 12,
+            verbatimTextOutput("simulation_status")
           )
         )
       ),
       
-      # --- TAB 4: CAUSAL IMPACT (A/B TEST) ---
-      tabItem(tabName = "causal_impact",
+      # --- TAB 2: CAUSAL INFERENCE & DEEP DIVE ---
+      tabItem(tabName = "causal_inference",
+        # A/B Test Configuration
         fluidRow(
           box(
             title = "A/B Test Configuration", status = "primary", solidHeader = TRUE, width = 12,
             fluidRow(
               column(4,
                 selectInput("control_strategy", "Control Strategy:", 
-                           choices = c("Greedy", "User-First"), selected = "Greedy")
+                           choices = c("Greedy", "Customer-First"), selected = "Greedy")
               ),
               column(4,
                 selectInput("treatment_strategy", "Treatment Strategy:", 
-                           choices = c("LP-Optimized", "RL Policy"), selected = "LP-Optimized")
+                           choices = c("RL-Optimized", "Custom"), selected = "RL-Optimized")
               ),
               column(4,
                 numericInput("test_duration", "Test Duration (days):", value = 30, min = 7, max = 90)
@@ -586,12 +530,16 @@ ui <- dashboardPage(
             )
           )
         ),
+        
+        # Causal Impact Results
         fluidRow(
           box(
-            title = "Causal Impact Results", status = "success", solidHeader = TRUE, width = 12,
+            title = "Causal Impact Results (A/B Test)", status = "success", solidHeader = TRUE, width = 12,
             DT::dataTableOutput("ab_test_results_table")
           )
         ),
+        
+        # Statistical Significance and Shapley Values
         fluidRow(
           box(
             title = "Statistical Significance", status = "info", solidHeader = TRUE, width = 6,
@@ -623,82 +571,6 @@ ui <- dashboardPage(
             )
           )
         )
-      ),
-      
-      # --- TAB 5: DATA GENERATION ---
-      tabItem(tabName = "data_generation",
-        fluidRow(
-          box(
-            title = "Data Generation Parameters", status = "primary", solidHeader = TRUE, width = 12,
-            fluidRow(
-              column(3,
-                numericInput("num_users_gen", "Number of Users:", value = 80, min = 1, max = 100)
-              ),
-              column(3,
-                numericInput("num_hotels_gen", "Hotels per Destination:", value = 10, min = 1, max = 20)
-              ),
-              column(3,
-                numericInput("num_partners_gen", "Partners per Hotel:", value = 5, min = 1, max = 10)
-              ),
-              column(3,
-                numericInput("min_users_per_destination_gen", "Min Users per Destination:", value = 8, min = 1, max = 20)
-              )
-            ),
-            fluidRow(
-              column(3,
-                numericInput("days_to_go_gen", "Days to Go (target):", value = 30, min = 1, max = 365)
-              ),
-              column(3,
-                numericInput("days_var_gen", "Days Variance:", value = 5, min = 1, max = 30)
-              ),
-              column(6,
-                div(style = "text-align: center; padding: 10px; background-color: #f8f9fa; border-radius: 5px;",
-                    helpText("Data generation is now integrated into the Strategic Simulation")
-                )
-              )
-            )
-          )
-        ),
-        fluidRow(
-          box(
-            title = "Generated Data", status = "success", solidHeader = TRUE, width = 12,
-            tabsetPanel(
-              tabPanel("Bandit Results", DT::dataTableOutput("bandit_table")),
-              tabPanel("User DPS", DT::dataTableOutput("dps_table")),
-              tabPanel("Conversion Probs", DT::dataTableOutput("conversion_table"))
-            )
-          )
-        )
-      ),
-      
-      # --- TAB 6: DATA STATUS ---
-      tabItem(tabName = "data_status",
-        fluidRow(
-          box(
-            title = "Data Files Status", status = "info", solidHeader = TRUE, width = 12,
-            actionButton("refresh_data_status_btn", "Refresh Data Status", 
-                       class = "btn-primary", icon = icon("refresh")),
-            br(), br(),
-            DT::dataTableOutput("data_status_table")
-          )
-        ),
-        fluidRow(
-          box(
-            title = "Data Summary", status = "success", solidHeader = TRUE, width = 6,
-            div(class = "metric-box",
-              div(class = "metric-value", textOutput("total_data_files")),
-              div(class = "metric-label", "Total Files")
-            ),
-            div(class = "metric-box",
-              div(class = "metric-value", textOutput("total_data_size")),
-              div(class = "metric-label", "Total Size (MB)")
-            )
-          ),
-          box(
-            title = "Data Directory Info", status = "warning", solidHeader = TRUE, width = 6,
-            verbatimTextOutput("data_directory_info")
-          )
-        )
       )
     )
   )
@@ -717,6 +589,17 @@ server <- function(input, output, session) {
     objectives_results = NULL,
     weights_data = NULL,
     ab_test_results = NULL,
+    sample_table = NULL,
+    bandit_table = NULL,
+    dps_table = NULL,
+    conversion_table = NULL,
+    greedy_ranking = NULL,
+    customer_first_ranking = NULL,
+    two_stage_optimization_table = NULL,
+    trivago_income_value = NULL,
+    user_satisfaction_value = NULL,
+    partner_conversion_value = NULL,
+    total_objective_value = NULL,
     refresh_counter = 0
   )
   
@@ -736,6 +619,206 @@ server <- function(input, output, session) {
     } else {
       paste0(total, " ✅")
     }
+  })
+  
+  # Two-Stage Optimization handler
+  observeEvent(input$run_two_stage_optimization, {
+    tryCatch({
+      showNotification("Running two-stage stochastic optimization...", type = "message")
+      
+      # Call the two-stage optimization endpoint with query parameters
+      res <- POST(paste0(API_URL, "/run_two_stage_optimization"), 
+                 query = list(
+                   alpha = input$alpha_weight,
+                   beta = input$beta_weight,
+                   gamma = input$gamma_weight,
+                   num_positions = 10,
+                   reconversion_threshold = 0.3,
+                   budget_utilization_target = 0.8
+                 ))
+      
+      if (res$status_code == 200) {
+        optimization_data <- fromJSON(rawToChar(res$content))
+        rv$two_stage_optimization_table <- optimization_data$results
+        rv$trivago_income_value <- optimization_data$objectives$trivago_income
+        rv$user_satisfaction_value <- optimization_data$objectives$user_satisfaction
+        rv$partner_conversion_value <- optimization_data$objectives$partner_conversion_value
+        rv$total_objective_value <- optimization_data$objectives$total_objective
+        
+        showNotification("Two-stage optimization completed successfully!", type = "message")
+      } else {
+        showNotification("Error in two-stage optimization", type = "error", duration = 5)
+      }
+      
+    }, error = function(e) {
+      showNotification(paste("Error:", e$message), type = "error", duration = 5)
+    })
+  })
+  
+  # Sample data button handler
+  observeEvent(input$sample_data_btn, {
+    tryCatch({
+      showNotification("Loading data and generating rankings...", type = "message", duration = 5)
+      
+      # Load data from CSV files using the new endpoint
+      csv_files <- c("trial_sampled_offers.csv", "user_dynamic_price_sensitivity.csv", 
+                     "conversion_probabilities.csv", "bandit_simulation_results.csv")
+      
+      for (file in csv_files) {
+        res <- GET(paste0(API_URL, "/read_csv_file/", file))
+        if (res$status_code == 200) {
+          data <- fromJSON(rawToChar(res$content))
+          
+          # Store data based on filename
+          if (file == "trial_sampled_offers.csv") {
+            rv$sample_table <- data$data
+          } else if (file == "user_dynamic_price_sensitivity.csv") {
+            rv$dps_table <- data$data
+          } else if (file == "conversion_probabilities.csv") {
+            rv$conversion_table <- data$data
+          } else if (file == "bandit_simulation_results.csv") {
+            rv$bandit_table <- data$data
+          }
+        } else {
+          # If file doesn't exist, create empty data frame
+          if (file == "trial_sampled_offers.csv") {
+            rv$sample_table <- data.frame(Message = "Click 'Sample Data' to load user-offer matches")
+          } else if (file == "user_dynamic_price_sensitivity.csv") {
+            rv$dps_table <- data.frame(Message = "DPS data not available")
+          } else if (file == "conversion_probabilities.csv") {
+            rv$conversion_table <- data.frame(Message = "Conversion data not available")
+          } else if (file == "bandit_simulation_results.csv") {
+            rv$bandit_table <- data.frame(Message = "Bandit data not available")
+          }
+        }
+      }
+      
+      # Generate Greedy and Customer-First rankings
+      showNotification("Generating Greedy and Customer-First rankings...", type = "message", duration = 3)
+      
+      # Generate Greedy ranking
+      tryCatch({
+        greedy_res <- POST(paste0(API_URL, "/apply_greedy_policy"))
+        if (greedy_res$status_code == 200) {
+          greedy_data <- fromJSON(rawToChar(greedy_res$content))
+          rv$greedy_ranking <- greedy_data
+          showNotification("✅ Greedy ranking generated successfully!", type = "success", duration = 3)
+        } else {
+          showNotification("❌ Failed to generate Greedy ranking", type = "error", duration = 3)
+        }
+      }, error = function(e) {
+        showNotification(paste("Error generating Greedy ranking:", e$message), type = "error", duration = 3)
+      })
+      
+      # Generate Customer-First ranking (using user-first policy)
+      tryCatch({
+        customer_res <- POST(paste0(API_URL, "/apply_user_first_policy"))
+        if (customer_res$status_code == 200) {
+          customer_data <- fromJSON(rawToChar(customer_res$content))
+          rv$customer_first_ranking <- customer_data
+          showNotification("✅ Customer-First ranking generated successfully!", type = "success", duration = 3)
+        } else {
+          showNotification("❌ Failed to generate Customer-First ranking", type = "error", duration = 3)
+        }
+      }, error = function(e) {
+        showNotification(paste("Error generating Customer-First ranking:", e$message), type = "error", duration = 3)
+      })
+      
+      showNotification("Data loaded and rankings generated successfully!", type = "message", duration = 5)
+      
+    }, error = function(e) {
+      showNotification(paste("Error:", e$message), type = "error", duration = 5)
+    })
+  })
+  
+  # Run policy comparison (Enhanced with Hierarchical Optimization)
+  observeEvent(input$run_policy_comparison_btn, {
+    tryCatch({
+      # Check if two-stage optimization has been completed
+      if (is.null(rv$two_stage_optimization_table)) {
+        showNotification("Please run Two-Stage Optimization first to enable hierarchical optimization comparison", 
+                       type = "warning", duration = 5)
+        return()
+      }
+      
+              showNotification("Running comprehensive policy comparison...", type = "message")
+      
+      # Get current weights from UI
+      custom_weights <- list(
+        alpha = input$alpha_weight,
+        beta = input$beta_weight,
+        gamma = input$gamma_weight
+      )
+      
+      # Call the enhanced compare_policies endpoint
+      res <- POST(paste0(API_URL, "/compare_policies"), 
+                 body = list(
+                   custom_weights = custom_weights
+                 ),
+                 encode = "json")
+      
+      if (res$status_code == 200) {
+        comparison_data <- fromJSON(rawToChar(res$content))
+        rv$policy_comparison_results <- comparison_data
+        
+        # Generate CSV files automatically
+        tryCatch({
+          csv_response <- GET(paste0(API_URL, "/policy_comparison_csv"))
+          if (csv_response$status_code == 200) {
+            showNotification("📊 CSV files generated successfully!", type = "success", duration = 3)
+          }
+        }, error = function(e) {
+          print(paste("Error generating CSV files:", e$message))
+        })
+        
+        # Update simulation status with comprehensive policy comparison results
+        rv$simulation_message <- paste0(
+          "✅ Comprehensive Policy Comparison Completed!\n\n",
+          "📊 Comparison Summary:\n",
+          "• Total Offers: ", comparison_data$summary$total_offers, "\n",
+          "• Unique Partners: ", comparison_data$summary$unique_partners, "\n",
+          "• Free Cancellation Offers: ", comparison_data$summary$free_cancellation_offers, "\n\n",
+          "🏆 Best Performance:\n",
+          "• Best Trivago Income: $", round(comparison_data$summary$best_trivago_income, 2), "\n",
+          "• Best User Satisfaction: ", round(comparison_data$summary$best_user_satisfaction, 2), "\n",
+          "• Best Partner Value: $", round(comparison_data$summary$best_partner_value, 2), "\n",
+          "• Best Total Objective: ", round(comparison_data$summary$best_total_objective, 2), "\n\n",
+          "⚖️ Custom Weights Used: α=", custom_weights$alpha, ", β=", custom_weights$beta, ", γ=", custom_weights$gamma, "\n\n",
+          "📈 Policies Compared:\n",
+          "• Customer-First (α=0.2, β=0.6, γ=0.2)\n",
+          "• Greedy (α=0.7, β=0.1, γ=0.2)\n",
+          "• RL-Optimized (α=0.4, β=0.3, γ=0.3)\n",
+          "• Custom (α=", custom_weights$alpha, ", β=", custom_weights$beta, ", γ=", custom_weights$gamma, ")"
+        )
+        
+        showNotification("Policy comparison completed successfully!", type = "message")
+      } else {
+        showNotification("Error in policy comparison", type = "error", duration = 5)
+      }
+      
+    }, error = function(e) {
+      showNotification(paste("Error:", e$message), type = "error", duration = 5)
+    })
+  })
+  
+  # Download policy comparison CSV
+  observeEvent(input$download_policy_csv_btn, {
+    tryCatch({
+      showNotification("Generating CSV file...", type = "message", duration = 5)
+      
+      # Call backend API to generate CSV
+      res <- GET(paste0(API_URL, "/policy_comparison_csv"))
+      
+      if (res$status_code == 200) {
+        result <- fromJSON(rawToChar(res$content))
+        showNotification("CSV file generated successfully! Check the /data directory.", type = "message", duration = 5)
+      } else {
+        error_msg <- rawToChar(res$content)
+        showNotification(paste("Error generating CSV:", error_msg), type = "error", duration = 5)
+      }
+    }, error = function(e) {
+      showNotification(paste("Error:", e$message), type = "error", duration = 5)
+    })
   })
   
   # Run strategic simulation (Enhanced)
@@ -819,7 +902,7 @@ server <- function(input, output, session) {
       showNotification("Comprehensive strategic simulation completed successfully!", type = "message")
       
     }, error = function(e) {
-      showNotification(paste("Error:", e$message), type = "error")
+      showNotification(paste("Error:", e$message), type = "error", duration = 5)
     })
   })
   
@@ -859,7 +942,7 @@ server <- function(input, output, session) {
       }
       
     }, error = function(e) {
-      showNotification(paste("Error:", e$message), type = "error")
+      showNotification(paste("Error:", e$message), type = "error", duration = 5)
     })
   })
   
@@ -900,7 +983,7 @@ server <- function(input, output, session) {
       }
       
     }, error = function(e) {
-      showNotification(paste("Error:", e$message), type = "error")
+      showNotification(paste("Error:", e$message), type = "error", duration = 5)
     })
   })
   
@@ -910,6 +993,130 @@ server <- function(input, output, session) {
       return("Click 'Run Strategic Simulation' to start...")
     }
     rv$simulation_message
+  })
+  
+  # Data preview tables
+  output$sample_table <- DT::renderDataTable({
+    if (is.null(rv$sample_table)) {
+      return(data.frame(Message = "Click 'Sample Data' to load user-offer matches"))
+    }
+    
+    df <- as.data.frame(rv$sample_table)
+    
+    DT::datatable(df, 
+                  options = list(pageLength = 10, scrollX = TRUE),
+                  rownames = FALSE) %>%
+      DT::formatRound(columns = c("price_per_night", "star_rating", "review_score"), digits = 2)
+  })
+  
+  output$bandit_table <- DT::renderDataTable({
+    if (is.null(rv$bandit_table)) {
+      return(data.frame(Message = "Click 'Sample Data' to load bandit results"))
+    }
+    
+    df <- as.data.frame(rv$bandit_table)
+    
+    DT::datatable(df, 
+                  options = list(pageLength = 10, scrollX = TRUE),
+                  rownames = FALSE) %>%
+      DT::formatRound(columns = c("probability_of_click", "true_click_prob", "preference_score"), digits = 4)
+  })
+  
+  output$dps_table <- DT::renderDataTable({
+    if (is.null(rv$dps_table)) {
+      return(data.frame(Message = "Click 'Sample Data' to load user DPS data"))
+    }
+    
+    df <- as.data.frame(rv$dps_table)
+    
+    DT::datatable(df, 
+                  options = list(pageLength = 10, scrollX = TRUE),
+                  rownames = FALSE) %>%
+      DT::formatRound(columns = c("base_price_sensitivity", "dynamic_price_sensitivity"), digits = 4)
+  })
+  
+  output$conversion_table <- DT::renderDataTable({
+    if (is.null(rv$conversion_table)) {
+      return(data.frame(Message = "Click 'Sample Data' to load conversion probabilities"))
+    }
+    
+    df <- as.data.frame(rv$conversion_table)
+    
+    DT::datatable(df, 
+                  options = list(pageLength = 10, scrollX = TRUE),
+                  rownames = FALSE) %>%
+      DT::formatRound(columns = c("conversion_probability"), digits = 4)
+  })
+  
+  # Greedy ranking table
+  output$greedy_ranking_table <- DT::renderDataTable({
+    if (is.null(rv$greedy_ranking)) {
+      return(data.frame(Message = "Click 'Sample Data' to generate Greedy rankings"))
+    }
+    
+    # Extract ranking data from the response
+    if (!is.null(rv$greedy_ranking$optimization_result$ranked_offers)) {
+      df <- as.data.frame(rv$greedy_ranking$optimization_result$ranked_offers)
+    } else {
+      df <- data.frame(Message = "No ranking data available in Greedy response")
+    }
+    
+    DT::datatable(df, 
+                  options = list(pageLength = 10, scrollX = TRUE),
+                  rownames = FALSE) %>%
+      DT::formatRound(columns = c("price_per_night", "star_rating", "review_score", "cost_per_click_bid"), digits = 2)
+  })
+  
+  # Customer-First ranking table
+  output$customer_first_ranking_table <- DT::renderDataTable({
+    if (is.null(rv$customer_first_ranking)) {
+      return(data.frame(Message = "Click 'Sample Data' to generate Customer-First rankings"))
+    }
+    
+    # Extract ranking data from the response
+    if (!is.null(rv$customer_first_ranking$optimization_result$ranked_offers)) {
+      df <- as.data.frame(rv$customer_first_ranking$optimization_result$ranked_offers)
+    } else {
+      df <- data.frame(Message = "No ranking data available in Customer-First response")
+    }
+    
+    DT::datatable(df, 
+                  options = list(pageLength = 10, scrollX = TRUE),
+                  rownames = FALSE) %>%
+      DT::formatRound(columns = c("price_per_night", "star_rating", "review_score", "cost_per_click_bid"), digits = 2)
+  })
+  
+  # Two-stage optimization result outputs
+  output$trivago_income_value <- renderText({
+    if (is.null(rv$trivago_income_value)) return("--")
+    paste0("$", format(round(rv$trivago_income_value, 2), nsmall = 2))
+  })
+  
+  output$user_satisfaction_value <- renderText({
+    if (is.null(rv$user_satisfaction_value)) return("--")
+    format(round(rv$user_satisfaction_value, 2), nsmall = 2)
+  })
+  
+  output$partner_conversion_value <- renderText({
+    if (is.null(rv$partner_conversion_value)) return("--")
+    paste0("$", format(round(rv$partner_conversion_value, 2), nsmall = 2))
+  })
+  
+  output$total_objective_value <- renderText({
+    if (is.null(rv$total_objective_value)) return("--")
+    format(round(rv$total_objective_value, 2), nsmall = 2)
+  })
+  
+  output$two_stage_optimization_table <- DT::renderDataTable({
+    if (is.null(rv$two_stage_optimization_table)) {
+      return(data.frame(Message = "Run Two-Stage Optimization to see results"))
+    }
+    
+    df <- as.data.frame(rv$two_stage_optimization_table)
+    
+    DT::datatable(df, 
+                  options = list(pageLength = 10, scrollX = TRUE),
+                  rownames = FALSE)
   })
   
   # Data preview tables
@@ -960,43 +1167,335 @@ server <- function(input, output, session) {
   
   # --- OPTIMIZATION & TRADE-OFFS TAB ---
   
-  # Pareto frontier plot
-  output$pareto_frontier_plot <- renderPlotly({
-    if (is.null(rv$optimization_results)) {
-      return(plot_ly() %>% 
-               add_annotations(text = "Run optimization to see Pareto frontier", 
-                             showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5))
-    }
-    
-    # Generate Pareto frontier data by varying weights
-    pareto_data <- data.frame()
-    
-    for (alpha in seq(0, 1, 0.1)) {
-      for (beta in seq(0, 1 - alpha, 0.1)) {
-        gamma <- 1 - alpha - beta
-        if (gamma >= 0) {
-          pareto_data <- rbind(pareto_data, data.frame(
-            alpha = alpha,
-            beta = beta,
-            gamma = gamma,
-            revenue = alpha * 1000,  # Simplified
-            trust = beta * 10        # Simplified
-          ))
+  # Pareto frontier table (Enhanced for Policy Comparison)
+  output$pareto_frontier_table <- DT::renderDataTable({
+    tryCatch({
+      # Try to load from CSV file first
+      csv_response <- httr::GET(paste0(API_URL, "/read_csv_file/pareto_frontier_results.csv"))
+      
+      if (csv_response$status_code == 200) {
+        csv_data <- jsonlite::fromJSON(rawToChar(csv_response$content))
+        if (length(csv_data$data) > 0) {
+          table_data <- as.data.frame(csv_data$data)
+          
+          # Return formatted table
+          DT::datatable(table_data, 
+                       options = list(pageLength = 10, dom = 't'),
+                       rownames = FALSE) %>%
+            DT::formatCurrency(c("Revenue"), currency = "$") %>%
+            DT::formatRound(c("Trust", "Partner_Value"), digits = 2)
+        } else {
+          return(data.frame(Message = "No Pareto frontier data available in CSV"))
+        }
+      } else {
+        # Fallback to JSON data
+        if (is.null(rv$policy_comparison_results)) {
+          return(data.frame(Message = "Run Policy Comparison to see Pareto frontier data"))
+        }
+        
+        # Extract policy comparison data
+        policies <- rv$policy_comparison_results$policies
+        
+        # Create data frame for table
+        table_data <- data.frame()
+        
+        for (policy_name in c("customer_first", "greedy", "rl_optimized", "custom")) {
+          if (policy_name %in% names(policies) && 
+              !is.null(policies[[policy_name]]$objectives) &&
+              !is.null(policies[[policy_name]]$objectives$trivago_income) &&
+              !is.null(policies[[policy_name]]$objectives$user_satisfaction)) {
+            
+            table_data <- rbind(table_data, data.frame(
+              Policy = policies[[policy_name]]$policy_name,
+              Revenue = round(policies[[policy_name]]$objectives$trivago_income, 2),
+              Trust = round(policies[[policy_name]]$objectives$user_satisfaction, 2),
+              Partner_Value = round(policies[[policy_name]]$objectives$partner_value, 2),
+              stringsAsFactors = FALSE
+            ))
+          }
+        }
+        
+        if (nrow(table_data) == 0) {
+          return(data.frame(Message = "No policy comparison data available"))
+        }
+        
+        # Return formatted table
+        DT::datatable(table_data, 
+                     options = list(pageLength = 10, dom = 't'),
+                     rownames = FALSE) %>%
+          DT::formatCurrency(c("Revenue"), currency = "$") %>%
+          DT::formatRound(c("Trust", "Partner_Value"), digits = 2)
+      }
+      
+    }, error = function(e) {
+      print(paste("Error in Pareto frontier table:", e$message))
+      return(data.frame(Message = paste("Error:", e$message)))
+    })
+  })
+  
+  # Free cancellation rank table (New)
+  output$free_cancellation_rank_table <- DT::renderDataTable({
+    tryCatch({
+      # Try to load from CSV file first
+      csv_response <- httr::GET(paste0(API_URL, "/read_csv_file/free_cancellation_rank_results.csv"))
+      
+      if (csv_response$status_code == 200) {
+        csv_data <- jsonlite::fromJSON(rawToChar(csv_response$content))
+        if (length(csv_data$data) > 0) {
+          table_data <- as.data.frame(csv_data$data)
+          
+          # Return formatted table
+          DT::datatable(table_data, 
+                       options = list(pageLength = 10, dom = 't'),
+                       rownames = FALSE) %>%
+            DT::formatRound(c("Avg_Rank"), digits = 2)
+        } else {
+          return(data.frame(Message = "No free cancellation rank data available in CSV"))
+        }
+      } else {
+        # Fallback to JSON data
+        if (is.null(rv$policy_comparison_results)) {
+          return(data.frame(Message = "Run Policy Comparison to see data"))
+        }
+        
+        # Extract average free cancellation ranks
+        policies <- rv$policy_comparison_results$policies
+        
+        # Create data frame with proper error handling
+        table_data <- data.frame(
+          Policy = character(),
+          Avg_Rank = numeric(),
+          Free_Cancellation_Offers = numeric(),
+          stringsAsFactors = FALSE
+        )
+        
+        for (policy_name in c("customer_first", "greedy", "rl_optimized", "custom")) {
+          if (policy_name %in% names(policies) && 
+              !is.null(policies[[policy_name]]$analytics) &&
+              !is.null(policies[[policy_name]]$analytics$avg_free_cancellation_rank)) {
+            
+            new_row <- data.frame(
+              Policy = policies[[policy_name]]$policy_name,
+              Avg_Rank = round(policies[[policy_name]]$analytics$avg_free_cancellation_rank, 2),
+              Free_Cancellation_Offers = policies[[policy_name]]$analytics$free_cancellation_count,
+              stringsAsFactors = FALSE
+            )
+            table_data <- rbind(table_data, new_row)
+          }
+        }
+        
+        if (nrow(table_data) == 0) {
+          return(data.frame(Message = "No free cancellation rank data available"))
+        }
+        
+        # Return formatted table
+        DT::datatable(table_data, 
+                     options = list(pageLength = 10, dom = 't'),
+                     rownames = FALSE) %>%
+          DT::formatRound(c("Avg_Rank"), digits = 2)
+      }
+      
+    }, error = function(e) {
+      print(paste("Error in free cancellation rank table:", e$message))
+      return(data.frame(Message = paste("Error:", e$message)))
+    })
+  })
+  
+  # Budget consumption by policy table (Enhanced with error handling)
+  output$budget_consumption_policy_table <- DT::renderDataTable({
+    tryCatch({
+      # Try to load from CSV file first
+      csv_response <- httr::GET(paste0(API_URL, "/read_csv_file/partner_budget_consumption_results.csv"))
+      
+      if (csv_response$status_code == 200) {
+        csv_data <- jsonlite::fromJSON(rawToChar(csv_response$content))
+        if (length(csv_data$data) > 0) {
+          table_data <- as.data.frame(csv_data$data)
+          
+          # Return formatted table with scrolling and styling
+          DT::datatable(table_data, 
+                       options = list(
+                         pageLength = 10,
+                         dom = 't',
+                         scrollX = TRUE,
+                         scrollY = '300px',
+                         scrollCollapse = TRUE,
+                         autoWidth = FALSE,
+                         columnDefs = list(
+                           list(width = '120px', targets = 0),  # Policy
+                           list(width = '100px', targets = 1),  # Partner
+                           list(width = '120px', targets = 2),  # Budget_Consumed
+                           list(width = '120px', targets = 3),  # Budget_Utilization
+                           list(width = '120px', targets = 4),  # Expected_Clicks
+                           list(width = '140px', targets = 5)   # Expected_Conversions
+                         )
+                       ),
+                       rownames = FALSE,
+                       width = '100%',
+                       height = '350px',
+                       style = 'bootstrap',
+                       class = 'table table-striped table-bordered table-hover') %>%
+            DT::formatCurrency(c("Budget_Consumed"), currency = "$") %>%
+            DT::formatRound(c("Budget_Utilization"), digits = 1) %>%
+            DT::formatRound(c("Expected_Clicks", "Expected_Conversions"), digits = 2)
+        } else {
+          return(data.frame(Message = "No budget consumption data available in CSV"))
+        }
+      } else {
+        # Fallback to JSON data
+        if (is.null(rv$policy_comparison_results)) {
+          return(data.frame(Message = "Run Policy Comparison to see data"))
+        }
+        
+        # Extract budget consumption data
+        policies <- rv$policy_comparison_results$policies
+        
+        # Create data frame for table
+        table_data <- data.frame()
+        
+        for (policy_name in names(policies)) {
+          policy_data <- policies[[policy_name]]
+          
+          # Check if analytics and partner_budget_consumption exist
+          if (!is.null(policy_data$analytics) && !is.null(policy_data$analytics$partner_budget_consumption)) {
+            budget_data <- policy_data$analytics$partner_budget_consumption
+            
+            for (partner in names(budget_data)) {
+              if (!is.null(budget_data[[partner]]$budget_consumed)) {
+                table_data <- rbind(table_data, data.frame(
+                  Policy = policy_data$policy_name,
+                  Partner = partner,
+                  Budget_Consumed = round(budget_data[[partner]]$budget_consumed, 2),
+                  Budget_Utilization = round(budget_data[[partner]]$budget_utilization * 100, 1),
+                  Expected_Clicks = budget_data[[partner]]$expected_clicks,
+                  Expected_Conversions = budget_data[[partner]]$expected_conversions,
+                  stringsAsFactors = FALSE
+                ))
+              }
+            }
+          }
+        }
+        
+        if (nrow(table_data) == 0) {
+          return(data.frame(Message = "No budget consumption data available"))
+        }
+        
+        # Return formatted table with scrolling and styling
+        DT::datatable(table_data, 
+                     options = list(
+                       pageLength = 10,
+                       dom = 't',
+                       scrollX = TRUE,
+                       scrollY = '300px',
+                       scrollCollapse = TRUE,
+                       autoWidth = FALSE,
+                       columnDefs = list(
+                         list(width = '120px', targets = 0),  # Policy
+                         list(width = '100px', targets = 1),  # Partner
+                         list(width = '120px', targets = 2),  # Budget_Consumed
+                         list(width = '120px', targets = 3),  # Budget_Utilization
+                         list(width = '120px', targets = 4),  # Expected_Clicks
+                         list(width = '140px', targets = 5)   # Expected_Conversions
+                       )
+                     ),
+                     rownames = FALSE,
+                     width = '100%',
+                     height = '350px',
+                     style = 'bootstrap',
+                     class = 'table table-striped table-bordered table-hover') %>%
+          DT::formatCurrency(c("Budget_Consumed"), currency = "$") %>%
+          DT::formatRound(c("Budget_Utilization"), digits = 1) %>%
+          DT::formatRound(c("Expected_Clicks", "Expected_Conversions"), digits = 2)
+      }
+      
+    }, error = function(e) {
+      print(paste("Error in budget consumption table:", e$message))
+      return(data.frame(Message = paste("Error:", e$message)))
+    })
+  })
+  
+  # Objective functions comparison histogram (New)
+  output$objective_comparison_table <- renderPlotly({
+    tryCatch({
+      if (is.null(rv$policy_comparison_results)) {
+        return(plot_ly() %>% 
+                 add_annotations(text = "Run Policy Comparison to see data", 
+                               showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5))
+      }
+      
+      # Extract objective functions data
+      policies <- rv$policy_comparison_results$policies
+      
+      # Create data frame for histogram with proper error handling
+      plot_data <- data.frame()
+      
+      for (policy_name in c("customer_first", "greedy", "rl_optimized", "custom")) {
+        if (policy_name %in% names(policies) && !is.null(policies[[policy_name]]$objectives)) {
+          policy_data <- policies[[policy_name]]
+          objectives <- policy_data$objectives
+          
+          # Add each objective with proper error handling
+          if (!is.null(objectives$trivago_income)) {
+            plot_data <- rbind(plot_data, data.frame(
+              Policy = policy_data$policy_name,
+              Objective = "Trivago Income ($)",
+              Value = round(objectives$trivago_income, 2),
+              stringsAsFactors = FALSE
+            ))
+          }
+          
+          if (!is.null(objectives$user_satisfaction)) {
+            plot_data <- rbind(plot_data, data.frame(
+              Policy = policy_data$policy_name,
+              Objective = "User Satisfaction (Score)", 
+              Value = round(objectives$user_satisfaction, 2),
+              stringsAsFactors = FALSE
+            ))
+          }
+          
+          if (!is.null(objectives$partner_value)) {
+            plot_data <- rbind(plot_data, data.frame(
+              Policy = policy_data$policy_name,
+              Objective = "Partner Value ($)",
+              Value = round(objectives$partner_value, 2),
+              stringsAsFactors = FALSE
+            ))
+          }
+          
+          if (!is.null(objectives$cancellation_profit)) {
+            plot_data <- rbind(plot_data, data.frame(
+              Policy = policy_data$policy_name,
+              Objective = "Cancellation Profit ($)",
+              Value = round(objectives$cancellation_profit, 2),
+              stringsAsFactors = FALSE
+            ))
+          }
         }
       }
-    }
-    
-    plot_ly(pareto_data, x = ~revenue, y = ~trust, 
-            type = 'scatter', mode = 'markers',
-            marker = list(size = 8, color = ~alpha, colorscale = 'Viridis'),
-            text = ~paste("α:", alpha, "<br>β:", beta, "<br>γ:", gamma),
-            hoverinfo = 'text') %>%
-      layout(
-        title = "Pareto Frontier: Revenue vs. User Trust",
-        xaxis = list(title = "Expected Revenue ($)"),
-        yaxis = list(title = "User Trust Score"),
-        showlegend = FALSE
-      )
+      
+      if (nrow(plot_data) == 0) {
+        return(plot_ly() %>% 
+                 add_annotations(text = "No objective data available", 
+                               showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5))
+      }
+      
+      # Create grouped bar chart
+      plot_ly(plot_data, x = ~Policy, y = ~Value, color = ~Objective, 
+              type = 'bar', barmode = 'group') %>%
+        layout(
+          title = "Objective Functions Comparison by Policy",
+          xaxis = list(title = "Policy"),
+          yaxis = list(title = "Value"),
+          legend = list(title = "Objective"),
+          showlegend = TRUE
+        )
+      
+    }, error = function(e) {
+      print(paste("Error in objective comparison plot:", e$message))
+      return(plot_ly() %>% 
+               add_annotations(text = paste("Error:", e$message), 
+                             showarrow = FALSE, xref = "paper", yref = "paper", x = 0.5, y = 0.5))
+    })
   })
   
   # Test connection to backend
@@ -1392,7 +1891,7 @@ server <- function(input, output, session) {
       }
       
     }, error = function(e) {
-      showNotification(paste("Error:", e$message), type = "error")
+      showNotification(paste("Error:", e$message), type = "error", duration = 5)
     })
   })
   
@@ -1476,7 +1975,7 @@ server <- function(input, output, session) {
       showNotification("A/B test completed!", type = "message")
       
     }, error = function(e) {
-      showNotification(paste("Error:", e$message), type = "error")
+      showNotification(paste("Error:", e$message), type = "error", duration = 5)
     })
   })
   
@@ -1611,7 +2110,7 @@ server <- function(input, output, session) {
         showNotification("Error fetching data status", type = "error", duration = 5)
       }
     }, error = function(e) {
-      showNotification(paste("Error:", e$message), type = "error")
+      showNotification(paste("Error:", e$message), type = "error", duration = 5)
     })
   })
   
